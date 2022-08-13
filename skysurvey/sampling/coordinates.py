@@ -12,5 +12,5 @@ class Sampling_radec( Sampling ):
         """ """
         dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
         ra = np.random.uniform(*ra_range, size=size)
-        dec = np.arcsin( np.random.uniform(*dec_sin_range, size=size) ) / np.pi/180
+        dec = np.arcsin( np.random.uniform(*dec_sin_range, size=size) ) / (np.pi/180)
         return ra, dec

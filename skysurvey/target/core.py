@@ -49,6 +49,13 @@ class Target( object ):
         template = self._get_template(self.template_source, incl_dust=True, **kwargs)
         return template
 
+    def get_target_template(self, index, incl_dust=True, **kwargs):
+        """ """
+        known = self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
+        prop = self.data[known].loc[index].to_dict()
+        model = self.get_template(**prop)
+        return model
+        
     @staticmethod
     def _get_template(source, incl_dust=True, **kwargs):
         """ """
@@ -115,7 +122,8 @@ class Target( object ):
     def draw(self, size=None,  **kwargs):
         """ """
         model = self.get_model(**kwargs)
-        return self._draw(model, size=size)
+        self._data = self._draw(model, size=size)
+        return self._data
     
     def draw_param(self, name, model=None, size=None, xx=None, **kwargs):
         """ """
@@ -170,7 +178,12 @@ class Target( object ):
             
         return self._model
     
-
+    @property
+    def data(self):
+        """ data """
+        if not hasattr(self,"_data"):
+            return None
+        return self._data
 
 
     
@@ -225,4 +238,3 @@ class Transient( Target ):
     def volume_rate(self):
         """ volumetric rate in Gpc-3 / yr-1 """
         return self._VOLUME_RATE
-    

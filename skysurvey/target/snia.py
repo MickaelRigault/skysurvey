@@ -7,7 +7,7 @@ class SNeIa( Transient ):
     _KIND = "SNIa"
     _TEMPLATE_SOURCE = "salt2"
     _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
-    _MODEL = dict( redshift ={"prop":{"zmax":0.2}},
+    _MODEL = dict( redshift ={"prop":{"zmax":0.2}, "as":"z"},
                    x1={"model":"nicolas2021"},
                    c={"model":"intrinsic_and_dust"},
                    t0={"model":"uniform", 
