@@ -1,6 +1,8 @@
 # skysurvey
 modern version of simsurvey to simulate transients within the sky
 
+_Under active development, things are likely to change_
+
 # Install
 ```bash
 pip install skysurvey
