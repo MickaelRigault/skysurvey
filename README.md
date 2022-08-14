@@ -42,9 +42,12 @@ hpsurvey.data.head(5)
 ## Step 3: Dataset
 We will use dask for fasten distributed the computation (and memory usage) between available worker.
 On you laptop it plays as a multiprocess/multithreading tool, but natively scale on a computer clusters.
+
 If you don't want to, skip the dask part and set `use_dask=False` after. 
 Careful `use_dask=True` is default.
+
 See https://www.dask.org/
+
 ```python
 # run Dask locally
 from dask.distributed import Client
