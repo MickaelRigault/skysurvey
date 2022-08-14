@@ -28,7 +28,7 @@ data.head(5) # data also stored in snia.data
 ```python
 from skysurvey import survey
 # Say I what a survey split in healpix pixel, observing 1000 fields per day for 4 years
-# This is a healpix much-simplfied version of ZTF. 
+# This is a healpix much-simplified version of ZTF. 
 hpsurvey = survey.HealpixSurvey.from_random(nside=9, 
                                      size=365*4*1000, # number of observation 
                                      bands=["ztfg","ztfr","ztfi"], # observed bands
@@ -42,9 +42,11 @@ hpsurvey.data.head(5)
 ## Step 3: Dataset
 We will use dask for fasten distributed the computation (and memory usage) between available worker.
 On you laptop it plays as a multiprocess/multithreading tool, but natively scale on a computer clusters.
-If you don't want to, skip the dask part and set `use_dask=False` after. Careful `use_dask=True` is default.
+If you don't want to, skip the dask part and set `use_dask=False` after. 
+Careful `use_dask=True` is default.
+See https://www.dask.org/
 ```python
-# Dask ran locally
+# run Dask locally
 from dask.distributed import Client
 client = Client() # check localhost:8787 to see the computation live
 ```
