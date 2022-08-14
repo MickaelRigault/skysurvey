@@ -40,12 +40,13 @@ hpsurvey.data.head(5)
 ## Step 3: Dataset
 We will use dask for fasten distributed the computation (and memory usage) between available worker.
 On you laptop it plays as a multiprocess/multithreading tool, but natively scale on a computer clusters.
+If you don't want to, skip the dask part and set `use_dask=False` after. Careful `use_dask=True` is default.
 ```python
 # Dask ran locally
 from dask.distributed import Client
 client = Client() # check localhost:8787 to see the computation live
 ```
-And now let's build the dataset (computation split by fieldid
+And now let's build the dataset (computation split by fieldid)
 ```python
 from survey import dataset
 dset = dataset.DataSet.from_targets_and_survey(snia, hpsurvey, use_dask=True) # this takes ~1 min on a laptop for ~10000 targets
