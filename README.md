@@ -1,5 +1,5 @@
 # skysurvey
-modern version of simsurvey to simulate transients withing the sky
+modern version of simsurvey to simulate transients within the sky
 
 # Install
 ```bash
