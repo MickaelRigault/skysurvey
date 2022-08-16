@@ -3,6 +3,8 @@ modern version of simsurvey to simulate transients within the sky
 
 _Under active development, things are likely to change_
 
+skysurvey relies on sncosmo for bandpass and lightcurve generations. (https://sncosmo.readthedocs.io/en/stable/)
+
 # Install
 ```bash
 pip install skysurvey

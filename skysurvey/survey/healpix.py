@@ -54,23 +54,24 @@ class HealpixSurvey( Survey ):
     @classmethod
     def from_random(cls, nside, size, 
                     bands,  
-                    mjd_range, skynoise_range, 
-                    ra_range=None, dec_range=None):
+                    mjd_range, skynoise_range,
+                    ra_range=None, dec_range=None, **kwargs):
         """ """
         this = cls(nside=nside)
         this.draw_random(size,  bands,  
                         mjd_range, skynoise_range, 
                         ra_range=ra_range, dec_range=dec_range,
-                        inplace=True)
+                        inplace=True, **kwargs)
         return this
     
     # ============== #
     #   Methods      #
     # ============== #
     def draw_random(self, size, 
-                    bands, mjd_range, skynoise_range, gain_range=1,
+                    bands, mjd_range, skynoise_range,
+                    gain_range=1, zp_range=25,
                     ra_range=None, dec_range=None,
-                    inplace=False, nside=None):
+                    inplace=False, nside=None, **kwargs):
         """ """
         if nside is None: # don't change nside
             nside = self.nside
@@ -81,7 +82,8 @@ class HealpixSurvey( Survey ):
         data = self._draw_random(nside, size, 
                                  bands, mjd_range, skynoise_range, 
                                  ra_range=ra_range, dec_range=dec_range,
-                                 gain_range=gain_range)
+                                 gain_range=gain_range, zp_range=zp_range,
+                                 **kwargs)
         
         if not inplace:
             return self.__class__.from_data(nside=nside, data=data)
@@ -109,6 +111,7 @@ class HealpixSurvey( Survey ):
                      bands,  
                      mjd_range, skynoise_range,
                      gain_range=1,
+                     zp_range=[27,30],
                      ra_range=None, dec_range=None):
         """ 
         *_range can be 2d-array [min, max] or single values. 
@@ -118,6 +121,7 @@ class HealpixSurvey( Survey ):
         band = np.random.choice(bands, size=size)
         skynoise = np.random.uniform(*np.resize(skynoise_range, 2), size=size)
         gain = np.random.uniform(*np.resize(gain_range, 2), size=size)
+        zp = np.random.uniform(*np.resize(zp_range, 2), size=size)
         # = coords
         # no radec limit
         if ra_range is None and dec_range is None:
@@ -128,8 +132,8 @@ class HealpixSurvey( Survey ):
             ipix = np.random.choice(ipix_ok, size=size)
             
         # data sorted by mjd
-        data = pandas.DataFrame(zip(mjd, band, skynoise, gain, ipix),
-                               columns=["mjd","band","skynoise", "gain", "fieldid"]
+        data = pandas.DataFrame(zip(mjd, band, skynoise, gain, zp, ipix),
+                               columns=["mjd","band","skynoise", "gain", "zp","fieldid"]
                                ).sort_values("mjd"
                                ).reset_index(drop=False) # don't need to know the creation order
         return data

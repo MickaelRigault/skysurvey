@@ -4,7 +4,7 @@ import pandas
 
 class Survey( object ):
     
-    _REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', 'fieldid', "gain"]
+    _REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', 'fieldid', "gain", "zp"]
     
     def __init__(self, data):
         """ """

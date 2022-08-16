@@ -2,9 +2,9 @@ from .core import Sampling
 import numpy as np
 
 
-__all__ = ["Sampling_mag", "Sampling_x0"]
+__all__ = ["Sampling_magabs"]
 
-class Sampling_mag( Sampling ):
+class Sampling_magabs( Sampling ):
 
     @classmethod
     def tripp1998(cls, x1, c,
@@ -13,16 +13,5 @@ class Sampling_mag( Sampling ):
                     alpha=-0.14, beta=3.15):
         """ """
         mabs = np.random.normal(size=size, loc=mabs, scale=sigmaint)
-        mobs = mabs + (x1*alpha + c*beta)
-        return mobs
-    
-    
-class Sampling_x0( Sampling_mag ):
-    """ Converting mag->x0 """
-    
-    @classmethod
-    def draw(cls, model, size=None, **kwargs):
-        """ """
-        mags = super().draw(model, size=size, **kwargs)
-        
-        return 10**(-0.4*mags)
+        mabs_notstandard = mabs + (x1*alpha + c*beta)
+        return mabs_notstandard

@@ -13,10 +13,12 @@ from astropy.table import Table
 __all__ = ["DataSet"]
 
 
-def get_obsdata(template, observations, parameters, zp=25, zpsys="ab"):
+def get_obsdata(template, observations, parameters, zpsys="ab"):
     """ """
-    # observation of that field    
-    observations[["zp","zpsys"]] = [zp, zpsys]
+    # observation of that field
+    if "zpsys" not in observations:
+        observations["zpsys"] = zpsys
+        
     sncosmo_obs = Table.from_pandas(observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
     
     # sn parameters
@@ -83,7 +85,6 @@ class DataSet( object ):
         """ """
         raise NotImplementedError("read_from_directory is not yet available.")
         
-    
     # ============== #
     #   Method       #
     # ============== #
@@ -93,6 +94,7 @@ class DataSet( object ):
     def set_data(self, data):
         """ observation lightcurve data """
         self._data = data
+        self._obs_index = None
         
     def set_targets(self, targets):
         """ observation lightcurve data """
@@ -106,6 +108,30 @@ class DataSet( object ):
     #  GETTER  #
     # -------- #
 
+
+
+    def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25,
+                                lc_prop={}, bands=None, **kwargs):
+        """ if index is None, a random index will be used. 
+        if bands is None, the target's observed band will be used.
+        """
+        if index is None:
+            index = np.random.choice(self.obs_index)
+
+        # Data
+        obs_ = self.data.xs(index)
+
+        # Model
+        if bands is None:
+            bands = np.unique(obs_["band"])
+            
+        fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, format_time=False, zp=zp,
+                                               **lc_prop)
+        ax = fig.axes[0]
+        
+        coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
+        ax.scatter(obs_["time"], obs_["flux"]*coef, **kwargs)
+        return fig
     
     # -------------- #
     #    Statics     #
@@ -126,7 +152,7 @@ class DataSet( object ):
             template = targets.get_template() # in the loop to avoid dask conflict, to be checked
             
             # get the given field observation
-            this_survey = survey.data[survey.data["fieldid"] == fieldid_][["mjd","band","skynoise","gain"]]
+            this_survey = survey.data[survey.data["fieldid"] == fieldid_][["mjd","band","skynoise","gain", "zp"]]
 
             # taking the data we need
             existing_columns = np.asarray(template.param_names)[np.in1d(template.param_names, targets_data.columns)]
@@ -159,3 +185,10 @@ class DataSet( object ):
         """ """
         return self._survey
         
+    @property
+    def obs_index(self):
+        """ index of the observed target """
+        if not hasattr(self,"_obs_index") or self._obs_index is None:
+            self._obs_index = self.data.index.get_level_values(0).unique().sort_values()
+
+        return self._obs_index
