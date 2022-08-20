@@ -59,7 +59,7 @@ class DataSet( object ):
                                 use_dask=True, client=None, 
                                 targetsdata_inplace=False):
         """ """
-        per_fieldid = cls._realize_lc_perfieldid_from_survey_and_target(targets, survey, 
+        fieldids, per_fieldid = cls._realize_lc_perfieldid_from_survey_and_target(targets, survey, 
                                                                         use_dask=use_dask,
                                                                         inplace=targetsdata_inplace)
         if use_dask:
@@ -69,8 +69,11 @@ class DataSet( object ):
             else:
                 f_all_outs = client.compute(all_outs)
                 all_outs = client.gather(f_all_outs)
-            
-        data = pandas.concat(all_outs)
+        else:
+            all_outs = per_fieldid
+
+        # keep track of why field is what.
+        data = pandas.concat(all_outs, keys=fieldids).reset_index(level=0).rename({"level_0":"fieldid"}, axis=1)
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -107,32 +110,58 @@ class DataSet( object ):
     # -------- #
     #  GETTER  #
     # -------- #
-
-
-
     def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25,
-                                lc_prop={}, bands=None, **kwargs):
+                                lc_prop={}, bands=None, 
+                                format_time=True, t0_format="mjd", 
+                                phase_window=None, **kwargs):
         """ if index is None, a random index will be used. 
         if bands is None, the target's observed band will be used.
         """
+        from matplotlib.colors import to_rgba
+        from .config import get_band_color
+        
+        if format_time:
+            from astropy.time import Time
         if index is None:
             index = np.random.choice(self.obs_index)
 
         # Data
-        obs_ = self.data.xs(index)
+        obs_ = self.data.xs(index).copy()
+        if phase_window is not None:
+            t0 = self.targets.data["t0"].loc[index]
+            phase_window = np.asarray(phase_window)+t0
+            obs_ = obs_[obs_["time"].between(*phase_window)]
+
+        coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
+        obs_["flux_zp"] = obs_["flux"] * coef
+        obs_["fluxerr_zp"] = obs_["fluxerr"] * coef
 
         # Model
         if bands is None:
             bands = np.unique(obs_["band"])
-            
-        fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, format_time=False, zp=zp,
-                                               **lc_prop)
+
+        colors = get_band_color(bands)
+        fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
+                                           format_time=format_time, t0_format=t0_format, 
+                                           zp=zp, colors=colors,
+                                           zorder=2, 
+                                           **lc_prop)
         ax = fig.axes[0]
-        
-        coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
-        ax.scatter(obs_["time"], obs_["flux"]*coef, **kwargs)
+
+
+
+        for band_, color_ in zip(bands, colors):
+            obs_band = obs_[obs_["band"] == band_]
+            times = obs_band["time"] if not format_time else Time(obs_band["time"], format=t0_format).datetime
+            ax.scatter(times, obs_band["flux_zp"],
+                       color=color_, zorder=4, **kwargs)
+            ax.errorbar(times, obs_band["flux_zp"],
+                        yerr= obs_band["fluxerr_zp"],
+                        ls="None", marker="None", ecolor=to_rgba(color_, 0.2), 
+                        zorder=3,
+                        **kwargs)
+
         return fig
-    
     # -------------- #
     #    Statics     #
     # -------------- #
@@ -145,9 +174,12 @@ class DataSet( object ):
             
         targets_data = targets.data.copy() if not inplace else targets.data
         targets_data["fieldid"] = survey.radec_to_fieldid(*targets_data[["ra","dec"]].values.T)
-            
+
+        targets_data = targets_data.explode("fieldid")
         all_out = []
-        for fieldid_ in targets_data["fieldid"].unique():
+
+        fieldids = targets_data["fieldid"].unique()
+        for fieldid_ in fieldids:
             # What kind of template ?
             template = targets.get_template() # in the loop to avoid dask conflict, to be checked
             
@@ -166,7 +198,7 @@ class DataSet( object ):
             
             all_out.append(this_out)
         
-        return all_out
+        return fieldids, all_out
     # ============== #
     #   Properties   #
     # ============== #

@@ -67,6 +67,16 @@ class HealpixSurvey( Survey ):
     # ============== #
     #   Methods      #
     # ============== #
+    # ------- #
+    #  core   #
+    # ------- #
+    def radec_to_fieldid(self, ra, dec):
+        """ """
+        return hp.ang2pix(self.nside, (90 - dec) * np.pi/180, ra * np.pi/180)
+
+    # ------- #
+    #  draw   #
+    # ------- #    
     def draw_random(self, size, 
                     bands, mjd_range, skynoise_range,
                     gain_range=1, zp_range=25,
@@ -75,6 +85,7 @@ class HealpixSurvey( Survey ):
         """ """
         if nside is None: # don't change nside
             nside = self.nside
+            
         elif inplace: # change nside
             warnings.warn("Cannot change nside with inplace=True, a copy (inplace=False) is returned.")
             inplace = False
@@ -91,9 +102,6 @@ class HealpixSurvey( Survey ):
         self.set_data(data)
         
         
-    def radec_to_fieldid(self, ra, dec):
-        """ """
-        return hp.ang2pix(self.nside, (90 - dec) * np.pi/180, ra * np.pi/180)
         
     # ----------- #
     #  PLOTTER    #
