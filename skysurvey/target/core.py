@@ -4,29 +4,11 @@ import pandas
 
 from astropy import cosmology
 
-__all__ = ["get_sncosmo_template",
-           "Target", "Transient"]
+__all__ = ["Target", "Transient"]
 
 
 from .. import sampling
-
-    
-def get_sncosmo_template(source="salt2", 
-                      incl_dust=True, 
-                      **params):
-    """ """
-    import sncosmo
-    modelprop = dict(source=source)
-    if incl_dust:
-        dust  = sncosmo.CCM89Dust()
-        modelprop["effects"] = [dust]
-        modelprop["effect_names"]=['mw']
-        modelprop["effect_frames"]=['obs']
-        
-    model = sncosmo.Model(**modelprop)
-    model.set(**params)
-    return model
-
+from ..template import Template
 
 
 class Target( object ):
@@ -38,7 +20,6 @@ class Target( object ):
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
 
-
     @classmethod
     def from_setting(cls, setting, **kwargs):
         """ """
@@ -47,25 +28,25 @@ class Target( object ):
     # ------------- # 
     #   Template    #
     # ------------- #
+    def set_template_source(self, source):
+        """ set the template source (based on sncosmo.Model(source)
+        This will reset self.template to the new template source.
+        """
+        self._template_source = source
+        self._template = None
+        
     def get_template(self, index=None, incl_dust=True, **kwargs):
         """ template """
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
             kwargs = {**prop, **kwargs}
-            
-        template = self._get_template(self.template_source, incl_dust=True, **kwargs)
-        return template
+
+        return self.template.get(incl_dust=incl_dust, **kwargs)
 
     def get_target_template(self, index, incl_dust=True, **kwargs):
         """ shortcut to get_template(index=index, incl_dust=incl_dust, **kwargs) """
         return self.get_template(index=index, incl_dust=incl_dust, **kwargs)
-        
-    @staticmethod
-    def _get_template(source, incl_dust=True, **kwargs):
-        """ """
-        return get_sncosmo_template(source=source, 
-                                    incl_dust=True, 
-                                   **kwargs)
+
     # -------------- #
     #   Getter       #
     # -------------- #
@@ -92,7 +73,6 @@ class Target( object ):
     def _magabs_to_magobs(z, magabs, cosmology):
         """ distmod(z) + Mabs """
         return cosmology.distmod(np.asarray(z)).value + magabs
-
     
     # -------------- #
     #   Model        #
@@ -137,19 +117,7 @@ class Target( object ):
 
         ax.scatter(xvalue, yvalue, c=cvalue)
         return fig
-        
-    # ============== #
-    #   Properties   #
-    # ============== #        
-    @property
-    def model(self):
-        """ modeling who the transient is generated """
-        if not hasattr(self, "_model") or self._model is None:
-            self._model = {}
-        return self._model
-    
-
-
+            
     # =============== #
     #   Draw Methods  #
     # =============== #
@@ -194,7 +162,6 @@ class Target( object ):
             
         return interp
 
-    
     def draw_param(self, name, model=None, size=None, xx=None, **kwargs):
         """ """
         if model is not None and hasattr(self, model):
@@ -220,30 +187,6 @@ class Target( object ):
         """ """
         return self._COSMOLOGY
 
-    # Template
-    @property
-    def template_source(self):
-        """ """
-        return self._TEMPLATE_SOURCE
-    
-    @property
-    def _testtemplate(self):
-        """ hiden test model to check what's inside. 
-        """
-        if not hasattr(self,"_htesttemplate"):
-            self._htesttemplate = self.get_template()
-        return self._htesttemplate
-        
-    @property
-    def template_parameters(self):
-        """ """
-        return self._testtemplate.param_names
-    
-    @property
-    def template_effect_parameters(self):
-        """ """
-        return self._testtemplate.effect_names        
-
     # model
     @property
     def model(self):
@@ -259,6 +202,32 @@ class Target( object ):
         if not hasattr(self,"_data"):
             return None
         return self._data
+
+    # template
+    @property
+    def template(self):
+        """ """
+        if not hasattr(self,"_template") or self._template is None:
+            self._template = Template(self.template_source)
+        return self._template
+
+    @property
+    def template_source(self):
+        """ """
+        if not hasattr(self, "_template_source"):
+            self.set_template_source(self._TEMPLATE_SOURCE)
+            
+        return self._template_source
+
+    @property
+    def template_parameters(self):
+        """ """
+        return self.template.parameters
+    
+    @property
+    def template_effect_parameters(self):
+        """ """
+        return self.template.effect_parameters  
 
 
     
@@ -285,34 +254,22 @@ class Transient( Target ):
         raise NotImplementedError("you must implement get_rate() or provide self._VOLUME_RATE for your transient.")
 
     def get_lightcurve(self, band, times,
-                           template=None, index=None, params=None,
+                           sncosmo_model=None, index=None, params=None,
                            in_mag=False, zp=25, zpsys="ab"):
         """ """
+        # get the template
+        if params is None:
+            params = {}
+            
+        if index is not None:
+            prop = self.get_template_parameters(index).to_dict()
+            params = {**prop, **params}
 
-        if template is None:
-            if params is None:
-                params = {}
-            template = self.get_template(index=index, **params)
-
-        # patch for odd sncosmo behavior (see https://github.com/sncosmo/sncosmo/issues/346)
-        squeeze = type(band) in [str, np.str_] # for the output format
-
-        # make sure all are array
-        # make sure all are array
-        band_ = np.atleast_1d(band)
-        times_ = np.atleast_1d(times)
-        # flatten for bandflux
-        band_ = np.hstack([np.resize(band_, len(times)) for band_ in band])
-        times_ = np.resize(times, len(band)*len(times))
+        return self.template.get_lightcurve(band, times,
+                                            sncosmo_model=sncosmo_model, index=index,
+                                            params=params,
+                                            in_mag=in_mag, zp=zp, zpsys=zpsys)
         
-        # in flux
-        if not in_mag:
-            values = template.bandflux(band_, times_, zp=zp, zpsys=zpsys).reshape( len(band),len(times) )
-        # in mag
-        else:                
-            values = template.bandmag(band_, zpsys, times_).reshape( len(band),len(times) )
-
-        return np.squeeze(values) if squeeze else values
     
     # ------------ #
     #   Draw       #
@@ -344,81 +301,25 @@ class Transient( Target ):
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd", 
                             in_mag=False, invert_mag=True, **kwargs):
-        """ """
-        from ..config import get_band_color
+        """ 
+        params: None or dict
+        """
         # get the template
         if params is None:
             params = {}
+            
+        if index is not None:
+            prop = self.get_template_parameters(index).to_dict()
+            params = {**prop, **params}
 
-        template = self.get_template(index=index, **params)
-        
-        # ------- #
-        #  x-data #
-        # ------- #
-        # time range
-        t0 = template.parameters[template.param_names.index("t0")]
-        times = np.linspace(*np.asarray(time_range)+t0, npoints)
-
-        # ------- #
-        #  y-data #
-        # ------- #        
-        # flux
-        band = np.atleast_1d(band)
-        values = self.get_lightcurve(band,
-                                     times, in_mag=in_mag,
-                                     zp=zp, zpsys=zpsys,
-                                     template=template)
-
-        # ------- #
-        #  axis   #
-        # ------- #                    
-        if ax is None:
-            if fig is None:
-                import matplotlib.pyplot as plt
-                fig = plt.figure(figsize=[7,4])
-            ax = fig.add_subplot(111)
-        else:
-            fig = ax.figure
-
-        # ------- #
-        #  Plot   #
-        # ------- #  
-        # The plot
-        if format_time:
-            from astropy.time import Time
-            times = Time(times, format=t0_format).datetime
-
-        colors = np.resize(colors, len(values))
-        for band_, value_, color_ in zip(band, values, colors):
-            if color_ is None: # default back to config color
-                color_ = get_band_color(band_)
-
-            ax.plot(times, value_, color=color_, **kwargs)
-
-        # ------- #
-        #  Format #
-        # ------- #  
-        # mag upside down
-        if in_mag and invert_mag:
-            ax.invert_yaxis()
-        # time format
-        if format_time:
-            from matplotlib import dates as mdates        
-            locator = mdates.AutoDateLocator()
-            formatter = mdates.ConciseDateFormatter(locator)
-            ax.xaxis.set_major_locator(locator)
-            ax.xaxis.set_major_formatter(formatter)
-        else:
-            ax.set_xlabel("time [in day]", fontsize="large")
-
-        if in_mag:
-            ax.set_ylabel(f"Magnitude", fontsize="large")
-        elif zp is None:
-            ax.set_ylabel(f"Flux [erg/s/cm^2/A]", fontsize="large")
-        else:
-            ax.set_ylabel(f"Flux [zp={zp}]", fontsize="large")
-
-        return fig
+        return self.template.show_lightcurve(band, params=params,
+                                             ax=ax, fig=fig, colors=colors,
+                                             time_range=time_range, npoints=npoints,
+                                             zp=zp, zpsys=zpsys,
+                                             format_time=format_time,
+                                             t0_format=t0_format, 
+                                             in_mag=in_mag, invert_mag=invert_mag,
+                                             **kwargs)
             
     # ============== #
     #   Properties   #

@@ -9,6 +9,8 @@ import numpy as np
 import sncosmo
 from astropy.table import Table
 
+from .template import Template
+
 
 __all__ = ["DataSet"]
 
@@ -110,6 +112,119 @@ class DataSet( object ):
     # -------- #
     #  GETTER  #
     # -------- #
+    def get_ndetection(self, detlimit=5, perband=False):
+        """ get the number of detection (flux/fluxerr)>detlimit per observed target (and perband if perband=True). """
+        data = self.data.copy()
+        data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
+        if perband:
+            ndetection = data.reset_index().set_index(["level_0","level_1","band"]).groupby(level=[0,2])["detected"].sum()
+        else:
+            ndetection = data.groupby(level=0)["detected"].sum()
+
+            
+        return ndetection
+
+    
+    # -------- #
+    #  FIT     #
+    # -------- #
+    def fit_lightcurve(self, source, index=None, use_dask=True,
+                        incl_dust=True, 
+                        phase_fitrange=[-50,200],
+                        fixedparams = None,
+
+
+                        
+                        guessparams = None,
+                        bounds = None,
+                        add_truth=True,
+                        **kwargs):
+        """ 
+        phase_fitrange can only work if t0 is given in fixed or guess
+
+        add_truth: bool
+            if self.targets.data exists and add_truth=True, the colunm "truth" will be 
+            added to the results getting values from self.targets.data.
+        """
+        if use_dask:
+            import dask
+
+        if index is None:
+            index = self.obs_index.values
+
+        if phase_fitrange is not None:
+            phase_fitrange = np.asarray(phase_fitrange)
+
+        def _format_paramin_(paramin):
+            """ """
+            if type(paramin) is dict:
+                # most flexible format found
+                temp_ = pandas.DataFrame(index=index)
+                for k,v in paramin.items(): 
+                    temp_[k] = v
+                paramin = temp_.copy()
+
+            return paramin
+
+        fixedparams = _format_paramin_(fixedparams)
+        guessparams = _format_paramin_(guessparams)
+        bounds = _format_paramin_(bounds)
+
+        results = []
+        metas = []
+
+        
+        for i in index:
+            if use_dask:
+                template = dask.delayed(Template)(source)
+            else:
+                template = Template(source)
+                
+            # Data
+            data_to_fit = self.data.xs(i)
+            #
+            fixed_ = fixedparams.loc[i].to_dict() if fixedparams is not None else None
+            guess_ = guessparams.loc[i].to_dict() if guessparams is not None else None
+            bounds_ = bounds.loc[i].to_dict() if bounds is not None else None
+            # - t0 for datarange
+            if phase_fitrange is not None:
+                t0 = fixed_.get("t0", guess_.get("t0", None)) # from fixed or from guess or None
+                if t0 is not None:
+                    data_to_fit = data_to_fit[data_to_fit["time"].between(*(t0+phase_fitrange))]
+
+            prop = {**dict(fixedparams=fixed_, guessparams=guess_,
+                           bounds=bounds_), 
+                    **kwargs}
+
+            if use_dask:
+                # is already delayed
+                result_meta = template.fit_data(data_to_fit,  **prop) # this create a new sncosmo_model inside fit_data
+                results.append(result_meta)
+
+            else:
+                result, meta = model.fit_data(data_to_fit,  **prop)
+                results.append(result)
+                metas.append(meta)
+
+        if use_dask:
+            res = dask.delayed(np.asarray)(results, dtype="object").compute()
+            flatres = np.ravel(res)
+            results = pandas.concat(flatres[::2], keys=index)
+            metas = pandas.concat(flatres[1::2], keys=index)
+        else:
+            results = pandas.concat(results, keys=index)
+            metas = pandas.concat(metas, keys=index)
+
+        if add_truth and self.targets is not None:
+            truth = self.targets.data.loc[index].stack()
+
+            truth.name = "truth"
+            results = results.merge(truth, left_index=True, right_index=True)
+            
+        return results, metas    
+    # -------- #
+    #  PLOTTER #
+    # -------- #
     def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25,
                                 lc_prop={}, bands=None, 
                                 format_time=True, t0_format="mjd", 
@@ -166,11 +281,14 @@ class DataSet( object ):
     #    Statics     #
     # -------------- #
     @staticmethod
-    def _realize_lc_perfieldid_from_survey_and_target(targets, survey, 
-                                                      use_dask=True, inplace=False):
+    def _realize_lc_perfieldid_from_survey_and_target(targets, survey, template_source=None,
+                                                      use_dask=True, inplace=False, template_prop={}):
         """ """
         if use_dask:
             import dask
+
+        if template_source is None:
+            template_source = targets.template.source
             
         targets_data = targets.data.copy() if not inplace else targets.data
         targets_data["fieldid"] = survey.radec_to_fieldid(*targets_data[["ra","dec"]].values.T)
@@ -181,7 +299,8 @@ class DataSet( object ):
         fieldids = targets_data["fieldid"].unique()
         for fieldid_ in fieldids:
             # What kind of template ?
-            template = targets.get_template() # in the loop to avoid dask conflict, to be checked
+            # in the loop to avoid dask conflict, to be checked
+            template = Template._get(template_source, **template_prop) 
             
             # get the given field observation
             this_survey = survey.data[survey.data["fieldid"] == fieldid_][["mjd","band","skynoise","gain", "zp"]]
@@ -199,6 +318,7 @@ class DataSet( object ):
             all_out.append(this_out)
         
         return fieldids, all_out
+    
     # ============== #
     #   Properties   #
     # ============== #
