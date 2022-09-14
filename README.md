@@ -41,7 +41,7 @@ from skysurvey import survey
 starting_date = snia.data["t0"].min()-50 # 50 days before the first target, no need to simulate a survey before that
 
 # and this is a much-simplified version of ZTF (independent random draws)
-ztf = survey.ZTF.from_random(size=365*4*500, # number of observation  2 years, 500 per day, small for the doc
+ztf = survey.ZTF.from_random(size=365*4*1000, # number of observation 
                        bands=["ztfg","ztfr","ztfi"], # band to observed
                        mjd_range=[starting_date, starting_date+365*4], # timerange of observation
                        skynoise_range=[10,20], # sky noise
@@ -54,7 +54,7 @@ ztf.data.head(5)
 And now let's build the dataset (computation split by fieldid)
 ```python
 from survey import dataset
-dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30 min on a laptop for ~5000 targets
+dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30s on a laptop for ~5000 targets
 dset.data
 # your survey (here ztf) is stored in dset.survey
 # your targets (here snia) is stored in dset.targets
