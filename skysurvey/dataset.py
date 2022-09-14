@@ -67,14 +67,12 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
 class DataSet( object ):
     
     def __init__(self, data, targets=None, survey=None):
-        """ The DataSet should most likely be created from 
-        classmethod such as:
-        - DataSet.from_targets_and_survey( yourtargets, yoursurvey)
-        
-        - DataSet.read_parquet( parquet_file)
+        """ 
 
-        - DataSet.read_from_directory()
-
+        See also
+        --------
+        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        read_parquet: loads a stored dataset
         """
         self.set_data(data)
         self.set_targets(targets)
@@ -84,7 +82,47 @@ class DataSet( object ):
     def from_targets_and_survey(cls, targets, survey, 
                                 use_dask=False, client=None, 
                                 targetsdata_inplace=False):
-        """ """
+        """ loads a dataset (observed data) given targets and a survey
+
+        This first matches the targets (given targets.data[["ra","dec"]]) with the
+        survey to find which target has been observed with which field.
+        Then simulate the targets lightcurves given the observing data (survey.data).
+        
+
+        Parameters
+        ----------
+        targets: skysurvey.Target (or child of)
+            target data corresponding to the true target parameters  
+            (as given by nature)
+            
+        survey: skysurvey.Survey (or child of)
+            sky observation (what was observed when with which situation)
+
+        use_dask: bool
+            should dask be used for the lightcurve realisation ?
+            (worse it for very large dataset, say >20000 targets)
+        
+        client: dask.distributed.Client
+            = ignored if ``used_dask=False`` =
+            if you want to compute on this particular dask client.
+            If None dask will use the current one.
+
+        targetsdata_inplace: bool
+            shall the fieldid matching be added to targets.data ?
+            if not, this information is lost. 
+            re-call ``fieldid_of_targets = survey.radec_to_fieldid(*targets.data[["ra","dec"]].values.T)``
+            to retrieve it.
+
+
+        Returns
+        -------
+        class instance
+            the observation data have been derived and stored as self.data
+
+        See also
+        --------
+        read_parquet: loads a stored dataset
+        """
         fieldids, per_fieldid = cls._realize_lc_perfieldid_from_survey_and_target(targets, survey, 
                                                                         use_dask=use_dask,
                                                                         inplace=targetsdata_inplace)
@@ -104,14 +142,57 @@ class DataSet( object ):
 
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
-        """ Loads a stored dataset. Only the observation data can be loaded this way, 
-        not the survey nor the targets (truth). """
+        """ loads a stored dataset. 
+
+        Only the observation data can be loaded this way, 
+        not the survey nor the targets (truth). 
+
+        Parameters
+        ----------
+        parquetfile: str
+            path to the parquet file containing the dataset (pandas.DataFrame)
+
+        survey: skysurvey.Survey (or child of), None
+            survey that have been used to generate the dataset (if you know it)
+
+        targets: skysurvey.Target (of child of), None
+            target data corresponding to the true target parameters 
+            (as given by nature)
+
+        **kwargs goes to pandas.read_parquet
+
+        Returns
+        -------
+        class instance
+            with a dataset loaded but maybe no survey nor targets
+
+        See also
+        --------
+        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        """
         data = pandas.read_parquet(parquetfile, **kwargs)
         return cls(data, survey=survey, targets=targets)
 
     @classmethod
     def read_from_directory(cls, dirname, **kwargs):
-        """ """
+        """ loads a directory containing the dataset, the survey and the targets
+
+        = Not Implemented Yet = 
+
+        Parameters
+        ----------
+        dirname: str
+            path to the directory.
+            
+        Returns
+        -------
+        class instance
+            
+        See also
+        --------
+        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        read_parquet: loads a stored dataset
+        """
         raise NotImplementedError("read_from_directory is not yet available.")
         
     # ============== #
@@ -121,23 +202,93 @@ class DataSet( object ):
     #  SETTER  #
     # -------- #
     def set_data(self, data):
-        """ observation lightcurve data """
+        """ lightcurve data as observed by the survey
+
+        = It is unlikely you need to use that directly. =
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            multi-index dataframe ((id, observation index))
+            corresponding the concat of all targets observations
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        read_parquet: loads a stored dataset
+        """
         self._data = data
         self._obs_index = None
         
     def set_targets(self, targets):
-        """ observation lightcurve data """
+        """ set the targets
+
+        = It is unlikely you need to use that directly. =
+
+        Parameters
+        ----------
+        targets: skysurvey.Target (of child of), None
+            target data corresponding to the true target parameters 
+            (as given by nature)
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        """
         self._targets = targets
 
     def set_survey(self, survey):
-        """ observation lightcurve data """
+        """ set the survey 
+
+        = It is unlikely you need to use that directly. =
+
+        Parameters
+        ----------
+        survey: skysurvey.Survey (or child of), None
+            survey that have been used to generate the dataset (if you know it)
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        """
+        self._targets = targets
+
         self._survey = survey
 
     # -------- #
     #  GETTER  #
     # -------- #
     def get_ndetection(self, detlimit=5, per_band=False):
-        """ get the number of detection (flux/fluxerr)>detlimit per observed target (and per_band if per_band=True). """
+        """ get the number of detection for each lightcurves
+
+        Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
+
+        Parameters
+        ----------
+        detlimit: float, int
+            detection limit below which a point is not considered
+            (cut a > not >=)
+        
+        per_band: bool
+            should be computation be made per band ?
+            if true it will then be per target *and* per band.
+
+        Returns
+        -------
+        pandas.Series
+            the number of detected point per target (and per band if per_band=True)
+        """
         data = self.data.copy()
         data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
         if per_band:
@@ -152,23 +303,81 @@ class DataSet( object ):
     # -------- #
     #  FIT     #
     # -------- #
-    def fit_lightcurve(self, source, index=None, use_dask=True,
-                        incl_dust=True, 
-                        phase_fitrange=[-50,200],
-                        fixedparams = None,
+    def fit_lightcurves(self, source, index=None,
+                           use_dask=True,
+                           phase_fitrange=[-50,200],
+                           fixedparams = None,
+                           guessparams = None,
+                           bounds = None,
+                           incl_dust=True, 
+                           add_truth=True,
+                           **kwargs):
+        """ fit the template source model to the observed data.
 
+        Basically loops over the targets an use sncosmo.fit_lc()
 
-                        
-                        guessparams = None,
-                        bounds = None,
-                        add_truth=True,
-                        **kwargs):
-        """ 
-        phase_fitrange can only work if t0 is given in fixed or guess
+        Parameters
+        ----------
+        source: str
+            name of the template ( will use ``sncosmo.Model(source)``)
+            
+        index: list
+            select the target to be fitted using their index
+
+        use_dask: bool
+            shall this use dask to distribute the computation ?
+
+        phase_fitrange: 2d-array, None
+            if not None, only the given phase_range will be considered
+            for the fit.  t0 is taken from fixedparams or from guessparams, 
+            whichever comes first.
+            
+        fixedparams: dict
+            fix parameters to this value for the fit.
+            a parameter could be fixed at a given value: e.g. {"mw_ebv":0}
+            or it must be one per fitted target: e.g. {"z":dataset.targets.data["z"]}
+            
+        fixedparams: dict
+            guess parameters to this value for the fit.
+            a parameter could be fixed at a given value: e.g. {"mw_ebv":0}
+            or it must be one per fitted target: e.g. {"z":dataset.targets.data["z"]}
+            
+        bounds: dict
+            boundaries for the parameters.
+            (see example)
 
         add_truth: bool
-            if self.targets.data exists and add_truth=True, the colunm "truth" will be 
-            added to the results getting values from self.targets.data.
+            = ignored if self.targets is not set =
+            should the true parameters be added to the results ("thruth" columns)
+
+        incl_dust: bool
+            should the template include the Milky Way dust extinction
+            parameters ?
+
+
+        Returns
+        -------
+        pandas.DataFrame, pandas.DataFrame
+            multi-index dataframe of the fits results, errors and covariances
+            and the pandas.DataFrame fit meta data.
+
+        
+        Examples
+        --------
+        fit the lightcurves of targets having at least 5 detection, fixing the redshift and the mw parameters
+        the t0 is only a guess (but actually guessed at the truth here)
+
+        >>> detstat = dataset.get_ndetection()
+        >>> detected = detstat[detstat>5].index
+        >>> results, meta = dataset.fit_lightcurve("salt2", 
+                                                  use_dask=True, index=detected
+                                                  phase_fitrange=[-30,60],
+                                                  add_truth=True,
+                                                  fixedparams={"z":dataset.targets.data.loc[detected]["z"],
+                                                               "mwr_v":3.1, "mwebv":0},
+                                                  guessparams={"t0":dataset.targets.data.loc[detected]["t0"]},
+                                                  bounds={"t0":dataset.targets.data.loc[detected]["t0"].apply(lambda x: [x-5, x+5])}
+                                                 )
         """
         if use_dask:
             import dask

@@ -14,9 +14,11 @@ skysurvey documentation
    notebooks/quickstart_survey
    notebooks/quickstart_survey_target_dataset
 
+   
 .. toctree::
-   :maxdepth: 2
-   :caption: Package	      
+   :maxdepth: 1
+   :caption: Package
+	     
   skysurvey
   
 Indices and tables
