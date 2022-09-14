@@ -1,9 +1,12 @@
-# skysurvey
+# skysurvey [![Documentation Status](https://readthedocs.org/projects/skysurvey/badge/?version=latest)](https://skysurvey.readthedocs.io/en/latest/?badge=latest)
+
 modern version of simsurvey to simulate transients within the sky
 
 _Under active development, things are likely to change_
 
 skysurvey relies on sncosmo for bandpass and lightcurve generations. (https://sncosmo.readthedocs.io/en/stable/)
+
+**See documentation on [read the docs](https://skysurvey.readthedocs.io/en/latest/)**
 
 # Install
 ```bash
