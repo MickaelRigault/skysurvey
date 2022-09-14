@@ -1,4 +1,8 @@
-# skysurvey [![Documentation Status](https://readthedocs.org/projects/skysurvey/badge/?version=latest)](https://skysurvey.readthedocs.io/en/latest/?badge=latest)
+[![PyPI](https://img.shields.io/pypi/v/skysurvey.svg?style=flat-square)](https://pypi.python.org/pypi/skysurvey)
+[![Documentation Status](https://readthedocs.org/projects/skysurvey/badge/?version=latest)](https://skysurvey.readthedocs.io/en/latest/?badge=latest)
+
+
+# skysurvey 
 
 modern version of simsurvey to simulate transients within the sky
 
