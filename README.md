@@ -32,38 +32,27 @@ data.head(5) # data also stored in snia.data
 ## Step 2: Survey (when you pointed and sky conditions)
 ```python
 from skysurvey import survey
-# Say I what a survey split in healpix pixel, observing 1000 fields per day for 4 years
-# This is a healpix much-simplified version of ZTF. 
-hpsurvey = survey.HealpixSurvey.from_random(nside=9, 
-                                     size=365*4*1000, # number of observation 
-                                     bands=["ztfg","ztfr","ztfi"], # observed bands
-                                     mjd_range=[56000, 56000+365*4], # duration
-                                     skynoise_range=[180,210], # typical skynoise
-                                     gain_range=6, # typical gain (1 value means always the same)
-                                     dec_range=[-30,90]) # limited in declination to the north.
-hpsurvey.data.head(5)
+# Say I what a ztf-fields survey, observing 1000 fields per day for 4 years
+# Let get the starting date from the data
+starting_date = snia.data["t0"].min()-50 # 50 days before the first target, no need to simulate a survey before that
+
+# and this is a much-simplified version of ZTF (independent random draws)
+ztf = survey.ZTF.from_random(size=365*4*500, # number of observation  2 years, 500 per day, small for the doc
+                       bands=["ztfg","ztfr","ztfi"], # band to observed
+                       mjd_range=[starting_date, starting_date+365*4], # timerange of observation
+                       skynoise_range=[10,20], # sky noise
+                     )
+ztf.data.head(5)
 ```
 
 ## Step 3: Dataset
-We will use dask for fasten distributed the computation (and memory usage) between available worker.
-On you laptop it plays as a multiprocess/multithreading tool, but natively scale on a computer clusters.
 
-If you don't want to, skip the dask part and set `use_dask=False` after. 
-Careful `use_dask=True` is default.
-
-See https://www.dask.org/
-
-```python
-# run Dask locally
-from dask.distributed import Client
-client = Client() # check localhost:8787 to see the computation live
-```
 And now let's build the dataset (computation split by fieldid)
 ```python
 from survey import dataset
-dset = dataset.DataSet.from_targets_and_survey(snia, hpsurvey, use_dask=True) # this takes ~1 min on a laptop for ~10000 targets
+dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30 min on a laptop for ~5000 targets
 dset.data
-# your survey (here hpsurvey) is stored in dset.survey
+# your survey (here ztf) is stored in dset.survey
 # your targets (here snia) is stored in dset.targets
 ```
 
