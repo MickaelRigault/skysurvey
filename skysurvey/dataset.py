@@ -231,10 +231,10 @@ class DataSet( object ):
                 metas.append(meta)
 
         if use_dask:
-            res = dask.delayed(np.asarray)(results, dtype="object").compute()
-            flatres = np.ravel(res)
-            results = pandas.concat(flatres[::2], keys=index)
-            metas = pandas.concat(flatres[1::2], keys=index)
+            res = dask.delayed(list)(results).compute()
+            res_, meta_ = np.array(res, dtype="object").T
+            results = pandas.concat(res_, keys=index)
+            metas = pandas.concat(meta_, keys=index)
         else:
             results = pandas.concat(results, keys=index)
             metas = pandas.concat(metas, keys=index)

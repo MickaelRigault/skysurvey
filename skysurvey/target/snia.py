@@ -4,13 +4,15 @@ from .core import Transient
 __all__ = ["SNeIa"]
 
 class SNeIa( Transient ):
+
     _KIND = "SNIa"
     _TEMPLATE_SOURCE = "salt2"
     _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
     
     _MODEL = dict( redshift ={"prop":{"zmax":0.2},
                               "as":"z"},
-                   x1={"model":"nicolas2021"},
+                              
+                   x1={"model":"nicolas2021"}, 
                    
                    c={"model":"intrinsic_and_dust"},
 
@@ -36,7 +38,7 @@ class SNeIa( Transient ):
 
     # ============== #
     #  Methods       #
-    # ============== #
+    # ============== #    
     def magobs_to_x0(self, magobs, band="bessellb",zpsys="ab"):
         """ """
         template = self.get_template()
