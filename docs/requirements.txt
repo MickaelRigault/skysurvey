@@ -1,0 +1,15 @@
+numpy
+scipy
+matplotlib
+pandas
+
+astropy
+healpy
+sncosmo
+dask
+
+numpydoc
+sphinx-book-theme
+myst-nb
+nbsphinx
+sphinx_copybutton

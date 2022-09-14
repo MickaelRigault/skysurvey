@@ -20,11 +20,87 @@ class Target( object ):
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
 
+    def __init__(self):
+        """ 
+        See also
+        --------
+        from_setting: loads an instance given model parameters (dict)
+
+        """
+
+    def __repr__(self):
+        """ """
+        
+        return self.__str__()
+    
+    def __str__(self):
+        """ """
+        import pprint
+        return pprint.pformat(self.model, sort_dicts=False)
+
+    
     @classmethod
     def from_setting(cls, setting, **kwargs):
-        """ """
-        raise NotImplementedError("from_setting is not Implemented ")
+        """ loads the target from a setting dictionary
         
+        = Not Implemented Yet = 
+
+        Parameters
+        ----------
+        setting: dict
+            dictionary containing the model parameters
+
+        **kwargs ....
+
+
+        Returns
+        -------
+        class instance
+            not implemented yet
+        """
+        raise NotImplementedError("from_setting is not Implemented ")
+
+
+    @classmethod
+    def from_draw(cls, size=None, model=None, template_source=None, **kwargs):
+        """ loads the instance from a random draw of targets given the model 
+
+        Parameters
+        ----------
+        size: int, None
+            number of target you want to sample
+            size=None as in numpy. Usually means 1.
+
+        model: dict, None
+            defines how  template parameters to draw and how they are connected
+            See "target model documentation"
+            = leave to None if unsure, cls._MODEL used as default = 
+
+        template_source: str, None
+            name of the template (sncosmo.Model(source)). 
+            = leave to None if unsure, cls._TEMPLATE_SOURCE used as default =
+
+        **kwargs goes to self.draw()
+
+        Returns
+        -------
+        class instance
+            self.data, self.model and self.template will be loaded.
+
+        See also
+        --------
+        from_setting:  loads an instance given model parameters (dict)            
+        """
+        this = cls()
+        if model is not None:
+            this.set_model(**model)
+
+        if template_source is not None:
+            self.set_template_source(template_source)
+            
+        _ = this.draw(size=size, **kwargs)
+        return this
+    
     # ------------- # 
     #   Template    #
     # ------------- #
@@ -36,7 +112,31 @@ class Target( object ):
         self._template = None
         
     def get_template(self, index=None, incl_dust=True, **kwargs):
-        """ template """
+        """ get a template (sncosmo.Model) 
+
+        Parameters
+        ----------
+        index: int, None
+            index of a target (see self.data.index) to set the 
+            template parameters to that of the target.
+            If None, the default sncosmo.Model parameters will be used.
+            
+        incl_dust: bool
+            should the template include the Milky Way dust extinction
+            parameters ?
+
+        *kwargs goes to seld.template.get() and passed to sncosmo.Model
+
+        Returns
+        -------
+        sncosmo.Model
+            an instance of the template (a sncosmo.Model)
+
+        See also
+        --------
+        get_target_template: get a template set to the target parameters.
+        get_template_parameters: get the template parameters for the given target
+        """
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
             kwargs = {**prop, **kwargs}
@@ -44,14 +144,62 @@ class Target( object ):
         return self.template.get(incl_dust=incl_dust, **kwargs)
 
     def get_target_template(self, index, incl_dust=True, **kwargs):
-        """ shortcut to get_template(index=index, incl_dust=incl_dust, **kwargs) """
+        """ get a template set to the target parameters.
+
+        This is a shortcut to 
+        ``get_template(index=index, incl_dust=incl_dust, **kwargs)``
+
+        Parameters
+        ----------
+        index: int
+            index of a target (see self.data.index) to set the 
+            template parameters to that of the target.
+            
+        incl_dust: bool
+            should the template include the Milky Way dust extinction
+            parameters ?
+
+        *kwargs goes to seld.template.get() and passed to sncosmo.Model
+
+        Returns
+        -------
+        sncosmo.Model
+            an instance of the template (a sncosmo.Model)
+
+        See also
+        --------
+        get_template: get a template instance (sncosmo.Model)
+        get_template_parameters: get the template parameters for the given target
+
+        """
         return self.get_template(index=index, incl_dust=incl_dust, **kwargs)
 
     # -------------- #
     #   Getter       #
     # -------------- #
     def get_template_parameters(self, index=None):
-        """ """
+        """ get the template parameters for the given target 
+        
+        This method selects from self.data the parameters that actually
+        are parameters of the template (and disregards the rest).
+
+
+        Parameters
+        ----------
+        index: int, None
+            index of a target (see self.data.index) to get the 
+            template parameters from that target only.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.Series
+            depending of index
+
+        See also
+        --------
+        template_parameter: parameters of the template (sncosmo.Model) | argument
+        get_template: get a template instance (sncosmo.Model)
+        """
         known = self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
         prop = self.data[known]
         if index is not None:
@@ -63,7 +211,26 @@ class Target( object ):
     #   Converts     #
     # -------------- #
     def magabs_to_magobs(self, z, magabs, cosmology=None):
-        """ converts the absolute magnitude into a cosmology """
+        """ converts absolute magnitude into observed magnitude 
+        given the (cosmological) redshift and a cosmology 
+
+        Parameters
+        ----------
+        z: float, array
+            cosmological redshift
+            
+        magabs: float, array
+            absolute magnitude
+
+        cosmology: astropy.Cosmology, None
+            cosmology to use. If None given, this will use
+            the cosmology from self.cosmology (Planck18 by default)
+
+        Returns
+        -------
+        array
+            array of observed magnitude (``distmod(z)+magabs``)
+        """
         if cosmology is None:
             cosmology = self.cosmology
 
@@ -71,14 +238,54 @@ class Target( object ):
     
     @staticmethod
     def _magabs_to_magobs(z, magabs, cosmology):
-        """ distmod(z) + Mabs """
+        """ converts absolute magnitude into observed magnitude 
+        given the (cosmological) redshift and a cosmology 
+
+        = internal method =
+
+        Parameters
+        ----------
+        z: float, array
+            cosmological redshift
+            
+        magabs: float, array
+            absolute magnitude
+
+        cosmology: astropy.Cosmology
+            cosmology to use. If None given, this will use
+            the cosmology from self.cosmology (Planck18 by default)
+
+        Returns
+        -------
+        array
+            array of observed magnitude (``distmod(z)+magabs``)
+        
+        """
         return cosmology.distmod(np.asarray(z)).value + magabs
     
     # -------------- #
     #   Model        #
     # -------------- #
     def set_model(self, **kwargs):
-        """ """
+        """ set the target model 
+
+        what template parameters to draw and how they are connected 
+
+        = It is unlikely you need to use that directly. =
+
+        Parameters
+        ----------
+        **kwargs stored as model
+
+        Returns
+        -------
+        None
+
+        See also
+        --------
+        from_setting: loads an instance given model parameters (dict)
+        from_draw: loads and draw random data.
+        """
         self._model = kwargs
         
     def get_model(self, **kwargs):

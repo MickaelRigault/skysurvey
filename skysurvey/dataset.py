@@ -12,11 +12,35 @@ from astropy.table import Table
 from .template import Template
 
 
-__all__ = ["DataSet"]
+__all__ = ["DataSet", "get_obsdata"]
 
 
 def get_obsdata(template, observations, parameters, zpsys="ab"):
-    """ """
+    """ get observed data using ``sncosmo.realize_lcs()``
+
+    Parameters
+    ----------
+    template: sncosmo.Model
+        an sncosmo model from which we can draw observations
+        (passed to 
+        
+    observations: pandas.DataFrame
+        Dataframe containing the observing infortation.
+        requested entries: TBD
+    
+    parameters: pandas.DataFrame
+        Dataframe containing the target parameters information.
+        These depend on you model. 
+
+    Returns
+    -------
+    MultiIndex DataFrame
+        all the observations for all targets
+
+    See also
+    --------
+    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
+    """
     # observation of that field
     if "zpsys" not in observations:
         observations["zpsys"] = zpsys
@@ -58,7 +82,7 @@ class DataSet( object ):
         
     @classmethod
     def from_targets_and_survey(cls, targets, survey, 
-                                use_dask=True, client=None, 
+                                use_dask=False, client=None, 
                                 targetsdata_inplace=False):
         """ """
         fieldids, per_fieldid = cls._realize_lc_perfieldid_from_survey_and_target(targets, survey, 
@@ -112,11 +136,11 @@ class DataSet( object ):
     # -------- #
     #  GETTER  #
     # -------- #
-    def get_ndetection(self, detlimit=5, perband=False):
-        """ get the number of detection (flux/fluxerr)>detlimit per observed target (and perband if perband=True). """
+    def get_ndetection(self, detlimit=5, per_band=False):
+        """ get the number of detection (flux/fluxerr)>detlimit per observed target (and per_band if per_band=True). """
         data = self.data.copy()
         data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
-        if perband:
+        if per_band:
             ndetection = data.reset_index().set_index(["level_0","level_1","band"]).groupby(level=[0,2])["detected"].sum()
         else:
             ndetection = data.groupby(level=0)["detected"].sum()
@@ -202,7 +226,7 @@ class DataSet( object ):
                 results.append(result_meta)
 
             else:
-                result, meta = model.fit_data(data_to_fit,  **prop)
+                result, meta = template.fit_data(data_to_fit,  **prop)
                 results.append(result)
                 metas.append(meta)
 
@@ -282,7 +306,7 @@ class DataSet( object ):
     # -------------- #
     @staticmethod
     def _realize_lc_perfieldid_from_survey_and_target(targets, survey, template_source=None,
-                                                      use_dask=True, inplace=False, template_prop={}):
+                                                      use_dask=False, inplace=False, template_prop={}):
         """ """
         if use_dask:
             import dask

@@ -7,7 +7,23 @@ import healpy as hp
 
 
 def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
-    """ """
+    """ get the healpix pixel index (ipix) that are with a given ra and dec range
+
+    Parameters
+    ----------
+    ra_range, dec_range: 2d-array, None
+        min and max to define a coordinate range to be considered.
+        None means no limit.
+
+    in_rad: bool
+        are the ra and dec coordinates in radian (True)
+        or degree (False)
+
+    Returns
+    -------
+    list
+        list of healpix pixel index ipix
+    """
     npix = hp.nside2npix(nside)
     pixs = np.arange(npix) # list of all healpix pixels
     if ra_range is None and dec_range is None:
@@ -42,13 +58,36 @@ def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
 class HealpixSurvey( Survey ):
     
     def __init__(self, nside, data=None):
-        """ """
+        """ 
+        See also
+        --------
+        from_data: loads the instance given observing data.
+        from_random: generate random observing data and loads the instance.
+        """
         super().__init__(data)
         self._nside = nside
         
     @classmethod
     def from_data(cls, nside, data):
-        """ """
+        """ load an instance given survey data and healpix size (nside) 
+        
+        Parameters
+        ----------
+        nside : int
+            healpix nside parameter
+
+        data: pandas.DataFrame
+            observing data.
+
+        Returns
+        -------
+        class instance
+
+        See also
+        --------
+        from_random: generate random observing data and loads the instance.
+        
+        """
         return cls(nside=nside, data=data)
 
     @classmethod
@@ -56,7 +95,29 @@ class HealpixSurvey( Survey ):
                     bands,  
                     mjd_range, skynoise_range,
                     ra_range=None, dec_range=None, **kwargs):
-        """ """
+        """ 
+
+        Parameters
+        ----------
+        nside : int
+            healpix nside parameter
+
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        ra_range, dec_range: 2d-array, None
+            min and max to define a coordinate range to be considered.
+            None means no limit.
+        
+        **kwargs goes to the draw_random() method
+
+        Returns
+        -------
+        class instance
+        """
         this = cls(nside=nside)
         this.draw_random(size,  bands,  
                         mjd_range, skynoise_range, 
@@ -71,8 +132,8 @@ class HealpixSurvey( Survey ):
     #  core   #
     # ------- #
     def radec_to_fieldid(self, ra, dec):
-        """ """
-        return hp.ang2pix(self.nside, (90 - dec) * np.pi/180, ra * np.pi/180)
+        """ get the fieldid of the given (list of) coordinates """
+        return hp.ang2pix(self.nside, (90 - ra) * np.pi/180, dec * np.pi/180)
 
     # ------- #
     #  draw   #
@@ -82,7 +143,45 @@ class HealpixSurvey( Survey ):
                     gain_range=1, zp_range=25,
                     ra_range=None, dec_range=None,
                     inplace=False, nside=None, **kwargs):
-        """ """
+        """ draw observations 
+
+        Parameters
+        ----------
+
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        ra_range, dec_range: 2d-array, None
+            min and max to define a coordinate range to be considered.
+            None means no limit.
+
+        skynoise_range, gain_range, zp_range: 2d-array, float, int
+            range to be considered.
+            If float or int, this value will always be used.
+            otherwise, uniform distribution between the range assumed.
+
+        inplace: bool
+            shall this method replace the current self.data or
+            return a new instance of the class with the 
+            generated observing data.
+            
+        nside: int
+            = ignore if inplace is set to True =
+            provide a new healpix nside parameters.
+
+        Returns
+        -------
+        class instance or None
+            see the inplace option.
+
+        See also
+        --------
+        from_random: generate random observing data and loads the instance.
+        set_data: set the observing data to the instance.
+        """
         if nside is None: # don't change nside
             nside = self.nside
             
@@ -101,15 +200,43 @@ class HealpixSurvey( Survey ):
 
         self.set_data(data)
         
-        
-        
     # ----------- #
     #  PLOTTER    #
     # ----------- #
     def show(self, stat='size', column=None, title=None, data=None, **kwargs):
-        """ shows the sky coverage """
+        """ shows the sky coverage using ``healpy.mollview`` 
+
+        Parameters
+        ----------
+        stat: str
+            element to be passed to groupby.agg() 
+            could be e.g.: 'mean', 'std' etc.
+            If stat = 'size', this returns data["fieldid"].value_counts()
+            (slightly faster than groupby("fieldid").size()).
+
+        columns: str
+            column of the dataframe the stat should be applied to.
+            = ignored if stat='size' = 
+
+        title: str
+            title of the healpy.mollview plot.
+            (healpy.mollview option)
+        
+        data: pandas.DataFrame, None
+            data you want this to be applied to.
+            if None, a copy of self.data is used.
+            = leave to None if unsure =
+            
+        Returns
+        -------
+        None
+        
+        See also
+        --------
+        get_fieldstat: get observing statistics for the fields
+        """
         data = self.get_fieldstat(stat=stat, columns=column, incl_zeros=True, fillna=np.NaN, data=data)
-        hp.mollview(data, title=title, **kwargs)
+        return hp.mollview(data, title=title, **kwargs)
         
     # ============== #
     # Static Methods #
@@ -121,8 +248,46 @@ class HealpixSurvey( Survey ):
                      gain_range=1,
                      zp_range=[27,30],
                      ra_range=None, dec_range=None):
-        """ 
-        *_range can be 2d-array [min, max] or single values. 
+        """ draw observations = internal =
+
+        Parameters
+        ----------
+        nside : int
+            healpix nside parameter
+
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        ra_range, dec_range: 2d-array, None
+            min and max to define a coordinate range to be considered.
+            None means no limit.
+
+        skynoise_range, gain_range, zp_range: 2d-array, float, int
+            range to be considered.
+            If float or int, this value will always be used.
+            otherwise, uniform distribution between the range assumed.
+
+        inplace: bool
+            shall this method replace the current self.data or
+            return a new instance of the class with the 
+            generated observing data.
+            
+        nside: int
+            = ignore if inplace is set to True =
+            provide a new healpix nside parameters.
+
+        Returns
+        -------
+        class instance or None
+            see the inplace option.
+
+        See also
+        --------
+        from_random: generate random observing data and loads the instance.
+        draw_random: main function calling _draw_random
         """
         # np.resize(1, 2) -> [1,1]
         mjd = np.random.uniform(*np.resize(mjd_range,2), size=size)
@@ -151,12 +316,12 @@ class HealpixSurvey( Survey ):
     # ============== #
     @property
     def nside(self):
-        """ dataframe containing what has been observed when """
+        """ healpix nside parameter (defines the 'fields' size and number) """
         return self._nside
     
     @property
     def nfields(self):
-        """ shortcut to npix """
+        """ number of fields (shortcut to npix) """
         return self.npix
     
     @property    
@@ -170,7 +335,7 @@ class HealpixSurvey( Survey ):
     
     @property
     def metadata(self):
-        """ """
+        """ pandas Series containing meta data i formation """
         meta = super().metadata
         meta["nside"] = self.nside
         return meta
