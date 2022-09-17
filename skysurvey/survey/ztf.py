@@ -1,11 +1,11 @@
-from .polygon import PolygonSurvey
+from .polygon import Survey
 from ztfquery.fields import get_field_vertices
 
 ZTF_FIELDS = get_field_vertices(as_dict=True)
 
 __all__ = ["ZTF"]
 
-class ZTF( PolygonSurvey ):
+class ZTF( Survey ):
     _DEFAULT_FIELDS  = ZTF_FIELDS
     
     @classmethod

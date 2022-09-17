@@ -2,7 +2,9 @@ import warnings
 import numpy as np
 import pandas
 
-class Survey( object ):
+__all__ = [] # no import when 'import *'
+
+class BaseSurvey( object ):
     
     REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', 'fieldid', "gain", "zp"]
     
@@ -38,6 +40,7 @@ class Survey( object ):
         """
         if data is not None and not np.in1d(self.REQUIRED_COLUMNS, data.columns).all():
             raise ValueError(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
+        
         self._data = data
         
     # ------------ #

@@ -5,8 +5,10 @@ import numpy as np
 import geopandas
 from shapely import geometry
 
-from .core import Survey
+from .core import BaseSurvey
 
+
+__all__ = ["Survey"] # PolygonSurvey renamed Survey as it is the normal used case.
 
 
 def spatialjoin_radec_to_fields(radec, fields, how="inner", predicate="intersects",
@@ -193,7 +195,7 @@ def regions_to_shapely(region):
 #    Polygon         #
 #                    #
 # ================== #
-class PolygonSurvey( Survey ):
+class Survey( BaseSurvey ):
     _DEFAULT_FIELDS = None
     
     def __init__(self, data=None, fields=None):
@@ -311,6 +313,7 @@ class PolygonSurvey( Survey ):
 
     @property
     def fieldids(self):
+        """ list of fields id """
         return self.fields["fieldid"].values
     
     @property
@@ -324,3 +327,4 @@ class PolygonSurvey( Survey ):
         # ready to be changed.
         meta = super().metadata
         return meta
+

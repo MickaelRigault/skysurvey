@@ -1,9 +1,11 @@
-from .core import Survey
+from .core import BaseSurvey
 
 import pandas
 import numpy as np
 import healpy as hp
 
+
+__all__ = ["HealpixSurvey"]
 
 
 def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
@@ -55,7 +57,7 @@ def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
 #    Healpix         #
 #                    #
 # ================== #
-class HealpixSurvey( Survey ):
+class HealpixSurvey( BaseSurvey ):
     
     def __init__(self, nside, data=None):
         """ 
