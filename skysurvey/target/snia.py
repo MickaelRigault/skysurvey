@@ -8,9 +8,9 @@ class SNeIa( Transient ):
     _KIND = "SNIa"
     _TEMPLATE_SOURCE = "salt2"
     _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
-    
-    _MODEL = dict( redshift ={"prop":{"zmax":0.2},
-                              "as":"z"},
+
+    # {'model': func, 'prop': dict, 'input':, 'as':}
+    _MODEL = dict( redshift ={"prop":{"zmax":0.2}, "as":"z"},
                               
                    x1={"model":"nicolas2021"}, 
                    
@@ -20,9 +20,8 @@ class SNeIa( Transient ):
                        "prop":{"mjd_range":[59000, 59000+365*4]} },
                        
                    magabs={"model":"tripp1998",
-                           "input":["x1","c"],
-                           "prop":{"size":None}},
-                           
+                           "input":["x1","c"]
+                          },
                            
                    magobs={"model":"magabs_to_magobs",
                          "input":["z", "magabs"]},

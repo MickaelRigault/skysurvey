@@ -11,6 +11,11 @@ from .. import sampling
 from ..template import Template
 
 
+
+class 
+
+
+
 class Target( object ):
     """ """
     _KIND = "unknow"
