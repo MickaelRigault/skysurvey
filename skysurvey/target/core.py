@@ -30,7 +30,6 @@ class Target( object ):
         See also
         --------
         from_setting: loads an instance given model parameters (dict)
-
         """
 
     def __repr__(self):
