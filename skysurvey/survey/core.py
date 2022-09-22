@@ -2,7 +2,7 @@ import warnings
 import numpy as np
 import pandas
 
-__all__ = [] # no import when 'import *'
+__all__ = ["BaseSurvey"] # no import when 'import *'
 
 class BaseSurvey( object ):
     
@@ -179,4 +179,3 @@ class BaseSurvey( object ):
     def of_type(self):
         """ kind of survey that is """
         return str(type(self)).split("'")[-2].split(".")[-1]
-

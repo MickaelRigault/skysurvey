@@ -1,45 +1,15 @@
-skysurvey package
-===========================
+.. currentmodule:: skysurvey
 
-Survey
--------------------------------------
-           
-.. automodule:: skysurvey.survey
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Targets
--------------------------------------
-	   
-.. automodule:: skysurvey.target
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-      
-Sampling
--------------------------------------
-	   
-.. automodule:: skysurvey.sampling
-   :members:
-   :undoc-members:
-   :show-inheritance:
+The API
+=======================
 
 
-DataSet
--------------------------------------
-	   
-.. automodule:: skysurvey.dataset
-   :members:
-   :undoc-members:
-   :show-inheritance:
+Subpackages
+-----------
 
-      
-Module contents
----------------
+.. toctree::
+    :maxdepth: 1
 
-.. automodule:: skysurvey
-   :members:
-   :undoc-members:
-   :show-inheritance:
+    skysurvey.dataset
+    skysurvey.target
+    skysurvey.survey

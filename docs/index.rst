@@ -1,29 +1,37 @@
-.. skysurvey documentation master file, created by
-   sphinx-quickstart on Wed Sep 14 10:39:23 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 skysurvey documentation
 ================
+
+skysurvey is a generic package to simulate transients as observed by a
+survey. It is a modern implementation of simsurvey_ that aims at
+speed-up and simplify the code.
 
 .. toctree::
    :maxdepth: 1
    :caption: Getting Starting
-	     
-   notebooks/quickstart_target
-   notebooks/quickstart_survey
-   notebooks/quickstart_survey_target_dataset
 
+   installation	     
    
 .. toctree::
    :maxdepth: 1
-   :caption: Package
-	     
-  skysurvey
-  
+   :caption: How to
+	      
+   quickstart/index
+   advanced/index
+   
+.. toctree::
+   :maxdepth: 2
+   :caption: API documentation
+
+   skysurvey
+   
+   
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+
+
+.. _simsurvey: https://simsurvey.readthedocs.io/en/latest/index.html

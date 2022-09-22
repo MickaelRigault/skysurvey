@@ -262,8 +262,6 @@ class DataSet( object ):
         --------
         from_targets_and_survey: loads a dataset (observed data) given targets and survey
         """
-        self._targets = targets
-
         self._survey = survey
 
     # -------- #

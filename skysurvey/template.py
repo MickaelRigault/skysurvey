@@ -8,10 +8,29 @@ from astropy.utils.decorators import classproperty
 
 __all__ = ["get_sncosmo_template", "Template"]
 
-def get_sncosmo_template(source="salt2", 
-                      incl_dust=True, 
-                      **params):
-    """ """
+def get_sncosmo_template(source="salt2",
+                             incl_dust=True, 
+                             **params):
+    """ get the template (sncosmo.Model)
+
+    Parameters
+    ----------
+    source : `~sncosmo.Source` or str
+        The model for the spectral evolution of the source. If a string
+        is given, it is used to retrieve a `~sncosmo.Source` from
+        the registry.
+
+    incl_dust: bool
+        shall this add the dust modeling offset ? 
+        (CCM89Dust)
+
+    **kwargs goes to model.set() to change the parameter's model
+
+    Returns
+    -------
+    `sncosmo.Model`
+        the sncosmo.Model template
+    """
     modelprop = dict(source=source)
     if incl_dust:
         dust  = sncosmo.CCM89Dust()
@@ -281,7 +300,7 @@ class Template( object ):
 
 class GridTemplate( Template ):
 
-    _GRID_OF = AngularTimeSeriesSource
+    _GRID_OF = None #AngularTimeSeriesSource
     
     @classmethod
     def _read_single_file(filename, sncosmo_source):

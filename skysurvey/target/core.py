@@ -1,19 +1,15 @@
 import warnings
 import numpy as np
 import pandas
-
+import inspect
 from astropy import cosmology
+from astropy.utils.decorators import classproperty
 
 __all__ = ["Target", "Transient"]
 
 
 from .. import sampling
 from ..template import Template
-
-
-
-class 
-
 
 
 class Target( object ):
@@ -345,7 +341,7 @@ class Target( object ):
         
         for param_name, param_model in model.items():
             # Default kwargs given
-            if (inprop := param_model.get("prop", {})) is None:
+            if (inprop := param_model.get("param", {})) is None:
                 inprop = {}
 
             # set the model ; this overwrite prop['model'] but that make sense.
@@ -375,25 +371,40 @@ class Target( object ):
 
     def draw_param(self, name, model=None, size=None, xx=None, **kwargs):
         """ """
-        if model is not None and hasattr(self, model):
-            return getattr(self, model)(**kwargs)
-        
-        if hasattr(self, f"draw_{name}"):
-            if model is not None:
-                kwargs["model"] = model # handle draw_{name} with no model
-            return getattr(self,f"draw_{name}")(size=size, **kwargs)
-        
-        return eval(f"sampling.Sampling_{name}").draw(model, size=size, xx=xx, **kwargs)
+
+        # Flexible origin of the sampling method
+        if type(model) == str or model is None:
+            if model is not None and hasattr(self, model):
+                func = getattr(self, model)
+            elif hasattr(self, f"draw_{name}"):
+                func = getattr(self,f"draw_{name}")
+            else:
+                func = eval(f"sampling.Sampling_{name}.draw")
+        else:
+            func = model # you provided the model directly
+        try:
+            func_arguments = list(inspect.getfullargspec(func).args)
+        except: # fail for Cython functions
+            func_arguments = ["size"] # let's assume this as for numpy.random or scipy.
+        prop = {}
+        if "size" in func_arguments:
+            prop["size"] = size
+        if "model" in func_arguments:
+            prop["model"] = model
+        if "xx" in func_arguments:
+            prop["xx"] = xx
+            
+        return func(**{**prop, **kwargs})
 
     # ============== #
     #   Properties   #
     # ============== #  
-    @property
+    @classproperty
     def kind(self):
         """ """
         return self._KIND
             
-    @property
+    @classproperty
     def cosmology(self):
         """ """
         return self._COSMOLOGY
@@ -443,7 +454,53 @@ class Target( object ):
 
     
 class Transient( Target ):
-    # - Transient    
+    # - Transient
+
+    """
+
+
+    # How to create a new Transient
+
+    ```python
+    class NewTransient( Transient ):
+        _KIND = "SNnew" # you can set that. self.kind will call it.
+        _TEMPLATE_SOURCE = "salt2" # needed with merged to a survey (to generate LC)
+        _VOLUME_RATE = 1 * 10**3 # defined how the redshift is drawn
+
+        _MODEL = dict( # Draw variable from a very simple method (only needs size as param).
+                       magabs = {"model":"my_defined_method"},
+
+                       # draw_redshift is defined for Transients
+                       redshift = {"param":{"zmax":0.2},  "as":"z"}, # you can change the stored variable name.
+
+                       # use a func drawing variables directly (e.g. numpy.random. )
+                       noise = {"model": np.random.normal, 
+                                "param":{"loc":0, "scale":0.5}},
+
+                       # use one of the few pre-defined method e.g., magabs_to_magobs 
+                        magobs = {"model": "magabs_to_magobs", 
+                                    "input":["z","magabs"]}, # "magabs_to_magobs has 2 mandatory inputs"
+
+                        bias = {"model":np.random.uniform, 
+                                "param":{"low":-1, "high":+1}},
+
+                        # Create a complexe method that needs input.
+                        magobs_eff = {"model": "my_method_needs_input", 
+                                        "input":["magobs","bias"]},# "my_method_needs_input has 2 mandatory inputs"
+
+                     )
+
+        def my_defined_method(self, size=None, boundaries=[-14,-18]):
+            return np.random.uniform(*boundaries, size=size)
+
+        # remark here, no size, it will be that of p1 and noise
+        def my_method_needs_input(self, magobs, bias):
+            return magobs+bias
+    ```
+
+    """
+
+    
     _VOLUME_RATE = None    
     
     # ============== #
@@ -536,7 +593,7 @@ class Transient( Target ):
     #   Properties   #
     # ============== #  
     # Rate
-    @property
+    @classproperty
     def volume_rate(self):
         """ volumetric rate in Gpc-3 / yr-1 """
         return self._VOLUME_RATE

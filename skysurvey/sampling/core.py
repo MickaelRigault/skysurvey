@@ -1,7 +1,7 @@
 """ Core Sampling library """
 
 import numpy as np
-
+import inspect
 
 class Sampling( object ):
     """ 
@@ -46,7 +46,11 @@ class Sampling( object ):
     def draw(cls, model, size=None, xx=None, **kwargs):
         """ """
         if hasattr(cls,f"{model}"):
-            return getattr(cls, model)(size=size, **kwargs)
+            func = getattr(cls, model)
+            if "size" in list(inspect.getfullargspec(func).args):
+                kwargs["size"] = size
+            return func(**kwargs)
+        
         elif hasattr(cls,f"getpdf_{model}"):
             return cls._draw_from_pdf(model, size=size, xx=xx, **kwargs)
         else:
