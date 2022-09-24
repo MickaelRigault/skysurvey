@@ -68,8 +68,8 @@ Dataset
 
 **Join target and survey to create realisitc lightcurves.**
 
-Finally, the  ``DataSet`` takes a ``target`` and a ``survey`` and
-knows how to match target with fieldid and thereby to create
+Finally, the  ``DataSet`` takes a ``target`` and a ``survey`` as input
+and knows how to match target with fieldid and thereby how to create
 lightcurves given the observing conditions of the survey.
 
 .. seealso:: 
