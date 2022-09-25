@@ -24,7 +24,8 @@ class SNeIa( Transient ):
                        "param":{"mjd_range":[59000, 59000+365*4]} },
                        
                    magabs={"model":"tripp1998",
-                           "input":["x1","c"]
+                           "input":["x1","c"],
+                           "param":{"mabs":-19.3, "sigmaint":0.10}
                           },
                            
                    magobs={"model":"magabs_to_magobs",
