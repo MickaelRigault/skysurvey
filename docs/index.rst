@@ -77,7 +77,62 @@ lightcurves given the observing conditions of the survey.
    `quickstart with dataset
    <quickstart/quickstart_survey_target_dataset.ipynb>`_  •
    `lightcurve fit <quickstart/quickstart_survey.ipynb>`_
-     
+
+Sharp start
+=======
+
+You need to create a `Transient` object (or child of) and a `Survey`
+object (or child of) and then to simulate how your survey would observe
+your targets. This latter is called a `DataSet`.
+
+
+Step 1: transients
+------------
+
+**Draw the 'truth'**
+
+..  code-block:: python
+		 
+    from skysurvey import target
+    snia = target.SNeIa() # create a pre-defined SN Ia target object
+    data = snia.draw(size=5000) # and draw 5000 of them (you have many options)
+    data.head(5) # data also stored in snia.data
+    
+
+Step 2: survey
+-----------
+
+**Provide what has been observed and when (here randomly drawn)**
+
+..  code-block:: python
+		 
+    from skysurvey import survey
+    # Say I what a ztf-fields survey, observing 1000 fields per day for 4 years
+    # Let get the starting date from the data
+    starting_date = snia.data["t0"].min()-50 # 50 days before the first target, no need to simulate a survey before that
+
+    # and this is a much-simplified version of ZTF (independent random draws)
+    ztf = survey.ZTF.from_random(size=365*4*1000, # number of observation 
+                       bands=["ztfg","ztfr","ztfi"], # band to observed
+                       mjd_range=[starting_date, starting_date+365*4], # timerange of observation
+                       skynoise_range=[10,20], # sky noise
+                     )
+    ztf.data.head(5)
+
+Step 3: dataset 
+------------
+
+**And get the lightcurve you should have**
+
+..  code-block:: python
+		 
+    from survey import dataset
+    dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30s on a laptop for ~5000 targets
+    dset.data
+    # your survey (here ztf) is stored in dset.survey
+    # your targets (here snia) is stored in dset.targets
+
+   
 Documentation
 =========
 
