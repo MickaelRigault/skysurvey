@@ -1,4 +1,4 @@
-__version__ = "0.3.2.dev"
+__version__ = "0.3.3"
 
 from .dataset import *
 
