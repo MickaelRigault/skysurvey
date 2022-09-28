@@ -62,7 +62,7 @@ class Target( object ):
 
 
     @classmethod
-    def from_draw(cls, size=None, model=None, =None, **kwargs):
+    def from_draw(cls, size=None, model=None, template=None, **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
         Parameters
@@ -331,8 +331,11 @@ class Target( object ):
     # =============== #
     #   Draw Methods  #
     # =============== #
-    def draw(self, size=None,  **kwargs):
+    def draw(self, size=None, nyears=None, zmax=None **kwargs):
         """ core method based on _draw and draw_param """
+        if nyears is not None:
+            size = self.get_rate(zmax) *nyears
+        
         model = self.get_model(**kwargs)
         self._data = self._draw(model, size=size)
         return self._data
