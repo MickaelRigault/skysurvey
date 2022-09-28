@@ -11,7 +11,7 @@ class SNeIa( Transient ):
 
     _KIND = "SNIa"
     _TEMPLATE = "salt2"
-    _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
+    _RATE = 2.35 * 10**4 # Perley 2020
 
     # {'model': func, 'prop': dict, 'input':, 'as':}
     _MODEL = dict( redshift ={"param":{"zmax":0.2}, "as":"z"},

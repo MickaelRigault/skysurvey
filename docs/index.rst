@@ -97,9 +97,18 @@ Step 1: transients
     snia = target.SNeIa() # create a pre-defined SN Ia target object
     data = snia.draw(size=5000) # and draw 5000 of them (you have many options)
     data.head(5) # data also stored in snia.data
-    
 
-Step 2: survey
+ you can also generate any kind of sncosmo "TimeSerieSource" based
+ transient [see list here](https://sncosmo.readthedocs.io/en/stable/source-list.html))
+Let's say, for instance the Type-IIb model ("v19-2013df")
+ 
+..  code-block:: python
+		 
+    from skysurvey import target
+    snIIb = target.TSTransient.from("v19-2013df", size=5000)
+
+
+ Step 2: survey
 -----------
 
 **Provide what has been observed and when (here randomly drawn)**

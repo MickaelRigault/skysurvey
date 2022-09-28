@@ -9,13 +9,13 @@ class TSTransient( Transient ):
     This model will generate a Transient object from
     any TimeSerieSource model from sncosmo.
     [see](https://sncosmo.readthedocs.io/en/stable/source-list.html)
-    
 
     Example
     -------
     >>> snii = TSTransient.from_draw("snana-2004fe", 4000)
     >>> _ = snii.show_lightcurve(["ztfg","ztfr"], index=10, in_mag=True)
     """
+    
     _MODEL = dict( redshift = {"param":{"zmax":0.05}, 
                                "as":"z"},
                    t0 = {"model":np.random.uniform,
@@ -30,12 +30,13 @@ class TSTransient( Transient ):
                    radec={"model":"random",
                           "as":["ra","dec"]}
                  )
+    
     @classmethod
     def from_sncosmo_source(cls, source, rate=1e-3, model=None):
         """ """
         this = cls()
         this.set_template(source)
-        this._volume_rate = rate
+        this._rate = rate
         if model is not None:
             self._model = model
             

@@ -331,7 +331,8 @@ class Target( object ):
     # =============== #
     #   Draw Methods  #
     # =============== #
-    def draw(self, size=None, nyears=None, zmax=None **kwargs):
+    def draw(self, size=None, nyears=None,
+                 zmax=None, **kwargs):
         """ core method based on _draw and draw_param """
         if nyears is not None:
             size = self.get_rate(zmax) *nyears
@@ -470,7 +471,7 @@ class Transient( Target ):
     class NewTransient( Transient ):
         _KIND = "SNnew" # you can set that. self.kind will call it.
         _TEMPLATE_SOURCE = "salt2" # needed with merged to a survey (to generate LC)
-        _VOLUME_RATE = 1 * 10**3 # defined how the redshift is drawn
+        _RATE = 1 * 10**3 # defined how the redshift is drawn
 
         _MODEL = dict( # Draw variable from a very simple method (only needs size as param).
                        magabs = {"model":"my_defined_method"},
@@ -504,7 +505,7 @@ class Transient( Target ):
     ```
 
     """
-    _VOLUME_RATE = None    
+    _RATE = None    
     
     # ============== #
     #  Methods       #
@@ -517,13 +518,13 @@ class Transient( Target ):
     
     def get_rate(self, z, **kwargs):
         """ """
-        if self.volume_rate is not None:
-            volume = self._COSMOLOGY.comoving_volume(z).to("Gpc**3").value 
-            z_rate = volume * self.volume_rate
-            return z_rate
+        if callable(self.rate):
+            return self.rate(z, **kwargs)
         
-        raise NotImplementedError("you must implement get_rate() or provide self._VOLUME_RATE for your transient.")
-
+        volume = self.cosmology.comoving_volume(z).to("Gpc**3").value
+        z_rate = volume * self.rate
+        return z_rate
+        
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None, params=None,
                            in_mag=False, zp=25, zpsys="ab"):
@@ -602,9 +603,11 @@ class Transient( Target ):
     # ============== #  
     # Rate
     @property
-    def volume_rate(self):
-        """ volumetric rate in Gpc-3 / yr-1 """
-        if not hasattr(self,"_volume_rate"):
-            self._volume_rate = self._VOLUME_RATE # default
+    def rate(self):
+        """ rate.
+        (If float, assumed to be volumetric rate in Gpc-3 / yr-1.)
+        """
+        if not hasattr(self,"_rate"):
+            self._rate = self._RATE # default
             
-        return self._volume_rate
+        return self._rate
