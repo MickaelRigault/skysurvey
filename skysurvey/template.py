@@ -1,5 +1,6 @@
 """ core template tools """
 
+import os
 import numpy as np
 import pandas
 import sncosmo
@@ -300,9 +301,9 @@ class Template( object ):
 
 class GridTemplate( Template ):
 
-    _GRID_OF = None #AngularTimeSeriesSource
+    _GRID_OF = sncosmo.TimeSeriesSource
     
-    @classmethod
+    @staticmethod
     def _read_single_file(filename, sncosmo_source):
         source = sncosmo_source.from_filename(filename)
         return Template.from_sncosmo_source(source)
@@ -350,10 +351,9 @@ class GridTemplate( Template ):
             params = {}
 
         params["grid_element"]= grid_element
-        props = locals()
-        _ = props.pop("self")
-        _ = props.pop("grid_element")
-        
+        props = {k:v for k,v in locals().items()
+                     if k not in ["self", "grid_element"]}
+        print(props)
         return super().get_lightcurve(**props)
     
     def fit_data(self, data, grid_element,
