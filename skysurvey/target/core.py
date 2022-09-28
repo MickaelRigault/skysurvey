@@ -15,7 +15,7 @@ from ..template import Template
 class Target( object ):
     """ """
     _KIND = "unknow"
-    _TEMPLATE_SOURCE = None
+    _TEMPLATE = None
     _MODEL = None # dict config 
     
     # - Cosmo
@@ -62,7 +62,7 @@ class Target( object ):
 
 
     @classmethod
-    def from_draw(cls, size=None, model=None, template_source=None, **kwargs):
+    def from_draw(cls, size=None, model=None, template=None, **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
         Parameters
@@ -78,7 +78,7 @@ class Target( object ):
 
         template_source: str, None
             name of the template (sncosmo.Model(source)). 
-            = leave to None if unsure, cls._TEMPLATE_SOURCE used as default =
+            = leave to None if unsure, cls._TEMPLATE used as default =
 
         **kwargs goes to self.draw()
 
@@ -95,8 +95,8 @@ class Target( object ):
         if model is not None:
             this.set_model(**model)
 
-        if template_source is not None:
-            self.set_template_source(template_source)
+        if template is not None:
+            self.set_template(template)
             
         _ = this.draw(size=size, **kwargs)
         return this
@@ -104,14 +104,25 @@ class Target( object ):
     # ------------- # 
     #   Template    #
     # ------------- #
-    def set_template_source(self, source):
-        """ set the template source (based on sncosmo.Model(source)
+    def set_template(self, template):
+        """ set the template 
+
+        Parameters
+        ----------
+        template: str, `sncosmo.Source`, `sncosmo.Model` or skysurvey.Template
         This will reset self.template to the new template source.
         """
-        self._template_source = source
-        self._template = None
+        import sncosmo
+        if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
+            template = Template.from_sncosmo_model(template) # let's build a skysurvey.Template
+        elif sncosmo.Source in template.__class__.__mro__ or type(template) is str: # you provided a source
+            template = Template.from_sncosmo_source(template) # let's build a skysurvey.Template
+        else:
+            pass # assume it's a template.
+            
+        self._template = template
         
-    def get_template(self, index=None, incl_dust=True, **kwargs):
+    def get_template(self, index=None, **kwargs):
         """ get a template (sncosmo.Model) 
 
         Parameters
@@ -121,10 +132,6 @@ class Target( object ):
             template parameters to that of the target.
             If None, the default sncosmo.Model parameters will be used.
             
-        incl_dust: bool
-            should the template include the Milky Way dust extinction
-            parameters ?
-
         *kwargs goes to seld.template.get() and passed to sncosmo.Model
 
         Returns
@@ -141,9 +148,9 @@ class Target( object ):
             prop = self.get_template_parameters(index).to_dict()
             kwargs = {**prop, **kwargs}
 
-        return self.template.get(incl_dust=incl_dust, **kwargs)
+        return self.template.get(**kwargs)
 
-    def get_target_template(self, index, incl_dust=True, **kwargs):
+    def get_target_template(self, index, **kwargs):
         """ get a template set to the target parameters.
 
         This is a shortcut to 
@@ -155,10 +162,6 @@ class Target( object ):
             index of a target (see self.data.index) to set the 
             template parameters to that of the target.
             
-        incl_dust: bool
-            should the template include the Milky Way dust extinction
-            parameters ?
-
         *kwargs goes to seld.template.get() and passed to sncosmo.Model
 
         Returns
@@ -172,7 +175,7 @@ class Target( object ):
         get_template_parameters: get the template parameters for the given target
 
         """
-        return self.get_template(index=index, incl_dust=incl_dust, **kwargs)
+        return self.get_template(index=index, **kwargs)
 
     # -------------- #
     #   Getter       #
@@ -430,16 +433,13 @@ class Target( object ):
     def template(self):
         """ """
         if not hasattr(self,"_template") or self._template is None:
-            self._template = Template(self.template_source)
+            self.set_template(self._TEMPLATE)
         return self._template
 
     @property
     def template_source(self):
         """ """
-        if not hasattr(self, "_template_source"):
-            self.set_template_source(self._TEMPLATE_SOURCE)
-            
-        return self._template_source
+        return self.template.source
 
     @property
     def template_parameters(self):

@@ -7,9 +7,9 @@ import sncosmo
 
 from astropy.utils.decorators import classproperty
 
-__all__ = ["get_sncosmo_template", "Template"]
+__all__ = ["get_sncosmo_model", "Template"]
 
-def get_sncosmo_template(source="salt2",
+def get_sncosmo_model(source="salt2",
                              incl_dust=True, 
                              **params):
     """ get the template (sncosmo.Model)
@@ -76,22 +76,37 @@ def sncosmoresult_to_pandas(result):
 # =============== #
 class Template( object ):
 
-    def __init__(self, source):
+    def __init__(self, sncosmo_model):
         """ """
-        self._source = source
+        self._sncosmo_model = sncosmo_model
 
     @classmethod
-    def from_sncosmo_source(cls, source):
-        """ """
+    def from_sncosmo_source(cls, source, incl_dust=True, **kwargs):
+        """ 
+        loads the instance given the source name.
+
+        Parameters
+        ----------
+        source : `~sncosmo.Source` or str
+            The model for the spectral evolution of the source. If a string
+            is given, it is used to retrieve a `~sncosmo.Source` from
+            the registry.
+
+        **kwargs goes to ``get_sncosmo_model(source, **kwargs)``
+
+        Returns
+        -------
+        instance
+        """
         # useless for now but I may change things in init.
-        return cls(source)
+        sncosmo_model = get_sncosmo_model(source, incl_dust=incl_dust,
+                                          **kwargs)
+        return cls(sncosmo_model)
     
     @classmethod
     def from_sncosmo_model(cls, model):
         """ """
-        this = cls(model.source.name)
-        this._hsncosmo_model = model
-        return this
+        return cls(model)
     
     # ============== #
     #   Methods      #
@@ -99,16 +114,14 @@ class Template( object ):
     # -------- #
     #  GETTER  #
     # -------- #
-    def get(self, incl_dust=True, **kwargs):
-        """ return a sncosmo model for the template's source name (self.source) """
-        return self._get(self.source, incl_dust=incl_dust, **kwargs)
+    def get(self,**kwargs):
+        """ return a copy of the model you can set new parameter with the options """
+        from copy import deepcopy
+        model = deepcopy(self.sncosmo_model)
+        if kwargs:
+            model.set(**kwargs)
+        return model
     
-    @staticmethod
-    def _get(source, incl_dust=True, **kwargs):
-        return get_sncosmo_template(source=source, 
-                                    incl_dust=incl_dust, 
-                                   **kwargs)
-
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, params=None,
                            in_mag=False, zp=25, zpsys="ab"):
@@ -133,7 +146,8 @@ class Template( object ):
         
         # in flux
         if not in_mag:
-            values = sncosmo_model.bandflux(band_, times_, zp=zp, zpsys=zpsys).reshape( len(band),len(times) )
+            values = sncosmo_model.bandflux(band_, times_, zp=zp, zpsys=zpsys
+                                            ).reshape( len(band),len(times) )
         # in mag
         else:                
             values = sncosmo_model.bandmag(band_, zpsys, times_).reshape( len(band),len(times) )
@@ -272,30 +286,28 @@ class Template( object ):
     @property
     def source(self):
         """ """
-        return self._source
+        return self.sncosmo_model.source
     
     @property
-    def _sncosmo_model(self):
+    def sncosmo_model(self):
         """ hiden sncosmo_model model to check what's inside. 
         """
-        if not hasattr(self,"_hsncosmo_model"):
-            self._hsncosmo_model = self.get()
-        return self._hsncosmo_model
+        return self._sncosmo_model
         
     @property
     def parameters(self):
         """ """
-        return self._sncosmo_model.param_names
+        return self.sncosmo_model.param_names
     
     @property
     def effect_parameters(self):
         """ """
-        return self._sncosmo_model.effect_names        
+        return self.sncosmo_model.effect_names        
 
     @property
     def core_parameters(self):
         """ """
-        return self._sncosmo_model.source.param_names
+        return self.sncosmo_model.source.param_names
 
 
 

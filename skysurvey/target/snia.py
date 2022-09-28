@@ -10,7 +10,7 @@ __all__ = ["SNeIa"]
 class SNeIa( Transient ):
 
     _KIND = "SNIa"
-    _TEMPLATE_SOURCE = "salt2"
+    _TEMPLATE = "salt2"
     _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
 
     # {'model': func, 'prop': dict, 'input':, 'as':}
