@@ -19,12 +19,14 @@ class SNeIa( Transient ):
                    x1={"model":"nicolas2021"}, 
                    
                    c={"model":"intrinsic_and_dust"},
+                  
+                   host_mass={"model":"asymetric_gaussian"},
 
                    t0={"model":"uniform", 
                        "param":{"mjd_range":[59000, 59000+365*4]} },
                        
-                   magabs={"model":"tripp1998",
-                           "input":["x1","c"],
+                   magabs={"model":"massstep",
+                           "input":["x1","c", "host_mass"],
                            "param":{"mabs":-19.3, "sigmaint":0.10}
                           },
                            
@@ -48,3 +50,4 @@ class SNeIa( Transient ):
         template = self.get_template()
         m_current = template._source.peakmag("bessellb","ab")
         return 10.**(0.4 * (m_current - magobs)) * template.get("x0")
+    
