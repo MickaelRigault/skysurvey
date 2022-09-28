@@ -62,7 +62,7 @@ class Target( object ):
 
 
     @classmethod
-    def from_draw(cls, size=None, model=None, template=None, **kwargs):
+    def from_draw(cls, size=None, model=None, =None, **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
         Parameters
@@ -405,7 +405,9 @@ class Target( object ):
     @classproperty
     def kind(self):
         """ """
-        return self._KIND
+        if not hasattr(self,"_kind"):
+            self._kind = self._KIND
+        return self._kind
             
     @classproperty
     def cosmology(self):
@@ -499,8 +501,6 @@ class Transient( Target ):
     ```
 
     """
-
-    
     _VOLUME_RATE = None    
     
     # ============== #
@@ -538,7 +538,12 @@ class Transient( Target ):
                                             params=params,
                                             in_mag=in_mag, zp=zp, zpsys=zpsys)
         
-    
+    def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
+        """ """
+        template = self.get_template()
+        m_current = template._source.peakmag(band,zpsys)
+        return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
+
     # ------------ #
     #   Draw       #
     # ------------ #
@@ -593,7 +598,10 @@ class Transient( Target ):
     #   Properties   #
     # ============== #  
     # Rate
-    @classproperty
+    @property
     def volume_rate(self):
         """ volumetric rate in Gpc-3 / yr-1 """
-        return self._VOLUME_RATE
+        if not hasattr(self,"_volume_rate"):
+            self._volume_rate = self._VOLUME_RATE # default
+            
+        return self._volume_rate
