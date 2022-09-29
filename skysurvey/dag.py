@@ -34,16 +34,44 @@ class ModelDAG( object ):
         self.model = model
         self.obj = obj
 
+    def __str__(self):
+        """ """
+        import pprint
+        return pprint.pformat(self.model, sort_dicts=False)
+
+    def __repr__(self):
+        """ """
+        return self.__str__()
+
     # ============ #
     #   Method     #
     # ============ #
     def get_model(self, **kwargs):
-        """ get a copy of the model """
-        return {**self.model,**kwargs}
+        """ get a copy of the model 
+        
+        Parameters
+        ----------
+
+        **kwargs can change the model entry parameters
+            for istance, t0: {"low":0, "high":10}
+            will update model["t0"]["param"] = ...
+
+        Returns
+        -------
+        dict
+           a copy of the model (with param potentially updated)
+        """
+        model = self.model
+        for k,v in kwargs.items():
+            model[k]["param"].update(v)
+
+        return model
     
     def change_model(self, **kwargs):
         """ change the model attached to this instance
         
+        **kwargs will update the entry  parameters ("param", e.g. t0["param"])
+
         See also
         --------
         get_model: get a copy of the model

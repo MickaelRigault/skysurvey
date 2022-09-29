@@ -13,7 +13,7 @@ from ..template import Template
 
 
 class Target( object ):
-    """ """
+
     _KIND = "unknow"
     _TEMPLATE = None
     _MODEL = None # dict config 
@@ -63,7 +63,10 @@ class Target( object ):
 
 
     @classmethod
-    def from_draw(cls, size=None, model=None, template=None, **kwargs):
+    def from_draw(cls, size=None, model=None, template=None,
+                      zmax=None, tstart=None, tstop=None,
+                      nyears=None,
+                      **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
         Parameters
@@ -71,6 +74,7 @@ class Target( object ):
         size: int, None
             number of target you want to sample
             size=None as in numpy. Usually means 1.
+            = ignored if nyears given =
 
         model: dict, None
             defines how  template parameters to draw and how they are connected
@@ -80,6 +84,24 @@ class Target( object ):
         template_source: str, None
             name of the template (sncosmo.Model(source)). 
             = leave to None if unsure, cls._TEMPLATE used as default =
+
+        zmax: float
+            maximum redshift to be simulated.
+
+        tstart: float
+            starting time of the simulation
+            
+        tstop: float
+            ending time of the simulation
+            (if tstart and nyears are both given, tstop will be
+            overwritten by ``tstart+365.25*nyears``
+
+        nyears: float
+            if given, nyears will set:
+            - size: it will be the number of target expected up to zmax 
+                in the given  number of years. 
+                This uses ``get_rate(zmax)``.
+            - tstop: ``tstart+365.25*nyears``
 
         **kwargs goes to self.draw()
 
@@ -108,10 +130,17 @@ class Target( object ):
     def set_template(self, template):
         """ set the template 
 
+        = unlikely you want to set this directly =
+
         Parameters
         ----------
         template: str, `sncosmo.Source`, `sncosmo.Model` or skysurvey.Template
-        This will reset self.template to the new template source.
+            This will reset self.template to the new template source.
+
+        See also
+        --------
+        from_draw(): load the instance by a random draw generation.
+        from_setting(): loads an instance given model parameters (dict)
         """
         import sncosmo
         if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
@@ -267,8 +296,30 @@ class Target( object ):
         """
         return cosmology.distmod(np.asarray(z)).value + magabs
 
-    def draw_radec(cls, model="random", size=None, ra_range=[0,360], dec_range=[-90,90], ):
-        """ """
+    def draw_radec(cls, model="random", size=None, ra_range=[0,360], dec_range=[-90,90]):
+        """ draw the sky positions
+
+        Parameters
+        ----------
+        model: str
+            name of the model. Implemented:
+            - random: random homogeneous 2d-sky distribution
+              (accounts for dec deformation)
+
+        size: int, None
+            number of draw
+
+        ra_range: 2d-array
+            right-accension boundaries (min, max)
+
+        dec_range: 2d-array
+            declination boundaries
+            
+        Returns
+        -------
+        2d-array
+            list of ra, list of dec.
+        """
         if model == "random":
             dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
             ra = np.random.uniform(*ra_range, size=size)
@@ -310,8 +361,22 @@ class Target( object ):
         self._model = model
         
     def get_model(self, **kwargs):
-        """ """
-        return {**self.model, **kwargs}
+        """ get a copy of the model (dict) 
+
+        Parameters
+        ----------
+
+        **kwargs can change the model entry parameters
+            for istance, t0: {"low":0, "high":10}
+            will update model["t0"]["param"] = ...
+
+        Returns
+        -------
+        dict
+           a copy of the model (with param potentially updated)
+           
+        """
+        self.model.get_model(**kwargs)
 
     # -------------- #
     #   Plotter      #
@@ -349,12 +414,66 @@ class Target( object ):
     # =============== #
     #   Draw Methods  #
     # =============== #
-    def draw(self, size=None, nyears=None,
-                 zmax=None, inplace=True, **kwargs):
-        """ draws the parameter model (using self.model.draw() """
-        if nyears is not None:
-            size = self.get_rate(zmax) *nyears
+    def draw(self, size=None,
+                 zmax=None, tstart=None, tstop=None,
+                 nyears=None,
+                 inplace=True, **kwargs):
+        """ draws the parameter model (using self.model.draw() 
 
+        Parameters
+        ----------
+        size: int
+            = ignored is nyears is not None =
+            number of target you want to draw.
+
+        zmax: float
+            maximum redshift to be simulated.
+
+        tstart: float
+            starting time of the simulation
+            
+        tstop: float
+            ending time of the simulation
+            (if tstart and nyears are both given, tstop will be
+            overwritten by ``tstart+365.25*nyears``
+
+        nyears: float
+            if given, nyears will set:
+            - size: it will be the number of target expected up to zmax 
+                in the given  number of years. 
+                This uses ``get_rate(zmax)``.
+            - tstop: ``tstart+365.25*nyears``
+
+        inplace: bool
+            sets self.data to the newly drawn dataframe
+
+        Returns
+        -------
+        DataFrame
+            the simulated dataframe.
+
+        """
+        # short cut 
+        # -> change the redshift
+        if zmax is not None:
+            kwargs.setdefault("redshift",{}).update({"zmax":zmax})
+        elif nyears is not None:
+            zmax = self.model.model["redshift"]["param"].get("zmax", None)
+
+        if tstop is not None:
+            kwargs.setdefault("t0",{}).update({"high":tstop})
+            
+        if tstart is not None:
+            kwargs.setdefault("t0",{}).update({"low":tstart})
+        elif tstop is not None and nyears is not None:
+            tstart = tstop - 365.25*nyears # fixed later
+        elif nyears is not None:
+            tstart = self.model.model["t0"]["param"].get("low", None)
+            
+        if nyears is not None:
+            kwargs.setdefault("t0",{}).update({"low":tstart, "high":tstart + 365.25*nyears})
+            size = int(self.get_rate(zmax) * nyears)
+            
         data = self.model.draw(size=size, **kwargs)
         if inplace:
             self._data = data
