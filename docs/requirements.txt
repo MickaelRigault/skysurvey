@@ -7,6 +7,9 @@ astropy
 healpy
 sncosmo
 dask
+shapely
+geopandas
+
 
 numpydoc
 sphinx-book-theme
