@@ -512,14 +512,14 @@ class DataSet( object ):
     #    Statics     #
     # -------------- #
     @staticmethod
-    def _realize_lc_perfieldid_from_survey_and_target(targets, survey, template_source=None,
+    def _realize_lc_perfieldid_from_survey_and_target(targets, survey, template=None,
                                                       use_dask=False, inplace=False, template_prop={}):
         """ """
         if use_dask:
             import dask
 
-        if template_source is None:
-            template_source = targets.template.source
+        if template is None:
+            template = targets.template
             
         targets_data = targets.data.copy() if not inplace else targets.data
         targets_data["fieldid"] = survey.radec_to_fieldid(*targets_data[["ra","dec"]].values.T)
@@ -531,20 +531,20 @@ class DataSet( object ):
         for fieldid_ in fieldids:
             # What kind of template ?
             # in the loop to avoid dask conflict, to be checked
-            template = Template._get(template_source, **template_prop) 
+            sncosmo_model = template.get(**template_prop)  # get() returs copy
             
             # get the given field observation
             this_survey = survey.data[survey.data["fieldid"] == fieldid_][["mjd","band","skynoise","gain", "zp"]]
 
             # taking the data we need
-            existing_columns = np.asarray(template.param_names)[np.in1d(template.param_names, targets_data.columns)]
+            existing_columns = np.asarray(sncosmo_model.param_names)[np.in1d(sncosmo_model.param_names, targets_data.columns)]
             this_target = targets_data[targets_data["fieldid"] == fieldid_][existing_columns]
             
             # realize the lightcurve for this fieldid
             if use_dask:
-                this_out = dask.delayed(get_obsdata)(template, this_survey, this_target)
+                this_out = dask.delayed(get_obsdata)(sncosmo_model, this_survey, this_target)
             else:
-                this_out = get_obsdata(template, this_survey, this_target)
+                this_out = get_obsdata(sncosmo_model, this_survey, this_target)
             
             all_out.append(this_out)
         
