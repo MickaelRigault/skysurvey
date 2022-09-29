@@ -27,7 +27,8 @@ class Target( object ):
         --------
         from_setting: loads an instance given model parameters (dict)
         """
-
+        
+        
     def __repr__(self):
         """ """
         
@@ -93,7 +94,7 @@ class Target( object ):
         """
         this = cls()
         if model is not None:
-            this.set_model(**model)
+            this.set_model(model)
 
         if template is not None:
             self.set_template(template)
@@ -265,11 +266,22 @@ class Target( object ):
         
         """
         return cosmology.distmod(np.asarray(z)).value + magabs
-    
+
+    def draw_radec(cls, model="random", size=None, ra_range=[0,360], dec_range=[-90,90], ):
+        """ """
+        if model == "random":
+            dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
+            ra = np.random.uniform(*ra_range, size=size)
+            dec = np.arcsin( np.random.uniform(*dec_sin_range, size=size) ) / (np.pi/180)
+        else:
+            raise NotImplementedError("Only the 'random' radec model has been implemented. ")
+        
+        return ra, dec
+
     # -------------- #
     #   Model        #
     # -------------- #
-    def set_model(self, **kwargs):
+    def set_model(self, model):
         """ set the target model 
 
         what template parameters to draw and how they are connected 
@@ -278,7 +290,8 @@ class Target( object ):
 
         Parameters
         ----------
-        **kwargs stored as model
+        model: dict or ModelDAG,
+            model that will be used to draw the Target parameter
 
         Returns
         -------
@@ -289,7 +302,12 @@ class Target( object ):
         from_setting: loads an instance given model parameters (dict)
         from_draw: loads and draw random data.
         """
-        self._model = kwargs
+        from ..dag import ModelDAG
+        if type( model ) is dict:
+            model = ModelDAG(model, self)
+            
+        
+        self._model = model
         
     def get_model(self, **kwargs):
         """ """
@@ -333,75 +351,11 @@ class Target( object ):
     # =============== #
     def draw(self, size=None, nyears=None,
                  zmax=None, **kwargs):
-        """ core method based on _draw and draw_param """
+        """ draws the parameter model (using self.model.draw() """
         if nyears is not None:
             size = self.get_rate(zmax) *nyears
-        
-        model = self.get_model(**kwargs)
-        self._data = self._draw(model, size=size)
-        return self._data
 
-    def _draw(self, model, size=None):
-        """ core method converting model into a DataFrame (interp) """
-        interp = pandas.DataFrame()
-        params = dict(size=size)
-        
-        for param_name, param_model in model.items():
-            # Default kwargs given
-            if (inprop := param_model.get("param", {})) is None:
-                inprop = {}
-
-            # set the model ; this overwrite prop['model'] but that make sense.
-            inprop["model"] = param_model.get("model", None)
-
-            # read the parameters
-            if (inparam := param_model.get("input", None)) is not None:
-                for k in inparam:
-                    if k in interp:
-                        inprop[k] = interp[k].values
-                    elif hasattr(self,k):
-                        inprop[k] = getattr(self, k)
-                    else:
-                        raise ValueError(f"cannot get the input parameter {k}")
-
-            # update the general properties for that of this parameters
-            prop = {**params, **inprop}
-            # 
-            # Draw it
-            samples = np.asarray(self.draw_param(param_name, **prop))
-            
-            # and feed
-            output_name = param_model.get("as", param_name)
-            interp[output_name] = samples.T
-            
-        return interp
-
-    def draw_param(self, name, model=None, size=None, xx=None, **kwargs):
-        """ """
-
-        # Flexible origin of the sampling method
-        if type(model) == str or model is None:
-            if model is not None and hasattr(self, model):
-                func = getattr(self, model)
-            elif hasattr(self, f"draw_{name}"):
-                func = getattr(self,f"draw_{name}")
-            else:
-                func = eval(f"sampling.Sampling_{name}.draw")
-        else:
-            func = model # you provided the model directly
-        try:
-            func_arguments = list(inspect.getfullargspec(func).args)
-        except: # fail for Cython functions
-            func_arguments = ["size"] # let's assume this as for numpy.random or scipy.
-        prop = {}
-        if "size" in func_arguments:
-            prop["size"] = size
-        if "model" in func_arguments:
-            prop["model"] = model
-        if "xx" in func_arguments:
-            prop["xx"] = xx
-            
-        return func(**{**prop, **kwargs})
+        return self.model.draw(size=size, **kwargs)
 
     # ============== #
     #   Properties   #
@@ -423,7 +377,7 @@ class Target( object ):
     def model(self):
         """ modeling who the transient is generated """
         if not hasattr(self, "_model") or self._model is None:
-            self._model = self._MODEL if self._MODEL is not None else {}
+            self.set_model(self._MODEL if self._MODEL is not None else {})
             
         return self._model
     
@@ -541,16 +495,16 @@ class Transient( Target ):
                                             sncosmo_model=sncosmo_model, index=index,
                                             params=params,
                                             in_mag=in_mag, zp=zp, zpsys=zpsys)
-        
+
+    # ------------ #
+    #  Model       #
+    # ------------ #    
     def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
         """ """
         template = self.get_template()
         m_current = template._source.peakmag(band,zpsys)
         return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
 
-    # ------------ #
-    #   Draw       #
-    # ------------ #
     def draw_redshift(self, zmax, zmin=0, zstep=1e-3, size=None):
         """ based on the rate (see get_rate()) """
         xx = np.arange(zmin, zmax, zstep)
@@ -558,17 +512,6 @@ class Transient( Target ):
         return np.random.choice(np.mean([xx[1:],xx[:-1]], axis=0), 
                       size=size, p=pdf/pdf.sum())
             
-    def draw_mjd(self, model="uniform", size=None, mjd_range=[59000, 59000]):
-        """ """
-        if model == "uniform":
-            return np.random.uniform(*mjd_range, size=size)
-        else:
-            raise NotImplementedError("model '{model}' not implemented in draw_radec")
-    
-    def draw_t0(self, **kwargs):
-        """ shortcut to draw_mjd(**kwargs) """
-        return self.draw_mjd(**kwargs)
-
     # ------------ #
     #  Show LC     #
     # ------------ #

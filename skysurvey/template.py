@@ -313,7 +313,7 @@ class Template( object ):
 
 class GridTemplate( Template ):
 
-    _GRID_OF = sncosmo.TimeSeriesSource
+    _GRID_OF = None
     
     @staticmethod
     def _read_single_file(filename, sncosmo_source):
