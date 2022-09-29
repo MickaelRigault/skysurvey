@@ -7,8 +7,6 @@ from astropy.utils.decorators import classproperty
 
 __all__ = ["Target", "Transient"]
 
-
-from .. import sampling
 from ..template import Template
 
 
