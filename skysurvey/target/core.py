@@ -37,7 +37,7 @@ class Target( object ):
     def __str__(self):
         """ """
         import pprint
-        return pprint.pformat(self.model, sort_dicts=False)
+        return pprint.pformat(self.model.model, sort_dicts=False)
 
     
     @classmethod
@@ -350,12 +350,16 @@ class Target( object ):
     #   Draw Methods  #
     # =============== #
     def draw(self, size=None, nyears=None,
-                 zmax=None, **kwargs):
+                 zmax=None, inplace=True, **kwargs):
         """ draws the parameter model (using self.model.draw() """
         if nyears is not None:
             size = self.get_rate(zmax) *nyears
 
-        return self.model.draw(size=size, **kwargs)
+        data = self.model.draw(size=size, **kwargs)
+        if inplace:
+            self._data = data
+            
+        return data
 
     # ============== #
     #   Properties   #
