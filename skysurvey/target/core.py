@@ -98,8 +98,8 @@ class Target( object ):
             if given, nyears will set:
             - size: it will be the number of target expected up to zmax 
                 in the given  number of years. 
-                This uses ``get_rate(zmax)``.
-            - tstop: ``tstart+365.25*nyears``
+                This uses get_rate(zmax).
+            - tstop: tstart+365.25*nyears
 
         **kwargs goes to self.draw()
 
@@ -137,8 +137,8 @@ class Target( object ):
 
         See also
         --------
-        from_draw(): load the instance by a random draw generation.
-        from_setting(): loads an instance given model parameters (dict)
+        from_draw: load the instance by a random draw generation.
+        from_setting: loads an instance given model parameters
         """
         import sncosmo
         if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
