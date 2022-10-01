@@ -88,7 +88,7 @@ class BaseSurvey( object ):
             element to be passed to groupby.agg() 
             could be e.g.: 'mean' or ['mean', 'std'] or [np.median, 'mean'] etc.
             If stat = 'size', this returns data["fieldid"].value_counts()
-                (slightly faster than groupby("fieldid").size()).
+            (slightly faster than groupby("fieldid").size()).
                 
         columns: str, list, None
             name of the columns to be kept.

@@ -97,8 +97,8 @@ class Target( object ):
         nyears: float
             if given, nyears will set:
             - size: it will be the number of target expected up to zmax 
-                in the given  number of years. 
-                This uses get_rate(zmax).
+            in the given  number of years. 
+            This uses get_rate(zmax).
             - tstop: tstart+365.25*nyears
 
         **kwargs goes to self.draw()
@@ -302,7 +302,7 @@ class Target( object ):
         model: str
             name of the model. Implemented:
             - random: random homogeneous 2d-sky distribution
-              (accounts for dec deformation)
+            (accounts for dec deformation)
 
         size: int, None
             number of draw
@@ -438,8 +438,8 @@ class Target( object ):
         nyears: float
             if given, nyears will set:
             - size: it will be the number of target expected up to zmax 
-                in the given  number of years. 
-                This uses ``get_rate(zmax)``.
+            in the given  number of years. 
+            This uses ``get_rate(zmax)``.
             - tstop: ``tstart+365.25*nyears``
 
         inplace: bool
@@ -536,50 +536,6 @@ class Target( object ):
     
 class Transient( Target ):
     # - Transient
-
-    """
-
-
-    # How to create a new Transient
-
-    ```python
-    class NewTransient( Transient ):
-        _KIND = "SNnew" # you can set that. self.kind will call it.
-        _TEMPLATE_SOURCE = "salt2" # needed with merged to a survey (to generate LC)
-        _RATE = 1 * 10**3 # defined how the redshift is drawn
-
-        _MODEL = dict( # Draw variable from a very simple method (only needs size as param).
-                       magabs = {"model":"my_defined_method"},
-
-                       # draw_redshift is defined for Transients
-                       redshift = {"param":{"zmax":0.2},  "as":"z"}, # you can change the stored variable name.
-
-                       # use a func drawing variables directly (e.g. numpy.random. )
-                       noise = {"model": np.random.normal, 
-                                "param":{"loc":0, "scale":0.5}},
-
-                       # use one of the few pre-defined method e.g., magabs_to_magobs 
-                        magobs = {"model": "magabs_to_magobs", 
-                                    "input":["z","magabs"]}, # "magabs_to_magobs has 2 mandatory inputs"
-
-                        bias = {"model":np.random.uniform, 
-                                "param":{"low":-1, "high":+1}},
-
-                        # Create a complexe method that needs input.
-                        magobs_eff = {"model": "my_method_needs_input", 
-                                        "input":["magobs","bias"]},# "my_method_needs_input has 2 mandatory inputs"
-
-                     )
-
-        def my_defined_method(self, size=None, boundaries=[-14,-18]):
-            return np.random.uniform(*boundaries, size=size)
-
-        # remark here, no size, it will be that of p1 and noise
-        def my_method_needs_input(self, magobs, bias):
-            return magobs+bias
-    ```
-
-    """
     _RATE = None    
     
     # ============== #
@@ -587,23 +543,67 @@ class Transient( Target ):
     # ============== #
     # Rates
     def getpdf_redshift(self, z, **kwargs):
-        """ """
+        """ 
+
+        Parameters
+        ----------
+        z: 1d-array
+            list of redshift
+
+        **kwargs goes to get_rate()
+
+        Returns
+        -------
+        1d-array
+            pdf of the redshift distribution
+        """
         rates = np.diff(self.get_rate(z, **kwargs))
         return rates/np.nansum(rates)
     
     def get_rate(self, z, **kwargs):
-        """ """
+        """ number of target (per year) up to the given redshift
+
+        Parameters
+        ----------
+        z: float
+            redshift
+
+        **wkwargs goes to the rate function (if a function, not a number)
+
+        Returns
+        -------
+        int
+        
+        See also
+        --------
+        getpdf_redshift: the redshift distribution
+        rate: float (volumetric_rate) or func (any)
+        """
         if callable(self.rate):
             return self.rate(z, **kwargs)
         
         volume = self.cosmology.comoving_volume(z).to("Gpc**3").value
         z_rate = volume * self.rate
-        return z_rate
+        return int(z_rate)
         
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None, params=None,
                            in_mag=False, zp=25, zpsys="ab"):
-        """ """
+        """ the transient lightcurve 
+
+        Parameters
+        ----------
+        band: str, list
+            name of the band (should be known by sncosmo) or list of.
+
+        times: float, list
+            time of the observations
+            
+        Returns
+        -------
+        nd-array
+            1 lightcurve per band.
+        """
         # get the template
         if params is None:
             params = {}

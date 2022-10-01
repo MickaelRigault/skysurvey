@@ -1,6 +1,6 @@
-================
+========================
 skysurvey documentation
-================
+========================
 
 skysurvey_ is a generic package to simulate transients as observed by a
 survey. It is a modern implementation of simsurvey_ that aims at
@@ -8,7 +8,7 @@ speed-up and simplify the code.
 
 
 Concept
-=====
+========
 
 The concept is simple, to simulate transient lightcurves you need
 three things:
@@ -21,14 +21,14 @@ With this logic, skysurvey_ produce realistic lightcurves in a few minutes for m
 observing tens of thousands of transients. This constitute a **Dataset**.
 
 Template
---------
+-----------
 
 The package is using the sncosmo_ for the **template** structure
 (``sncosmo.Model``).
 
 
 Transient
---------
+-----------
 
 **Data as given by nature.**
 
@@ -43,7 +43,7 @@ Some ``Transient`` have already been implemented for you, such as
    `create a new transient <quickstart/quickstart_target.ipynb>`_
 
 Survey
------
+-----------
 
 **What has been observed when under which condition.**
 
@@ -64,7 +64,7 @@ where ``fieldid`` corresponds to the healpix ``ipix``.
 
      
 Dataset
-------
+-----------
 
 **Join target and survey to create realisitc lightcurves.**
 
@@ -79,7 +79,7 @@ lightcurves given the observing conditions of the survey.
    `lightcurve fit <quickstart/quickstart_survey.ipynb>`_
 
 Sharp start
-=======
+============
 
 You need to create a `Transient` object (or child of) and a `Survey`
 object (or child of) and then to simulate how your survey would observe
@@ -87,7 +87,7 @@ your targets. This latter is called a `DataSet`.
 
 
 Step 1: transients
-------------
+------------------
 
 **Draw the 'truth'**
 
@@ -111,7 +111,7 @@ transient (`see list here`_). Say you want the Type-IIb model "v19-2013df".
 
 
 Step 2: survey
-------------
+-----------------
 
 **Provide what has been observed and when (here randomly drawn)**
 
@@ -131,7 +131,7 @@ Step 2: survey
     ztf.data.head(5)
 
 Step 3: dataset 
-------------
+------------------
 
 **And get the lightcurve you should have**
 
@@ -145,10 +145,10 @@ Step 3: dataset
 
    
 Documentation
-=========
+===============
 
 Tutorials
--------
+------------
 
 .. toctree::
    :maxdepth: 1
@@ -171,7 +171,7 @@ Tutorials
    
    
 Indices and tables
---------------
+-------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
