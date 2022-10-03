@@ -376,6 +376,32 @@ class Target( object ):
         """
         self.model.get_model(**kwargs)
 
+    def get_model_parameter(self, entry, key, default=None):
+        """ access a parameter of the model.
+
+        Parameters
+        ----------
+        entry: str
+            name of the variable as given by the model dict
+
+        key: str
+            name of the parameters
+
+        default: 
+            value returned if the parameter is not found.
+
+        Returns
+        -------
+        value of the entry parameter
+        
+        Example
+        -------
+        >>> self.get_model_parameter('redshift', 'zmax', None)
+
+        """
+        return self.model.model[entry]["param"].get(key, default)
+
+
     # -------------- #
     #   Plotter      #
     # -------------- #
@@ -455,8 +481,9 @@ class Target( object ):
         # -> change the redshift
         if zmax is not None:
             kwargs.setdefault("redshift",{}).update({"zmax":zmax})
+            
         elif nyears is not None:
-            zmax = self.model.model["redshift"]["param"].get("zmax", None)
+            zmax = self.get_model_parameter("redshift","zmax", None)
 
         if tstop is not None:
             kwargs.setdefault("t0",{}).update({"high":tstop})
@@ -466,7 +493,7 @@ class Target( object ):
         elif tstop is not None and nyears is not None:
             tstart = tstop - 365.25*nyears # fixed later
         elif nyears is not None:
-            tstart = self.model.model["t0"]["param"].get("low", None)
+            tstart = self.get_model_parameter("t0","low", None)
             
         if nyears is not None:
             kwargs.setdefault("t0",{}).update({"low":tstart, "high":tstart + 365.25*nyears})
@@ -584,7 +611,7 @@ class Transient( Target ):
         
         volume = self.cosmology.comoving_volume(z).to("Gpc**3").value
         z_rate = volume * self.rate
-        return int(z_rate)
+        return z_rate
         
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None, params=None,

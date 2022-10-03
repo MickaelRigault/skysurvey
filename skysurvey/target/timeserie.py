@@ -32,7 +32,7 @@ class TSTransient( Transient ):
                  )
     
     @classmethod
-    def from_sncosmo_source(cls, source, rate=1e-3, model=None):
+    def from_sncosmo_source(cls, source, rate=1e3, model=None):
         """ """
         this = cls()
         this.set_template(source)
