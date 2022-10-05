@@ -5,7 +5,6 @@ import pandas
 from .core import Target, Transient
 from .timeserie import TSTransient
 
-
 def reshape_values(values, shape):
     """ """
     values = np.atleast_1d(values)
@@ -17,7 +16,7 @@ def reshape_values(values, shape):
 
 
 class TargetCollection( object ):
-    _COLLECTION_OF = arget
+    _COLLECTION_OF = target.Target
     
     def __init__(self, targets):
         """ """
@@ -65,6 +64,11 @@ class TargetCollection( object ):
         """ targets id """
         return np.arange(self.ntargets)
     
+    @property
+    def models(self):
+        """ list of the target models """
+        return self.call_down("model")
+    
 class TransientCollection( TargetCollection ):
     _COLLECTION_OF = target.Target
     
@@ -92,8 +96,7 @@ class TransientCollection( TargetCollection ):
             # solving int issue
             
         draws = self.call_down("draw", margs=size, 
-                              tstart=tstart, tstop=tstop, nyears=nyears,
-                              inplace=inplace, 
+                              tstart=tstart, tstop=tstop, nyears=nyears, inplace=False, 
                               **kwargs)
         
         data = pandas.concat(draws, keys=self.target_ids, axis=0)
@@ -117,10 +120,22 @@ class TransientCollection( TargetCollection ):
         return self._data
     
 class TSTransientCollection( TransientCollection ):
-    _COLLECTION_OF = TSTransient
+    _COLLECTION_OF = target.TSTransient
         
     @classmethod
-    def from_sncosmo_sources(cls, sources, rates=1000):
+    def from_draw(cls, sources, size=None, nyears=None, 
+                  rates=1e3, magabs=None, magscatter=None, **kwargs):
+        """ """
+        this = cls.from_sncosmo_sources(sources, rates=rates,
+                                        magabs=magabs, 
+                                        magscatter=magscatter)
+        _ = this.draw(size=size, nyears=nyears, inplace=True,
+                      **kwargs)
+        return this
+        
+    @classmethod
+    def from_sncosmo_sources(cls, sources, rates=1e3, 
+                             magabs=None, magscatter=None):
         """ loads the instance from a list of sources
         (and relative rates)
         """
@@ -128,5 +143,18 @@ class TSTransientCollection( TransientCollection ):
         rates = reshape_values(rates, len(sources))
         transients = [cls._COLLECTION_OF.from_sncosmo_source(source_, rate_)
                      for source_, rate_ in zip(sources, rates)]
+        
+        # Change the model.
+        if magabs is not None:
+            magabs = reshape_values(magabs, len(sources))
+            print(magabs)
+            _ = [t.change_model_parameter(magabs={"loc":magabs_}) 
+                 for t, magabs_ in zip(transients, magabs)]
+            
+        if magscatter is not None:
+            magscatter = reshape_values(magscatter, len(sources))
+            _ = [t.change_model_parameter(magabs={"scale":magscatter_}) 
+                 for t, magscatter_ in zip(transients, magscatter)]
+            
         # and loads it
         return cls(transients)

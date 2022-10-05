@@ -119,7 +119,8 @@ class Target( object ):
         if template is not None:
             self.set_template(template)
             
-        _ = this.draw(size=size, **kwargs)
+        _ = this.draw(size=size, zmax=zmax, tstart=tstart, tstop=tstop,
+                      nyears=nyears, **kwargs)
         return this
     
     # ------------- # 
@@ -353,13 +354,17 @@ class Target( object ):
         """
         from ..dag import ModelDAG
         if type( model ) is dict:
-            model = ModelDAG(model, self)
+            from copy import deepcopy
+            model = ModelDAG(deepcopy(model), self)
             
         
         self._model = model
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 
+
+        You can change the model you get (not the current model)
+        using the kwargs. 
 
         Parameters
         ----------
@@ -373,6 +378,11 @@ class Target( object ):
         dict
            a copy of the model (with param potentially updated)
            
+           
+        See also
+        --------
+        change_model_parameter: change the current model (not just the one you get)
+        get_model_parameter: access the model parameters.
         """
         self.model.get_model(**kwargs)
 
@@ -401,7 +411,18 @@ class Target( object ):
         """
         return self.model.model[entry]["param"].get(key, default)
 
+    def change_model_parameter(self, **kwargs):
+        """ Change the model parameters
 
+        **kwargs will update any model entry parameters (i.e., the "param", e.g. t0["param"]).
+
+        Example
+        -------
+        Change the maximum redshift to 1.
+        >>> self.change_model_parameter(redshift={"zmax":1})
+        """
+        _ = self.model.change_model(**kwargs)
+        
     # -------------- #
     #   Plotter      #
     # -------------- #
@@ -480,25 +501,26 @@ class Target( object ):
         # short cut 
         # -> change the redshift
         if zmax is not None:
-            kwargs.setdefault("redshift",{}).update({"zmax":zmax})
+            kwargs.setdefault("redshift",{}).update({"zmax": zmax})
             
         elif nyears is not None:
-            zmax = self.get_model_parameter("redshift","zmax", None)
-
+            zmax = self.get_model_parameter("redshift", "zmax", None)
+            
         if tstop is not None:
-            kwargs.setdefault("t0",{}).update({"high":tstop})
+            kwargs.setdefault("t0",{}).update({"high": tstop})
             
         if tstart is not None:
-            kwargs.setdefault("t0",{}).update({"low":tstart})
+            kwargs.setdefault("t0",{}).update({"low": tstart})
         elif tstop is not None and nyears is not None:
             tstart = tstop - 365.25*nyears # fixed later
         elif nyears is not None:
-            tstart = self.get_model_parameter("t0","low", None)
-            
+            tstart = self.get_model_parameter("t0", "low", None)
+
         if nyears is not None:
-            kwargs.setdefault("t0",{}).update({"low":tstart, "high":tstart + 365.25*nyears})
+            print(zmax)
+            kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
             size = int(self.get_rate(zmax) * nyears)
-            
+
         data = self.model.draw(size=size, **kwargs)
         if inplace:
             self._data = data
@@ -513,6 +535,7 @@ class Target( object ):
         """ """
         if not hasattr(self,"_kind"):
             self._kind = self._KIND
+            
         return self._kind
             
     @classproperty
@@ -614,8 +637,9 @@ class Transient( Target ):
         return z_rate
         
     def get_lightcurve(self, band, times,
-                           sncosmo_model=None, index=None, params=None,
-                           in_mag=False, zp=25, zpsys="ab"):
+                           sncosmo_model=None, index=None,
+                           in_mag=False, zp=25, zpsys="ab",
+                           **kwargs):
         """ the transient lightcurve 
 
         Parameters
@@ -631,18 +655,52 @@ class Transient( Target ):
         nd-array
             1 lightcurve per band.
         """
-        # get the template
-        if params is None:
-            params = {}
-            
+        # get the template            
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
-            params = {**prop, **params}
+            kwargs = {**prop, **kwargs}
 
         return self.template.get_lightcurve(band, times,
-                                            sncosmo_model=sncosmo_model, index=index,
-                                            params=params,
-                                            in_mag=in_mag, zp=zp, zpsys=zpsys)
+                                            sncosmo_model=sncosmo_model,
+                                            in_mag=in_mag, zp=zp, zpsys=zpsys,
+                                            **kwargs)
+
+    def get_spectrum(self, time, lbdas, as_phase=True,
+                           sncosmo_model=None, index=None,
+                           **kwargs):
+        """ the transient spectrum at the given phase (time) 
+
+        Parameters
+        ----------
+        time : float or list_like
+            Time(s) in days. If `None` (default), the times corresponding
+            to the native phases of the model are used.
+
+        lbdas : float or list_like
+            Wavelength(s) in Angstroms. If `None` (default), the native
+            wavelengths of the model are used.
+            
+        as_phase: bool
+            Is the given time a phase ? (as_phase=True) or a actual time (False)
+
+        Returns
+        -------
+        flux : float or `~numpy.ndarray`
+            Spectral flux density values in ergs / s / cm^2 / Angstrom.
+        
+        See also
+        --------
+        get_lightcurve: get the transient lightcurve 
+        """
+        # get the template            
+        if index is not None:
+            prop = self.get_template_parameters(index).to_dict()
+            kwargs = {**prop, **kwargs}
+
+        return self.template.get_spectrum(time, lbdas,
+                                          sncosmo_model=sncosmo_model,
+                                          as_phase=as_phase,
+                                          **kwargs)
 
     # ------------ #
     #  Model       #

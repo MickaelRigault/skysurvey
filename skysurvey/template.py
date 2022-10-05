@@ -123,15 +123,12 @@ class Template( object ):
         return model
     
     def get_lightcurve(self, band, times,
-                           sncosmo_model=None, params=None,
-                           in_mag=False, zp=25, zpsys="ab"):
+                           sncosmo_model=None, in_mag=False, zp=25, zpsys="ab",
+                           **kwargs):
         """ """
 
         if sncosmo_model is None:
-            if params is None:
-                params = {}
-            
-            sncosmo_model = self.get(**params)
+            sncosmo_model = self.get(**kwargs)
 
         # patch for odd sncosmo behavior (see https://github.com/sncosmo/sncosmo/issues/346)
         squeeze = type(band) in [str, np.str_] # for the output format
@@ -153,10 +150,74 @@ class Template( object ):
             values = sncosmo_model.bandmag(band_, zpsys, times_).reshape( len(band),len(times) )
 
         return np.squeeze(values) if squeeze else values
+
+    def get_spectrum(self, time, lbdas, sncosmo_model=None, as_phase=True, **kwargs):
+        """ get the spectrum at phase (time) for the given wavelength
+
+        (based in sncosmo_model.flux(time, lbda)
+        
+        Parameters
+        ----------
+        time: float or list_like
+            Time(s) in days. If `None` (default), the times corresponding
+            to the native phases of the model are used.
+
+        lbdas: float or list_like
+            Wavelength(s) in Angstroms. If `None` (default), the native
+            wavelengths of the model are used.
+
+        as_phase: bool
+            Is the given time a phase ? (as_phase=True) or a actual time (False)
+
+        Returns
+        -------
+        flux : float or `~numpy.ndarray`
+            Spectral flux density values in ergs / s / cm^2 / Angstrom.
+        
+        See also
+        --------
+        get_lightcurve: get the transient lightcurve 
+        """
+        if sncosmo_model is None:            
+            sncosmo_model = self.get(**kwargs)
+
+
+        wmin, wmax = sncosmo_model.minwave(), sncosmo_model.maxwave()
+        lbdas = np.atleast_1d(lbdas)
+        sel = (lbdas > wmin) & (lbdas < wmax)
+        if not np.any(sel):
+            warnings.warn("no wavelength matched [def range {wmin}, {wmax}], given. {lbdas} ")
+
+        flux = np.zeros_like(lbdas)
+        if as_phase:
+            time += sncosmo_model.get("t0")
+        
+        flux[sel] = sncosmo_model.flux(time, lbdas[sel])
+        print(flux[sel])     
+        return flux
+
     
     # -------- #
     # Plotter  #
     # -------- #
+    def show_spectum(self, time, lbdas, params={},
+                         ax=None, fig=None, **kwargs):
+        """ """
+        spec = self.get_spectrum(time, lbdas, **params)
+        
+        # ------- #
+        #  axis   #
+        # ------- #                    
+        if ax is None:
+            if fig is None:
+                import matplotlib.pyplot as plt
+                fig = plt.figure(figsize=[7,4])
+            ax = fig.add_subplot(111)
+        else:
+            fig = ax.figure
+
+        ax.plot(lbdas, spec, **kwargs)
+        
     def show_lightcurve(self, band, params=None,
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
@@ -281,7 +342,8 @@ class Template( object ):
 
     # ============== #
     #   Properties   #
-    # ============== #        
+    # ============== #
+    
     # sncosmo_model
     @property
     def source(self):
