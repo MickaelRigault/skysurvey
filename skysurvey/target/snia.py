@@ -77,7 +77,7 @@ class SNeIaMagnitude( object ):
                     mabs=-19.3, sigmaint=0.10,
                     alpha=-0.14, beta=3.15):
         """ """
-        mabs = np.random.normal(loc=mabs, scale=sigmaint, size=None)
+        mabs = np.random.normal(loc=mabs, scale=sigmaint, size=len(x1))
         mabs_notstandard = mabs + (x1*alpha + c*beta)
         return mabs_notstandard
 
