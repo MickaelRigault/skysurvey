@@ -16,7 +16,7 @@ def reshape_values(values, shape):
 
 
 class TargetCollection( object ):
-    _COLLECTION_OF = target.Target
+    _COLLECTION_OF = Target
     
     def __init__(self, targets):
         """ """
@@ -70,7 +70,7 @@ class TargetCollection( object ):
         return self.call_down("model")
     
 class TransientCollection( TargetCollection ):
-    _COLLECTION_OF = target.Target
+    _COLLECTION_OF = Transient
     
     # ============= #
     #  Methods      #
@@ -120,7 +120,7 @@ class TransientCollection( TargetCollection ):
         return self._data
     
 class TSTransientCollection( TransientCollection ):
-    _COLLECTION_OF = target.TSTransient
+    _COLLECTION_OF = TSTransient
         
     @classmethod
     def from_draw(cls, sources, size=None, nyears=None, 
@@ -147,7 +147,6 @@ class TSTransientCollection( TransientCollection ):
         # Change the model.
         if magabs is not None:
             magabs = reshape_values(magabs, len(sources))
-            print(magabs)
             _ = [t.change_model_parameter(magabs={"loc":magabs_}) 
                  for t, magabs_ in zip(transients, magabs)]
             
