@@ -51,7 +51,7 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
     list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
     
     # realize LC
-    list_of_observations = sncosmo.realize_lcs(sncosmo_obs,template, list_of_parameters)
+    list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters)
     if len(list_of_observations) == 0:
         return None
     
@@ -79,9 +79,7 @@ class DataSet( object ):
         self.set_survey(survey)
         
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, 
-                                use_dask=False, client=None, 
-                                targetsdata_inplace=False):
+    def from_targets_and_survey(cls, targets, survey, template=None, **kwargs):
         """ loads a dataset (observed data) given targets and a survey
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
@@ -98,21 +96,8 @@ class DataSet( object ):
         survey: skysurvey.Survey (or child of)
             sky observation (what was observed when with which situation)
 
-        use_dask: bool
-            should dask be used for the lightcurve realisation ?
-            (worse it for very large dataset, say >20000 targets)
-        
-        client: dask.distributed.Client
-            = ignored if ``used_dask=False`` =
-            if you want to compute on this particular dask client.
-            If None dask will use the current one.
 
-        targetsdata_inplace: bool
-            shall the fieldid matching be added to targets.data ?
-            if not, this information is lost. 
-            re-call ``fieldid_of_targets = survey.radec_to_fieldid(*targets.data[["ra","dec"]].values.T)``
-            to retrieve it.
-
+        **kwargs goes to realize_survey_target_lcs
 
         Returns
         -------
@@ -123,21 +108,8 @@ class DataSet( object ):
         --------
         read_parquet: loads a stored dataset
         """
-        fieldids, per_fieldid = cls._realize_lc_perfieldid_from_survey_and_target(targets, survey, 
-                                                                        use_dask=use_dask,
-                                                                        inplace=targetsdata_inplace)
-        if use_dask:
-            if client is None:
-                import dask
-                all_outs = dask.delayed(list)(per_fieldid).compute()
-            else:
-                f_all_outs = client.compute(all_outs)
-                all_outs = client.gather(f_all_outs)
-        else:
-            all_outs = per_fieldid
-
-        # keep track of why field is what.
-        data = pandas.concat(all_outs, keys=fieldids).reset_index(level=0).rename({"level_0":"fieldid"}, axis=1)
+        data = cls.realize_survey_target_lcs(targets, survey, template=template,
+                                                 **kwargs)
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -512,43 +484,60 @@ class DataSet( object ):
     #    Statics     #
     # -------------- #
     @staticmethod
-    def _realize_lc_perfieldid_from_survey_and_target(targets, survey, template=None,
-                                                      use_dask=False, inplace=False, template_prop={}):
+    def realize_survey_target_lcs(targets, survey, template=None,
+                                  template_prop={}, nfirst=None):
         """ """
-        if use_dask:
-            import dask
-
         if template is None:
             template = targets.template
-            
-        targets_data = targets.data.copy() if not inplace else targets.data
-        targets_data["fieldid"] = survey.radec_to_fieldid(*targets_data[["ra","dec"]].values.T)
 
-        targets_data = targets_data.explode("fieldid")
-        all_out = []
+        template_columns = targets.get_template_columns()
 
-        fieldids = targets_data["fieldid"].unique()
-        for fieldid_ in fieldids:
-            # What kind of template ?
-            # in the loop to avoid dask conflict, to be checked
-            sncosmo_model = template.get(**template_prop)  # get() returs copy
-            
-            # get the given field observation
-            this_survey = survey.data[survey.data["fieldid"] == fieldid_][["mjd","band","skynoise","gain", "zp"]]
+        #targets_data = targets.data.copy() if not inplace else targets.data
+        dfieldids_ = survey.radec_to_fieldid(targets.data[["ra","dec"]])
+        # merge conserves the dtypes of fieldids, not join.
+        targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
 
-            # taking the data we need
-            existing_columns = np.asarray(sncosmo_model.param_names)[np.in1d(sncosmo_model.param_names, targets_data.columns)]
-            this_target = targets_data[targets_data["fieldid"] == fieldid_][existing_columns]
-            
-            # realize the lightcurve for this fieldid
-            if use_dask:
-                this_out = dask.delayed(get_obsdata)(sncosmo_model, this_survey, this_target)
-            else:
-                this_out = get_obsdata(sncosmo_model, this_survey, this_target)
-            
-            all_out.append(this_out)
+
+        # index them per fieldids names.
+        target_indexed = targets_data.reset_index().set_index(["index"]+survey.fieldids.names)
+        # best performance when passing by one groupby calls rather than indexing and xs()
+        gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names].groupby(survey.fieldids.names)
+
+        # get list of 
+        # This works for any size of fieldids
+        names = survey.fieldids.names
+        levels = np.arange(1, len(names)+1).tolist()
+        if len(levels)==1:
+            levels = levels[0] # single index dataframe
+
+        fieldids_indexes = target_indexed.groupby(level=levels).size().index
+        if nfirst is not None:
+            fieldids_indexes = fieldids_indexes[:nfirst]
+        print(f"{len(fieldids_indexes)} field combinations")
         
-        return fieldids, all_out
+        # Build a LC for a given index
+        def realize_index_lc(index_):
+            """ """
+            try:
+                this_survey = gsurvey_indexed.get_group(index_).copy()#survey_indexed.xs(index_)[["mjd","band","skynoise","gain", "zp"]]
+            except:
+                # no observations for this fieldids 
+                return None
+
+            # get() returns copy
+            sncosmo_model = template.get(**template_prop)  
+            # survey matching the input fieldids row
+
+            # Taking the data we need
+            this_target = target_indexed.xs(index_, level=levels)[template_columns]
+            # Get the lightcurves
+            this_lc = get_obsdata(sncosmo_model, this_survey, this_target)
+            this_lc[names] = index_
+
+            return this_lc
+
+        lc_out = [realize_index_lc(index_) for index_ in fieldids_indexes]
+        return pandas.concat(lc_out)
     
     # ============== #
     #   Properties   #

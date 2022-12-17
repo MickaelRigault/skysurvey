@@ -248,7 +248,7 @@ class Template( object ):
                                      times, in_mag=in_mag,
                                      zp=zp, zpsys=zpsys,
                                      sncosmo_model=sncosmo_model)
-
+        
         # ------- #
         #  axis   #
         # ------- #                    

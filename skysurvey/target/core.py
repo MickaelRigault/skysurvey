@@ -232,13 +232,22 @@ class Target( object ):
         template_parameter: parameters of the template (sncosmo.Model) | argument
         get_template: get a template instance (sncosmo.Model)
         """
-        known = self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
+        known = self.get_template_columns()
         prop = self.data[known]
         if index is not None:
             return prop.loc[index]
         
         return prop
 
+    def get_template_columns(self):
+        """ get the data columns that are template parameters 
+        
+        Returns
+        -------
+        pandas.columns
+        """
+        return self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
+        
     # -------------- #
     #   Converts     #
     # -------------- #

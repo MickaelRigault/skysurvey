@@ -7,3 +7,6 @@ scipy
 astropy
 sncosmo
 healpy
+
+# ZTF
+ztffields

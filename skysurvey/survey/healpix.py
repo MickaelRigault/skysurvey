@@ -133,8 +133,14 @@ class HealpixSurvey( BaseSurvey ):
     # ------- #
     #  core   #
     # ------- #
-    def radec_to_fieldid(self, ra, dec):
+    def radec_to_fieldid(self, radec):
         """ get the fieldid of the given (list of) coordinates """
+        if type(radec) is pandas.DataFrame:
+            ra = np.asarray(radec["ra"].values, dtype="float")
+            dec = np.asarray(radec["dec"].values, dtype="float")
+        else:
+            ra, dec = np.asarray(radec).T
+            
         return hp.ang2pix(self.nside, (90 - ra) * np.pi/180, dec * np.pi/180)
 
     # ------- #

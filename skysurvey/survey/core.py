@@ -139,7 +139,7 @@ class BaseSurvey( object ):
         return all_data
         
         
-    def radec_to_fieldid(self, ra, dec):
+    def radec_to_fieldid(self, radec):
         """ get the fieldid of the given (list of) coordinates """
         raise NotImplementedError("you have not implemented radec_to_fieldid for your survey")
     
@@ -149,7 +149,81 @@ class BaseSurvey( object ):
     def show(self):
         """ shows the sky coverage """
         raise NotImplementedError("you have not implemented show for your survey")
+
+
+    def show_nexposures(self, ax=None, exposure_key="expid",
+                            bands=None,perband=True, band_key="band", band_colors=None,
+                            fieldid=None,
+                            legend=True, **kwargs):
+        """ """
+        from astropy.time import Time
         
+        day = self.data["mjd"].astype(int)
+        day.name = "day"
+        data = self.data.join(day) # this is a copy
+
+        if fieldid is not None:
+            data = data[data["fieldid"].isin( np.atleast_1d(fieldid) )]
+        
+        if ax is None:
+            import matplotlib.pyplot as plt
+            fig = plt.figure(figsize=(9,2))
+            ax = fig.add_axes([0.075, 0.3, 0.85, 0.6])
+        else:
+            fig = ax.figure
+
+        if not perband:
+            nobs = data.groupby(exposure_key).first().groupby("day").size()
+            all_days = nobs.index
+            nbands = 1
+        else:
+            nobs = data.groupby(exposure_key).first().groupby(["day", band_key]).size()
+            all_days = nobs.index.levels[0]
+            if bands is None:
+                bands = nobs.index.levels[1]
+            nbands = len(bands)
+
+        times = Time(all_days.astype( float ), format="mjd").datetime
+
+        # plotting properties
+        prop = {**dict(zorder=3, width=0.95), **kwargs}
+
+        if perband:
+            bottom = 0
+            if band_colors is None:
+                band_colors = [None for i_ in range(len(bands))]
+                
+            for band_, color_ in zip( bands, band_colors ):
+                d_ = nobs.xs(band_, level=1).reindex(all_days).fillna(0).astype(int).values
+                ax.bar(times, d_, color=color_,
+                       bottom=bottom, label=f"{band_}",
+                       **prop)
+                bottom += d_
+        else:
+             ax.bar(times, nobs.values, **prop)
+
+        from matplotlib import dates as mdates
+        locator = mdates.AutoDateLocator()
+        formatter = mdates.ConciseDateFormatter(locator)
+        ax.xaxis.set_major_locator(locator)
+        ax.xaxis.set_major_formatter(formatter)
+
+
+        clearwhich = ["left","right","top"] # "bottom"
+        [ax.spines[which].set_visible(False) for which in clearwhich]
+        ax.tick_params(axis="y", labelsize="small", 
+                                   labelcolor="0.7", color="0.7")
+
+        ax.grid(axis="y", lw=0.5, color='0.7', zorder=1, alpha=0.5)
+        ax.set_ylabel("exposures per day", color="0.7", fontsize="small")
+
+        ax.set_ylim(ymin=0, ymax=np.round(nobs.max()*1.05,decimals=-1) )
+        print(nobs.max())
+        if legend:
+            ax.legend(loc=[0,1], ncol=nbands, frameon=False, fontsize="small")
+            
+        return fig
+    
     # ============== #
     #   Properties   #
     # ============== #
