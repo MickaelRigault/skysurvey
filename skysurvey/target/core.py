@@ -61,6 +61,17 @@ class Target( object ):
 
 
     @classmethod
+    def from_data(cls, data, template=None):
+        """ """
+        this = cls()
+
+        if template is not None:
+            self.set_template(template)
+
+        this._data = data
+        return this
+        
+    @classmethod
     def from_draw(cls, size=None, model=None, template=None,
                       zmax=None, tstart=None, tstop=None,
                       nyears=None,

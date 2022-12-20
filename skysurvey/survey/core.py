@@ -168,16 +168,18 @@ class BaseSurvey( object ):
         if ax is None:
             import matplotlib.pyplot as plt
             fig = plt.figure(figsize=(9,2))
-            ax = fig.add_axes([0.075, 0.3, 0.85, 0.6])
+            ax = fig.add_axes([0.075, 0.2, 0.85, 0.6])
         else:
             fig = ax.figure
 
         if not perband:
             nobs = data.groupby(exposure_key).first().groupby("day").size()
+            max_obs = nobs.max()
             all_days = nobs.index
             nbands = 1
         else:
             nobs = data.groupby(exposure_key).first().groupby(["day", band_key]).size()
+            max_obs = nobs.groupby(level=0).sum().max()
             all_days = nobs.index.levels[0]
             if bands is None:
                 bands = nobs.index.levels[1]
@@ -217,7 +219,7 @@ class BaseSurvey( object ):
         ax.grid(axis="y", lw=0.5, color='0.7', zorder=1, alpha=0.5)
         ax.set_ylabel("exposures per day", color="0.7", fontsize="small")
 
-        ax.set_ylim(ymin=0, ymax=np.round(nobs.max()*1.05,decimals=-1) )
+        ax.set_ylim(ymin=0, ymax=np.round(max_obs*1.05,decimals=-1) )
         print(nobs.max())
         if legend:
             ax.legend(loc=[0,1], ncol=nbands, frameon=False, fontsize="small")
@@ -253,3 +255,9 @@ class BaseSurvey( object ):
     def of_type(self):
         """ kind of survey that is """
         return str(type(self)).split("'")[-2].split(".")[-1]
+
+    @property
+    def date_range(self):
+        """ first and last date of the survey """
+        return np.min(self.data["mjd"]), np.max(self.data["mjd"])
+        

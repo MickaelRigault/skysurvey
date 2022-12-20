@@ -55,7 +55,7 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
     if len(list_of_observations) == 0:
         return None
     
-    return pandas.concat([l.to_pandas() for l in list_of_observations],  keys=parameters.index)
+    return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
 
 
 
@@ -269,6 +269,31 @@ class DataSet( object ):
             
         return ndetection
 
+
+    def get_target_lightcurve(self, index, detection_only=False, detlimit=5.):
+        """ get the observation of the given target.
+        
+        = short cut to self.data.xs(index) = 
+
+        Parameters
+        ----------
+        detection_only: bool
+            only the detected points of the lightcurves 
+
+        detlimit: float
+            definition of a detection (flux/fluxerr>=detlimit)
+
+        Returns
+        -------
+        pandas.DataFrame
+            the lightcurve
+
+        """
+        data = self.data.xs(index)
+        if detection_only:
+            data = data[data["flux"]/data["fluxerr"]>=detlimit]
+
+        return data
     
     # -------- #
     #  FIT     #
@@ -444,7 +469,7 @@ class DataSet( object ):
             index = np.random.choice(self.obs_index)
 
         # Data
-        obs_ = self.data.xs(index).copy()
+        obs_ = self.get_target_lightcurve(index)
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
             phase_window = np.asarray(phase_window)+t0
@@ -500,6 +525,7 @@ class DataSet( object ):
 
         # index them per fieldids names.
         target_indexed = targets_data.reset_index().set_index(["index"]+survey.fieldids.names)
+        
         # best performance when passing by one groupby calls rather than indexing and xs()
         gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names].groupby(survey.fieldids.names)
 
@@ -530,6 +556,7 @@ class DataSet( object ):
 
             # Taking the data we need
             this_target = target_indexed.xs(index_, level=levels)[template_columns]
+            
             # Get the lightcurves
             this_lc = get_obsdata(sncosmo_model, this_survey, this_target)
             this_lc[names] = index_
