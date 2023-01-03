@@ -34,7 +34,7 @@ def get_sncosmo_model(source="salt2",
     """
     modelprop = dict(source=source)
     if incl_dust:
-        dust  = sncosmo.CCM89Dust()
+        dust = sncosmo.CCM89Dust()
         modelprop["effects"] = [dust]
         modelprop["effect_names"]=['mw']
         modelprop["effect_frames"]=['obs']

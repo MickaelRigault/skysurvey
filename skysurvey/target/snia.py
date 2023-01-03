@@ -13,14 +13,27 @@ __all__ = ["SNeIa"]
 #                    #
 # ================== #
 class SNeIaColor( object ):
-    
+
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.01", cint=-0.05, sigmaint=0.05, tau=0.1):
         """ exponential decay convolved with and intrinsic gaussian color distribution.
 
         Parameters
         ----------
-        
+        xx: str
+            the x-axis of the color distribution. It should be a string with the
+            format "min:max:step". The default is "-0.3:1:0.01".
+            inputs np.r_[xx]
+
+        cint: float
+            the mean of the intrinsic color distribution. The default is -0.05.
+
+        sigmaint: float
+            the standard deviation of the intrinsic color distribution. The default is 0.05.
+
+        tau: float
+            the decay constant of the dust distribution. The default is 0.1.
+
         Returns
         -------
         2d-array:
@@ -31,16 +44,16 @@ class SNeIaColor( object ):
 
         from scipy import stats
         from scipy.ndimage import gaussian_filter1d
-        # exponential decay center on cint            
+        # exponential decay center on cint
         expon = stats.expon.pdf(xx, loc=-0.05, scale=0.1)
-        # applying gaussian filtering        
+        # applying gaussian filtering
         #  - which require sigmaint in pixel.
         sigmaint_inpix = sigmaint/(xx[1]-xx[0]) # assuming constant step
         pdf = gaussian_filter1d(expon, sigmaint_inpix)
-        
+
         return xx, pdf
 
-    
+
 class SNeIaStretch( object ):
 
     @staticmethod

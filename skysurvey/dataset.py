@@ -556,7 +556,7 @@ class DataSet( object ):
 
             # Taking the data we need
             this_target = target_indexed.xs(index_, level=levels)[template_columns]
-            
+
             # Get the lightcurves
             this_lc = get_obsdata(sncosmo_model, this_survey, this_target)
             this_lc[names] = index_
@@ -565,7 +565,7 @@ class DataSet( object ):
 
         lc_out = [realize_index_lc(index_) for index_ in fieldids_indexes]
         return pandas.concat(lc_out)
-    
+
     # ============== #
     #   Properties   #
     # ============== #
@@ -573,21 +573,21 @@ class DataSet( object ):
     def data(self):
         """ """
         return self._data
-    
+
     @property
     def targets(self):
         """ """
         return self._targets
-    
+
     @property
     def survey(self):
         """ """
         return self._survey
-        
+
     @property
     def obs_index(self):
         """ index of the observed target """
         if not hasattr(self,"_obs_index") or self._obs_index is None:
             self._obs_index = self.data.index.get_level_values(0).unique().sort_values()
-
+            
         return self._obs_index
