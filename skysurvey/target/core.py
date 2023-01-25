@@ -1,4 +1,3 @@
-import warnings
 import numpy as np
 import pandas
 import inspect
@@ -74,7 +73,7 @@ class Target( object ):
     @classmethod
     def from_draw(cls, size=None, model=None, template=None,
                       zmax=None, tstart=None, tstop=None,
-                      nyears=None,
+                      zmin=0, nyears=None,
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -96,6 +95,9 @@ class Target( object ):
 
         zmax: float
             maximum redshift to be simulated.
+
+        zmin: float
+            minimum redshift to be simulated.
 
         tstart: float
             starting time of the simulation
@@ -480,7 +482,8 @@ class Target( object ):
     #   Draw Methods  #
     # =============== #
     def draw(self, size=None,
-                 zmax=None, tstart=None, tstop=None,
+                 zmax=None, zmin=0,
+                 tstart=None, tstop=None,
                  nyears=None,
                  inplace=True, **kwargs):
         """ draws the parameter model (using self.model.draw() 
@@ -493,6 +496,9 @@ class Target( object ):
 
         zmax: float
             maximum redshift to be simulated.
+
+        zmin: float
+            minimum redshift to be simulated.
 
         tstart: float
             starting time of the simulation
@@ -525,6 +531,13 @@ class Target( object ):
             
         elif nyears is not None:
             zmax = self.get_model_parameter("redshift", "zmax", None)
+
+        if zmin is not None:
+            kwargs.setdefault("redshift",{}).update({"zmin": zmin})
+            
+        elif nyears is not None:
+            zmin = self.get_model_parameter("redshift", "zmin", None)
+            
             
         if tstop is not None:
             kwargs.setdefault("t0",{}).update({"high": tstop})
@@ -537,9 +550,9 @@ class Target( object ):
             tstart = self.get_model_parameter("t0", "low", None)
 
         if nyears is not None:
-            print(zmax)
+            rate_min = self.get_rate(zmin) if (zmin is not None and zmin >0) else 0
             kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
-            size = int(self.get_rate(zmax) * nyears)
+            size = int((self.get_rate(zmax)-rate_min) * nyears)
 
         data = self.model.draw(size=size, **kwargs)
         if inplace:

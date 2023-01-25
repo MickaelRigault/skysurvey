@@ -141,7 +141,7 @@ class HealpixSurvey( BaseSurvey ):
         else:
             ra, dec = np.asarray(radec).T
             
-        return hp.ang2pix(self.nside, (90 - ra) * np.pi/180, dec * np.pi/180)
+        return hp.ang2pix(self.nside, dec * np.pi/180,  (90 - ra) * np.pi/180)
 
     # ------- #
     #  draw   #
