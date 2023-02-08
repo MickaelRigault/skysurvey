@@ -260,6 +260,71 @@ class Target( object ):
         pandas.columns
         """
         return self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
+
+
+    # -------------- #
+    #   Apply        #
+    # -------------- #
+    def apply_noise(self, error_model, relat_err=0.01):
+        """ returns a DataFrame corresponding to self.data affected by the noise given in error_model.
+        
+        *Careful*: Only parameters explicitly mentioned in the input error_model will be changed. 
+        This could breaks the natural connection between DAG parameters. 
+        e.g. if magobs is changed, this does not automatically update x0.
+
+        Parameters
+        ----------
+        error_model: dict, DataFrame or ModelDAG
+            error model that will be applied to the data. The keys must correspond.
+            several input format are accepted. 
+            The error_model keys must correspond to the data keys to be affected.
+            - dict: assumed to be an input of a ModelDAG.
+            - ModelDAG: uses draw to generate the dataframe
+            - dataframe: keys must correspond to self.data keys to be affected.
+
+        relat_err: float or None
+            if given, the stored parameters error will randomly drawn (gaussian)
+            around the true input error with a scale corresponding to
+            true_err * relat_err.
+
+        Returns
+        -------
+        DataFrame:
+            self.data with all matching columns from error_model changed {param}.
+            {param}_err columns will be added.
+            
+            
+        Example
+        -------
+        Say you want to affect 'magobs' with a random gaussian noise of 
+        1 +/- 0.1.
+        ```
+        error_model = {'magobs': {"model": np.random.normal, "param": {'loc':1, 'scale':0.1}}}
+        ```
+        With that, the 'magobs' columns with be changed and a magobs_err created. 
+        """
+        from ..dag import ModelDAG
+        if type(error_model) is dict: # assumed to be a model's input
+            error_model = ModelDAG(error_model).draw( len(self.data) )
+        elif type(error_model) is ModelDAG: # assumed to be a model
+            error_model = error_model.draw( len(self.data) )
+        # else: dataframe
+        
+        data_ = self.data.copy()
+        colums = data_.columns[np.in1d(data_.columns, error_model.columns)]
+        
+        
+        for column in colums:
+            err_true = error_model[column]
+            data_[column] = np.random.normal(loc=data_[column], scale=err_true)
+            if relat_err is not None and relat_err>0:
+                err_eff = np.random.normal(loc=err_true, scale=err_true*relat_err)
+            else:
+                err_eff = err_true
+                
+            data_[f"{column}_err"] = err_eff
+            
+        return data_
         
     # -------------- #
     #   Converts     #

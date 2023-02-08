@@ -266,7 +266,7 @@ class SNeIa( Transient ):
 
                    x0 = {"model": "magobs_to_amplitude", # defined in Transients
                          "input": ["magobs"],
-                         "param": {"param_name":"x0"}}, #because it needs to call sncosmo_model.get(param_name)
+                         "param": {"param_name": "x0"}}, #because it needs to call sncosmo_model.get(param_name)
                        
                    radec = {"model": "random",
                             "param": dict(ra_range=[0, 360], dec_range=[-30, 90]),
