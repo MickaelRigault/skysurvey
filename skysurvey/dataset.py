@@ -139,8 +139,9 @@ class DataSet( object ):
         --------
         read_parquet: loads a stored dataset
         """
-        data = cls.realize_survey_target_lcs(targets, survey, template=template,
+        lightcurves = cls.realize_survey_target_lcs(targets, survey, template=template,
                                                  **kwargs)
+        data = pandas.concat(lightcurves)
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -593,14 +594,18 @@ class DataSet( object ):
             return sncosmo_model, this_survey, this_target
 
         data = [get_index_lc_input(index_) for index_ in fieldids_indexes]
+        print(f"data done")        
         if client is not None:
             big_future = client.scatter(data) # scatter data
+            print(f"scattering done")            
             futures_ = client.map(_get_obsdata_, big_future)
+            print(f"futures done")
             lc_out = client.gather(futures_)
         else:
             lc_out = [_get_obsdata_(data_) for data_ in data]
-            
-        return pandas.concat(lc_out)
+
+        print(f"returns lc_out")            
+        return lc_out
 
     # ============== #
     #   Properties   #
