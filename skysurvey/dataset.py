@@ -596,10 +596,10 @@ class DataSet( object ):
         if client is not None:
             big_future = client.scatter(data) # scatter data
             futures_ = client.map(_get_obsdata_, big_future)
-            return futures_
-        
-        
-        lc_out = [realize_index_lc(index_) for index_ in fieldids_indexes]
+            lc_out = client.gather(futures_)
+        else:
+            lc_out = [_get_obsdata_(data_) for data_ in data]
+            
         return pandas.concat(lc_out)
 
     # ============== #
