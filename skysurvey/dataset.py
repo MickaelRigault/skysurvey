@@ -110,7 +110,7 @@ class DataSet( object ):
         self.set_survey(survey)
         
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, template=None, **kwargs):
+    def from_targets_and_survey(cls, targets, survey, template=None, client=None, **kwargs):
         """ loads a dataset (observed data) given targets and a survey
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
@@ -127,6 +127,9 @@ class DataSet( object ):
         survey: skysurvey.Survey (or child of)
             sky observation (what was observed when with which situation)
 
+        client: dask.distributed.Client()
+            dask client to use if any. This is used for 
+            parallelization of the lc generation per field.
 
         **kwargs goes to realize_survey_target_lcs
 
@@ -139,9 +142,10 @@ class DataSet( object ):
         --------
         read_parquet: loads a stored dataset
         """
-        lightcurves = cls.realize_survey_target_lcs(targets, survey, template=template,
+        lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey, template=template,
+                                                                  client=client,
                                                  **kwargs)
-        data = pandas.concat(lightcurves)
+        data = pandas.concat(lightcurves, keys=fieldids).reset_index(level=0) # store the fieldid
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -544,7 +548,43 @@ class DataSet( object ):
     def realize_survey_target_lcs(targets, survey, template=None,
                                   template_prop={}, nfirst=None,
                                   client=None):
-        """ """
+        """ 
+        
+        Parameters
+        ----------
+        targets: skysurvey.Target (or child of)
+            target data corresponding to the true target parameters  
+            (as given by nature)
+            
+        survey: skysurvey.Survey (or child of)
+            sky observation (what was observed when with which situation)
+
+        template: Template
+            template to use to generate the lightcurve.
+            If None given, the target's template is used.
+
+        template_prop: dict
+            kwargs for template.get(), setting the template parameters
+            
+        nfirst: int
+            if given, only the first nfrist entries will be considered.
+            This is a debug / test tool.
+        
+        client: dask.distributed.Client()
+            dask client to use if any. This is used for 
+            parallelization of the lc generation per field.
+        
+            
+        Returns
+        -------
+        list, list
+            - list of dataframe (1 per fields, all targets of the field in)
+            - list of fields (fieldid)
+            
+        See also
+        --------
+        from_targets_and_survey: laods the instance given targets and a survey
+        """
         if template is None:
             template = targets.template
 
@@ -605,7 +645,7 @@ class DataSet( object ):
             lc_out = [_get_obsdata_(data_) for data_ in data]
 
         print(f"returns lc_out")            
-        return lc_out
+        return lc_out, fieldids_indexes
 
     # ============== #
     #   Properties   #
