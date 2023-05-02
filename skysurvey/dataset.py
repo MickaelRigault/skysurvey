@@ -58,6 +58,37 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
     return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
 
 
+def _get_obsdata_(data, **kwargs):
+    """ internal method to simplify get_obsdata using single input (for map)
+
+    Parameters
+    ----------
+    data: list
+        3 entries:
+        template: sncosmo.Model
+            an sncosmo model from which we can draw observations
+            
+        observations: pandas.DataFrame
+            Dataframe containing the observing infortation.
+            requested entries: TBD
+    
+        parameters: pandas.DataFrame
+            Dataframe containing the target parameters information.
+            These depend on you model. 
+
+    **kwargs goes to get_obsdata
+
+    Returns
+    -------
+    MultiIndex DataFrame
+        all the observations for all targets
+
+    See also
+    --------
+    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
+    """
+    return get_obsdata(*data, **kwargs)
+
 
 # ================== #
 #                    #
@@ -510,7 +541,8 @@ class DataSet( object ):
     # -------------- #
     @staticmethod
     def realize_survey_target_lcs(targets, survey, template=None,
-                                  template_prop={}, nfirst=None):
+                                  template_prop={}, nfirst=None,
+                                  client=None):
         """ """
         if template is None:
             template = targets.template
@@ -539,10 +571,11 @@ class DataSet( object ):
         fieldids_indexes = target_indexed.groupby(level=levels).size().index
         if nfirst is not None:
             fieldids_indexes = fieldids_indexes[:nfirst]
+            
         print(f"{len(fieldids_indexes)} field combinations")
         
         # Build a LC for a given index
-        def realize_index_lc(index_):
+        def get_index_lc_input(index_):
             """ """
             try:
                 this_survey = gsurvey_indexed.get_group(index_).copy()
@@ -552,18 +585,20 @@ class DataSet( object ):
                 return None
 
             # get() returns copy
-            sncosmo_model = template.get(**template_prop)  
+            sncosmo_model = template.get(**template_prop)
             # survey matching the input fieldids row
 
             # Taking the data we need
-            this_target = target_indexed.xs(index_, level=levels)[template_columns]
+            this_target = target_indexed.xs(index_, level=levels)[template_columns].copy()
+            return sncosmo_model, this_survey, this_target
 
-            # Get the lightcurves
-            this_lc = get_obsdata(sncosmo_model, this_survey, this_target)
-            this_lc[names] = index_
-
-            return this_lc
-
+        data = [get_index_lc_input(index_) for index_ in fieldids_indexes]
+        if client is not None:
+            big_future = client.scatter(data) # scatter data
+            futures_ = client.map(_get_obsdata_, big_future)
+            return futures_
+        
+        
         lc_out = [realize_index_lc(index_) for index_ in fieldids_indexes]
         return pandas.concat(lc_out)
 
