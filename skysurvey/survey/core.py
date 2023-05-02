@@ -23,7 +23,7 @@ class BaseSurvey( object ):
     # ============== #
     #   Methods      #
     # ============== #    
-    def set_data(self, data):
+    def set_data(self, data, lower_precision=True):
         """ set the observing data 
 
         = It is unlikely you need to use that directly. =
@@ -34,13 +34,19 @@ class BaseSurvey( object ):
              observing data. see REQUIRED_COLUMNS for the list of
              required columns.
 
+        lower_precision: bool
+             change the types from 64 to 32 precision when possible.
+
         Returns
         -------
         None
         """
         if data is not None and not np.in1d(self.REQUIRED_COLUMNS, data.columns).all():
             raise ValueError(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
-        
+
+        if lower_precision and data is not None:
+            data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
+            
         self._data = data
         
     # ------------ #

@@ -135,7 +135,7 @@ class Target( object ):
         _ = this.draw(size=size, zmax=zmax, tstart=tstart, tstop=tstop,
                       nyears=nyears, **kwargs)
         return this
-    
+        
     # ------------- # 
     #   Template    #
     # ------------- #
@@ -219,6 +219,43 @@ class Target( object ):
         """
         return self.get_template(index=index, **kwargs)
 
+    def get_target_flux(self, index, band, phase, zp=None, zpsys=None):
+        """ Flux through the given bandpass(es) at the given time(s).
+
+        Default return value is flux in photons / s / cm^2. If zp and zpsys
+        are given, flux(es) are scaled to the requested zeropoints.
+
+        Parameters
+        ----------
+        index: int
+            index of a target (see self.data.index) to set the 
+            template parameters to that of the target.
+
+        band : str or list_like
+            Name(s) of Bandpass(es) in registry.
+
+        phase : float or list_like
+            phase in day
+
+        zp : float or list_like, optional
+            If given, zeropoint to scale flux to (must also supply ``zpsys``).
+            If not given, flux is not scaled.
+
+        zpsys : str or list_like, optional
+            Name of a magnitude system in the registry, specifying the system
+            that ``zp`` is in.
+
+        Returns
+        -------
+        bandflux : float or `~numpy.ndarray`
+            Flux in photons / s /cm^2, unless `zp` and `zpsys` are
+            given, in which case flux is scaled so that it corresponds
+            to the requested zeropoint. Return value is `float` if all
+            input parameters are scalars, `~numpy.ndarray` otherwise.
+        """
+        template = self.get_target_template(index)
+        return template.bandflux(band, template.get('t0')+phase, zp=zp, zpsys=zpsys)
+    
     # -------------- #
     #   Getter       #
     # -------------- #
@@ -621,6 +658,8 @@ class Target( object ):
 
         data = self.model.draw(size=size, **kwargs)
         if inplace:
+            # lower precision
+            data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
             self._data = data
             
         return data

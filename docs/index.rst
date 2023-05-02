@@ -137,7 +137,7 @@ Step 3: dataset
 
 ..  code-block:: python
 		 
-    from survey import dataset
+    from skysurvey import dataset
     dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30s on a laptop for ~5000 targets
     dset.data
     # your survey (here ztf) is stored in dset.survey

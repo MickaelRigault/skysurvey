@@ -545,7 +545,8 @@ class DataSet( object ):
         def realize_index_lc(index_):
             """ """
             try:
-                this_survey = gsurvey_indexed.get_group(index_).copy()#survey_indexed.xs(index_)[["mjd","band","skynoise","gain", "zp"]]
+                this_survey = gsurvey_indexed.get_group(index_).copy()
+                #survey_indexed.xs(index_)[["mjd","band","skynoise","gain", "zp"]]
             except:
                 # no observations for this fieldids 
                 return None
