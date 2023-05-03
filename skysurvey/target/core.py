@@ -4,9 +4,11 @@ import inspect
 from astropy import cosmology
 from astropy.utils.decorators import classproperty
 
-__all__ = ["Target", "Transient"]
 
 from ..template import Template
+
+
+__all__ = ["Target", "Transient"]
 
 
 class Target( object ):
@@ -551,7 +553,8 @@ class Target( object ):
     #   Plotter      #
     # -------------- #
     def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None, 
-                     index=None, data=None):
+                         index=None, data=None, colorbar=True,
+                         **kwargs):
         """ """
         import matplotlib.pyplot as plt
 
@@ -577,7 +580,10 @@ class Target( object ):
             fig = ax.figure
 
 
-        ax.scatter(xvalue, yvalue, c=cvalue)
+        sc = ax.scatter(xvalue, yvalue, c=cvalue, **kwargs)
+        if cvalue is not None and colorbar:
+            fig.colorbar(sc, ax=ax)
+            
         return fig
             
     # =============== #
