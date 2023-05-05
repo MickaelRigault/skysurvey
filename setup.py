@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 packages = find_packages()
 
-VERSION = '0.3.14'
+VERSION = '0.4.0'
         
 setup(name='skysurvey',
       version=VERSION,

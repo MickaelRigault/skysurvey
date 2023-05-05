@@ -35,7 +35,7 @@ class TSTransient( Transient ):
                  )
     
     @classmethod
-    def from_sncosmo_source(cls, source, rate=1e3, model=None,
+    def from_sncosmo(cls, source, rate=1e3, model=None,
                                 magabs=None, magscatter=None):
         """ loads an instance from a sncosmo TimeSeriesSource source
         (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources) 
@@ -102,7 +102,7 @@ class TSTransient( Transient ):
         """ loads an instance from a sncosmo TimeSeriesSource source and draws trasient parameters
         (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources) 
 
-        = this is loads using cls.from_sncosmo_source = 
+        = this is loads using cls.from_sncosmo = 
 
 
         Parameters
@@ -163,7 +163,7 @@ class TSTransient( Transient ):
         --------
         from_draw: load an instance and draw the transient parameters
         """
-        this = cls.from_sncosmo_source(source, rate=rate, model=model,
+        this = cls.from_sncosmo(source, rate=rate, model=model,
                                       magabs=magabs, magscatter=magscatter)
         this.draw(size=size,
                       zmin=zmin, zmax=zmax,

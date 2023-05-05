@@ -63,13 +63,35 @@ class Target( object ):
 
     @classmethod
     def from_data(cls, data, template=None):
-        """ """
+        """ loads the instance given existing data. 
+        
+        This means that the model will be ignored as 
+        data will not be generated but input.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            dataframe containing (at least) the template
+            parameters
+
+        template: str, `sncosmo.Source`, `sncosmo.Model` or skysurvey.Template
+            the template source.
+            - str: any sncosmo model name
+
+        Returns
+        -------
+        instance
+        
+        See also
+        --------
+        from_draw: loads the instance from a random draw of targets given the model
+        """
         this = cls()
 
         if template is not None:
-            self.set_template(template)
+            this.set_template(template)
 
-        this._data = data
+        this.set_data(data)
         return this
         
     @classmethod
@@ -160,13 +182,13 @@ class Target( object ):
         if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
             template = Template.from_sncosmo_model(template) # let's build a skysurvey.Template
         elif sncosmo.Source in template.__class__.__mro__ or type(template) is str: # you provided a source
-            template = Template.from_sncosmo_source(template) # let's build a skysurvey.Template
+            template = Template.from_sncosmo(template) # let's build a skysurvey.Template
         else:
             pass # assume it's a template.
             
         self._template = template
         
-    def get_template(self, index=None, **kwargs):
+    def get_template(self, index=None, as_model=False, **kwargs):
         """ get a template (sncosmo.Model) 
 
         Parameters
@@ -188,11 +210,15 @@ class Target( object ):
         get_target_template: get a template set to the target parameters.
         get_template_parameters: get the template parameters for the given target
         """
+        from ..template import Template
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
             kwargs = {**prop, **kwargs}
 
-        return self.template.get(**kwargs)
+        sncosmo_model = self.template.get(**kwargs)
+        if as_model:
+            return sncosmo_model
+        return Template.from_sncosmo(sncosmo_model)
 
     def get_target_template(self, index, **kwargs):
         """ get a template set to the target parameters.
@@ -485,6 +511,33 @@ class Target( object ):
             
         
         self._model = model
+
+
+    def set_data(self, data, incl_template=True):
+        """ attach data  to this instance. 
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            dataframe containing (at least) the template
+            parameters
+
+        incl_template: bool
+            if data does not contain the template column
+            should this add it ?
+
+        Return
+        ------
+        None
+        """
+        if "template" not in data and incl_template:
+            if self.template is None:
+                templatename = "unknown"
+            else:
+                templatename = self.template_source.name
+            data["template"] = templatename
+
+        self._data = data
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 
@@ -632,6 +685,7 @@ class Target( object ):
             the simulated dataframe.
 
         """
+        
         # short cut 
         # -> change the redshift
         if zmax is not None:
@@ -645,13 +699,16 @@ class Target( object ):
             
         elif nyears is not None:
             zmin = self.get_model_parameter("redshift", "zmin", None)
-            
-            
+
         if tstop is not None:
             kwargs.setdefault("t0",{}).update({"high": tstop})
             
+        # time range:        
         if tstart is not None:
             kwargs.setdefault("t0",{}).update({"low": tstart})
+            if tstop is None and nyears is None: # do 1 year by default
+                kwargs.setdefault("t0",{}).update({"high": tstart+365.25})
+            
         elif tstop is not None and nyears is not None:
             tstart = tstop - 365.25*nyears # fixed later
         elif nyears is not None:
@@ -666,7 +723,7 @@ class Target( object ):
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
-            self._data = data
+            self.set_data(data)
             
         return data
 
@@ -850,7 +907,7 @@ class Transient( Target ):
     # ------------ #    
     def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
         """ """
-        template = self.get_template()
+        template = self.get_template(as_model=True)
         m_current = template._source.peakmag(band,zpsys)
         return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
 
@@ -864,7 +921,7 @@ class Transient( Target ):
     # ------------ #
     #  Show LC     #
     # ------------ #
-    def show_lightcurve(self, band, index=None, params=None,
+    def show_lightcurve(self, band, index, params=None,
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
                             zp=25, zpsys="ab",
@@ -877,11 +934,8 @@ class Transient( Target ):
         if params is None:
             params = {}
             
-        if index is not None:
-            prop = self.get_template_parameters(index).to_dict()
-            params = {**prop, **params}
-
-        return self.template.show_lightcurve(band, params=params,
+        template = self.get_target_template(index, **params)
+        return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
                                              time_range=time_range, npoints=npoints,
                                              zp=zp, zpsys=zpsys,

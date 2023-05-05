@@ -14,7 +14,6 @@ from .template import Template
 
 __all__ = ["DataSet", "get_obsdata"]
 
-
 def get_obsdata(template, observations, parameters, zpsys="ab"):
     """ get observed data using ``sncosmo.realize_lcs()``
 
@@ -56,7 +55,6 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
         return None
     
     return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
-
 
 def _get_obsdata_(data, **kwargs):
     """ internal method to simplify get_obsdata using single input (for map)
@@ -145,7 +143,8 @@ class DataSet( object ):
         lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey, template=template,
                                                                   client=client,
                                                  **kwargs)
-        data = pandas.concat(lightcurves, keys=fieldids).reset_index(level=0) # store the fieldid
+        data = pandas.concat(lightcurves, keys=fieldids # store fieldid
+                                 ).reset_index(level=0, names="fiedid")
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -505,7 +504,7 @@ class DataSet( object ):
             index = np.random.choice(self.obs_index)
 
         # Data
-        obs_ = self.get_target_lightcurve(index)
+        obs_ = self.get_target_lightcurve(index).copy()
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
             phase_window = np.asarray(phase_window)+t0
@@ -544,15 +543,18 @@ class DataSet( object ):
     # -------------- #
     #    Statics     #
     # -------------- #
-    @staticmethod
-    def realize_survey_target_lcs(targets, survey, template=None,
+    @classmethod
+    def realize_survey_target_lcs(cls, targets, survey, template=None,
                                   template_prop={}, nfirst=None,
                                   client=None):
-        """ 
+        """ creates the lightcurve of the input targets as they 
+        would be observed by the survey. 
+        = These are split per survey fields. =
+        
         
         Parameters
         ----------
-        targets: skysurvey.Target (or child of)
+        targets: skysurvey.Target, skysurvey.TargetCollection
             target data corresponding to the true target parameters  
             (as given by nature)
             
@@ -585,16 +587,77 @@ class DataSet( object ):
         --------
         from_targets_and_survey: laods the instance given targets and a survey
         """
+        if hasattr(targets.template, "__iter__"): # collection of single-kind
+            samekind_targets = targets.as_targets()
+            outs = [cls._realize_survey_kindtarget_lcs(t_, survey)
+                        for t_ in samekind_targets]
+            # lightcurves and fields
+            lc_out = [l_ for l,v in outs for l_ in l if l is not None] # list of list of dataframe
+            fieldids_indexes = np.hstack([v for l,v in outs if v is not None]) # all fields for all cases
+        else: # input is a single-kind target
+            lc_out, fieldids_indexes = cls._realize_survey_kindtarget_lcs(targets, survey,
+                                                          template=template,
+                                                          template_prop=template_prop,
+                                                          nfirst=nfirst,
+                                                          client=client)
+        return lc_out, fieldids_indexes
+
+        
+    @staticmethod
+    def _realize_survey_kindtarget_lcs( targets, survey, template=None,
+                                           template_prop={}, nfirst=None,
+                                           client=None):
+        """ creates the lightcurve of the input single-kind 
+        targets as they  would be observed by the survey. 
+        = These are split per survey fields. =
+        
+        
+        Parameters
+        ----------
+        targets: skysurvey.Target, skysurvey.TargetCollection
+            target data corresponding to the true target parameters  
+            (as given by nature)
+            
+        survey: skysurvey.Survey (or child of)
+            sky observation (what was observed when with which situation)
+
+        template: Template
+            template to use to generate the lightcurve.
+            If None given, the target's template is used.
+
+        template_prop: dict
+            kwargs for template.get(), setting the template parameters
+            
+        nfirst: int
+            if given, only the first nfrist entries will be considered.
+            This is a debug / test tool.
+        
+        client: dask.distributed.Client()
+            dask client to use if any. This is used for 
+            parallelization of the lc generation per field.
+        
+            
+        Returns
+        -------
+        list, list
+            - list of dataframe (1 per fields, all targets of the field in)
+            - list of fields (fieldid)
+            
+        See also
+        --------
+        from_targets_and_survey: laods the instance given targets and a survey
+        """
+        
         if template is None:
             template = targets.template
 
         template_columns = targets.get_template_columns()
 
-        #targets_data = targets.data.copy() if not inplace else targets.data
         dfieldids_ = survey.radec_to_fieldid(targets.data[["ra","dec"]])
         # merge conserves the dtypes of fieldids, not join.
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
-
+        if len(targets_data) == 0: # no field containing this target
+            return None, None
 
         # index them per fieldids names.
         target_indexed = targets_data.reset_index().set_index(["index"]+survey.fieldids.names)
@@ -613,7 +676,6 @@ class DataSet( object ):
         if nfirst is not None:
             fieldids_indexes = fieldids_indexes[:nfirst]
             
-        print(f"{len(fieldids_indexes)} field combinations")
         
         # Build a LC for a given index
         def get_index_lc_input(index_):
@@ -634,17 +696,13 @@ class DataSet( object ):
             return sncosmo_model, this_survey, this_target
 
         data = [get_index_lc_input(index_) for index_ in fieldids_indexes]
-        print(f"data done")        
         if client is not None:
             big_future = client.scatter(data) # scatter data
-            print(f"scattering done")            
             futures_ = client.map(_get_obsdata_, big_future)
-            print(f"futures done")
             lc_out = client.gather(futures_)
         else:
             lc_out = [_get_obsdata_(data_) for data_ in data]
 
-        print(f"returns lc_out")            
         return lc_out, fieldids_indexes
 
     # ============== #

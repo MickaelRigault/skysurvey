@@ -119,9 +119,9 @@ class Template( object ):
     def __init__(self, sncosmo_model):
         """ """
         self._sncosmo_model = sncosmo_model
-
+        
     @classmethod
-    def from_sncosmo_source(cls, source, incl_dust=True, **kwargs):
+    def from_sncosmo(cls, source, incl_dust=True, **kwargs):
         """ 
         loads the instance given the source name.
 
@@ -138,16 +138,15 @@ class Template( object ):
         -------
         instance
         """
-        # useless for now but I may change things in init.
-        sncosmo_model = get_sncosmo_model(source, incl_dust=incl_dust,
+        if type(source) != sncosmo.Model:
+            # useless for now but I may change things in init.
+            sncosmo_model = get_sncosmo_model(source, incl_dust=incl_dust,
                                           **kwargs)
+        else:
+            sncosmo_model = source
+            
         return cls(sncosmo_model)
-    
-    @classmethod
-    def from_sncosmo_model(cls, model):
-        """ """
-        return cls(model)
-    
+        
     # ============== #
     #   Methods      #
     # ============== #
@@ -420,7 +419,7 @@ class GridTemplate( Template ):
     @staticmethod
     def _read_single_file(filename, sncosmo_source):
         source = sncosmo_source.from_filename(filename)
-        return Template.from_sncosmo_source(source)
+        return Template.from_sncosmo(source)
     
     @classmethod
     def from_filenames(cls, filenames, refindex=0, grid_of=None):

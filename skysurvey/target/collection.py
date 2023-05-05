@@ -5,6 +5,9 @@ import pandas
 from .core import Target, Transient
 from .timeserie import TSTransient
 
+__all__ = ["TargetCollection"]
+
+
 def reshape_values(values, shape):
     """ """
     values = np.atleast_1d(values)
@@ -17,11 +20,22 @@ def reshape_values(values, shape):
 
 class TargetCollection( object ):
     _COLLECTION_OF = Target
+    _TEMPLATES = []
     
     def __init__(self, targets=None):
         """ """
         self.set_targets(targets)
 
+    def as_targets(self):
+        """ convert the collection in a list of same-template targets """
+        if "template" not in self.data:
+            raise AttributeError("self.data has no 'template' column")
+        
+        gtemplates = self.data.groupby("template")
+        return [self._COLLECTION_OF.from_data(self.data.loc[indices],
+                                              template=template_)
+                for template_, indices in gtemplates.groups.items()]
+        
     # ============= #
     #  Collection   #
     # ============= #            
@@ -46,6 +60,63 @@ class TargetCollection( object ):
         """ """
         return self.call_down("get_model_parameter", 
                               entry=entry, key=key, default=default)
+
+    def get_data(self, keys="_KIND", colname="kind"):
+        """ get a concat 
+        
+        """
+        if keys is not None and type(keys) is str: 
+            keys = self.call_down(keys)
+
+        list_of_data = self.call_down("data")
+        data = pandas.concat(list_of_data, keys=keys)
+        if keys is not None:
+            if colname is None:
+                colname = keys
+            data = data.reset_index(names=[colname,"subindex"])
+            
+        return data
+
+
+    def get_target_template(self, index):
+        """ """
+        from ..template import Template
+        data_index = self.data.loc[index]
+        this_template = Template.from_sncosmo( data_index["template"] )
+        target_params = data_index[np.in1d(data_index.index, this_template.parameters)].to_dict()
+        this_template.sncosmo_model.set(**target_params)
+        return this_template
+
+        
+    def show_lightcurve(self, band, index, params=None,
+                            ax=None, fig=None, colors=None,
+                            time_range=[-20,50], npoints=500,
+                            zp=25, zpsys="ab",
+                            format_time=True, t0_format="mjd", 
+                            in_mag=False, invert_mag=True, **kwargs):
+        """ 
+        params: None or dict
+        """
+
+        if params is None:
+            params = {}
+        # get the template
+        template = self.get_target_template(index, **params)
+        return template.show_lightcurve(band, params=params,
+                                             ax=ax, fig=fig, colors=colors,
+                                             time_range=time_range, npoints=npoints,
+                                             zp=zp, zpsys=zpsys,
+                                             format_time=format_time,
+                                             t0_format=t0_format, 
+                                             in_mag=in_mag, invert_mag=invert_mag,
+                                             **kwargs)
+
+    
+    def to_transient(self, keys=None, **kwargs):
+        """ """
+        data = self.get_data(keys=keys)
+        return Transient.from_data(data, **kwargs)
+        
     # ============= #
     #  Properties   #
     # ============= #
@@ -53,6 +124,13 @@ class TargetCollection( object ):
     def targets(self):
         """ list of transients """
         return self._targets
+
+    @property
+    def data(self):
+        """ """
+        if not hasattr(self,"_data"):
+            self._data = self.get_data()
+        return self._data
     
     @property
     def ntargets(self):
@@ -68,10 +146,24 @@ class TargetCollection( object ):
     def models(self):
         """ list of the target models """
         return self.call_down("model")
+
+
+    @property
+    def template(self):
+        """ shortcut to self.templates for self-consistency """
+        return self.templates
+    
+    @property
+    def templates(self):
+        """ """
+        if not hasattr(self,"_templates") or self._templates is None:
+            self._templates = self._TEMPLATES
+            
+        return self._templates
+
     
 class TransientCollection( TargetCollection ):
-    _COLLECTION_OF = Transient
-    
+    _COLLECTION_OF = Transient    
     # ============= #
     #  Methods      #
     # ============= #
@@ -82,23 +174,33 @@ class TransientCollection( TargetCollection ):
             rates /= np.nansum(rates)
         return rates
     
-    def draw(self, size=None, zmax=None,
-             tstart=None, tstop=None, nyears=None,
-             inplace=True, shuffle=True, **kwargs):
+    def draw(self, size=None,
+                 zmin=None, zmax=None,
+                 tstart=None, tstop=None,
+                 nyears=None,
+                 inplace=True, shuffle=True, **kwargs):
         """ """
         if size is not None:
-            size_ = np.asarray(size*self.get_rates(0.1, relative=True), dtype="int")
-            if np.sum(size_) < size:
-                size_[-1] += size-np.sum(size_)
-            size = size_
-                
-            # solving int issue
+            relat_rate = np.asarray(self.get_rates(0.1, relative=True))
+            templates = np.random.choice(np.arange( self.ntargets), size=size,
+                                        p=relat_rate/relat_rate.sum())
+            # using pandas to convert that into sizes.
+            # Most likely, there is a nuympy way, but it's fast enough?
+            templates = pandas.Series(templates)
+            # count entries and force 0 and none exist.
+            sizes = templates.value_counts().reindex( np.arange(self.ntargets)
+                                                     ).fillna(0).astype(int)
+            # and simply get the values
+            size = sizes.values # numpy
             
-        draws = self.call_down("draw", margs=size, 
-                              tstart=tstart, tstop=tstop, nyears=nyears, inplace=False, 
+            
+        draws = self.call_down("draw", margs=size,
+                              zmin=zmin, zmax=zmax,     
+                              tstart=tstart, tstop=tstop,
+                              nyears=nyears, inplace=False, 
                               **kwargs)
         
-        data = pandas.concat(draws, keys=self.target_ids, axis=0)
+        data = pandas.concat(draws, keys=self.templates, axis=0)
         data = data.reset_index(level=0).rename({"level_0":"template"}, axis=1)
         if shuffle:
             data = data.sample(frac=1).reset_index(drop=True)
@@ -115,20 +217,12 @@ class TransientCollection( TargetCollection ):
     def rates(self):
         """ list of transients """
         return self.call_down("rate")
-    
-    @property
-    def data(self):
-        """ """
-        if not hasattr(self,"_data"):
-            return None
-        return self._data
 
 
 class CompositeTransient( TransientCollection ):
     _COLLECTION_OF = Transient
 
     _KIND = "unknown"    
-    _TEMPLATES = []
     _RATE = 1e5
 
     _MAGABS = (-18, 1) # 
@@ -198,17 +292,9 @@ class CompositeTransient( TransientCollection ):
         if not hasattr(self,"_targets") or self._targets is None or len(self._targets) == 0:
             prop = {"rate": self.rate}
             prop["magabs"], prop["magscatter"] = self.magabs
-            self._targets = [self._COLLECTION_OF.from_sncosmo_source(source_, **prop)
+            self._targets = [self._COLLECTION_OF.from_sncosmo(source_, **prop)
                                  for source_ in self.templates]
         return self._targets
-
-    @property
-    def templates(self):
-        """ """
-        if not hasattr(self,"_templates") or self._templates is None:
-            self._templates = self._TEMPLATES
-            
-        return self._templates
 
     @property
     def magabs(self):
@@ -218,8 +304,6 @@ class CompositeTransient( TransientCollection ):
             
         return self._magabs
         
-
-    
     @property
     def rate(self):
         """ rate.
@@ -229,16 +313,17 @@ class CompositeTransient( TransientCollection ):
             self._rate = self._RATE # default
             
         return self._rate
-
+    
     
 class TSTransientCollection( TransientCollection ):
     _COLLECTION_OF = TSTransient
         
     @classmethod
     def from_draw(cls, sources, size=None, nyears=None, 
-                  rates=1e3, magabs=None, magscatter=None, **kwargs):
+                      rates=1e3, magabs=None, magscatter=None,
+                      **kwargs):
         """ """
-        this = cls.from_sncosmo_sources(sources, rates=rates,
+        this = cls.from_sncosmo(sources, rates=rates,
                                         magabs=magabs, 
                                         magscatter=magscatter)
         _ = this.draw(size=size, nyears=nyears, inplace=True,
@@ -246,14 +331,14 @@ class TSTransientCollection( TransientCollection ):
         return this
         
     @classmethod
-    def from_sncosmo_sources(cls, sources, rates=1e3, 
+    def from_sncosmo(cls, sources, rates=1e3, 
                              magabs=None, magscatter=None):
         """ loads the instance from a list of sources
         (and relative rates)
         """
         # make sure the sizes match
         rates = reshape_values(rates, len(sources))
-        transients = [cls._COLLECTION_OF.from_sncosmo_source(source_, rate_)
+        transients = [cls._COLLECTION_OF.from_sncosmo(source_, rate_)
                      for source_, rate_ in zip(sources, rates)]
         
         # Change the model.

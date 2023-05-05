@@ -166,10 +166,15 @@ class ModelDAG( object ):
 
     def _draw(self, model, size=None):
         """ core method converting model into a DataFrame (interp) """
+        if size == 0:
+            columns = list(np.hstack([v.get("as", name) for name, v in model.items()]))
+            return pandas.DataFrame(columns=columns)
+
+
         interp = pandas.DataFrame()
         params = dict(size=size)
-        
         for param_name, param_model in model.items():
+        
             # Default kwargs given
             if (inprop := param_model.get("param", {})) is None:
                 inprop = {}

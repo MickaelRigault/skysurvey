@@ -149,6 +149,7 @@ Tutorials
 
    installation
    builtin_transients
+   combining_transients
    
 .. toctree::
    :maxdepth: 2
