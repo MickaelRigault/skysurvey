@@ -231,8 +231,7 @@ class Template( object ):
         if as_phase:
             time += sncosmo_model.get("t0")
         
-        flux[sel] = sncosmo_model.flux(time, lbdas[sel])
-        print(flux[sel])     
+        flux[sel] = sncosmo_model.flux(time, lbdas[sel])  
         return flux
 
     

@@ -144,7 +144,7 @@ class DataSet( object ):
                                                                   client=client,
                                                  **kwargs)
         data = pandas.concat(lightcurves, keys=fieldids # store fieldid
-                                 ).reset_index(level=0, names="fiedid")
+                                 ).reset_index(survey.fieldids.names)
         return cls(data, targets=targets, survey=survey)
 
     @classmethod
@@ -297,11 +297,11 @@ class DataSet( object ):
         data = self.data.copy()
         data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
         if per_band:
-            ndetection = data.reset_index().set_index(["level_0","level_1","band"]).groupby(level=[0,2])["detected"].sum()
+            groupby = ["index","band"]
         else:
-            ndetection = data.groupby(level=0)["detected"].sum()
-
-            
+            groupby = "index"
+        
+        ndetection = data.groupby(groupby)["detected"].sum()
         return ndetection
 
 
@@ -489,7 +489,7 @@ class DataSet( object ):
     #  PLOTTER #
     # -------- #
     def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25,
-                                lc_prop={}, bands=None, 
+                                lc_prop={}, bands=None, show_truth=True,
                                 format_time=True, t0_format="mjd", 
                                 phase_window=None, **kwargs):
         """ if index is None, a random index will be used. 
@@ -518,13 +518,31 @@ class DataSet( object ):
         if bands is None:
             bands = np.unique(obs_["band"])
 
+        # = axes and figure = #
+        if ax is None:
+            if fig is None:
+                import matplotlib.pyplot as plt
+                fig = plt.figure(figsize=[7,4])
+            ax = fig.add_subplot(111)
+        else:
+            fig = ax.figure
+        
+        
         colors = get_band_color(bands)
-        fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
+        if show_truth:
+            fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
                                            format_time=format_time, t0_format=t0_format, 
                                            zp=zp, colors=colors,
                                            zorder=2, 
                                            **lc_prop)
-        ax = fig.axes[0]
+        elif format_time:
+            from matplotlib import dates as mdates        
+            locator = mdates.AutoDateLocator()
+            formatter = mdates.ConciseDateFormatter(locator)
+            ax.xaxis.set_major_locator(locator)
+            ax.xaxis.set_major_formatter(formatter)
+        else:
+            ax.set_xlabel("time [in day]", fontsize="large")
 
 
 
@@ -540,6 +558,7 @@ class DataSet( object ):
                         **kwargs)
 
         return fig
+    
     # -------------- #
     #    Statics     #
     # -------------- #
@@ -593,7 +612,13 @@ class DataSet( object ):
                         for t_ in samekind_targets]
             # lightcurves and fields
             lc_out = [l_ for l,v in outs for l_ in l if l is not None] # list of list of dataframe
-            fieldids_indexes = np.hstack([v for l,v in outs if v is not None]) # all fields for all cases
+            fieldids_indexes = np.vstack([np.vstack(v) for l,v in outs if v is not None]) # all fields for all cases
+            fieldids_indexes = np.squeeze(fieldids_indexes) # 1-d or n-d ?
+            if len(survey.fieldids.names) > 1: # multi-index
+                fieldids_indexes = pandas.MultiIndex.from_arrays(fieldids_indexes.T, names=survey.fieldids.names)
+            else: # single-index
+                fieldids_indexes = pandas.Index(data=fieldids_indexes, name=survey.fieldids.names[0])
+                
         else: # input is a single-kind target
             lc_out, fieldids_indexes = cls._realize_survey_kindtarget_lcs(targets, survey,
                                                           template=template,
@@ -663,7 +688,8 @@ class DataSet( object ):
         target_indexed = targets_data.reset_index().set_index(["index"]+survey.fieldids.names)
         
         # best performance when passing by one groupby calls rather than indexing and xs()
-        gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names].groupby(survey.fieldids.names)
+        gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names
+                                     ].groupby(survey.fieldids.names)
 
         # get list of 
         # This works for any size of fieldids
@@ -701,7 +727,7 @@ class DataSet( object ):
             futures_ = client.map(_get_obsdata_, big_future)
             lc_out = client.gather(futures_)
         else:
-            lc_out = [_get_obsdata_(data_) for data_ in data]
+            lc_out = [_get_obsdata_(data_) for data_ in data if data_ is not None]
 
         return lc_out, fieldids_indexes
 

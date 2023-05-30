@@ -1,7 +1,7 @@
 import numpy as np
 import pandas
 import inspect
-from astropy import cosmology
+from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
 
 
@@ -123,13 +123,19 @@ class Target( object ):
         zmin: float
             minimum redshift to be simulated.
 
-        tstart: float
+        tstart: float, str
             starting time of the simulation
-            
-        tstop: float
+            - str, this enters Astropy.Time, e.g. '2020-08-24'
+               and got converted into mjd
+            - float: date mjd
+
+        tstop: float, str
             ending time of the simulation
             (if tstart and nyears are both given, tstop will be
             overwritten by ``tstart+365.25*nyears``
+            - str, this enters Astropy.Time, e.g. '2020-08-24'
+               and got converted into mjd
+            - float: date mjd
 
         nyears: float
             if given, nyears will set:
@@ -255,7 +261,7 @@ class Target( object ):
 
         Parameters
         ----------
-        index: int
+        index:
             index of a target (see self.data.index) to set the 
             template parameters to that of the target.
 
@@ -283,6 +289,42 @@ class Target( object ):
         """
         template = self.get_target_template(index)
         return template.bandflux(band, template.get('t0')+phase, zp=zp, zpsys=zpsys)
+
+
+    def clone_target_at_redshifts(self, index, redshifts, as_dataframe=False):
+        """ get a clone of the given target at the given redshifts.
+        This: 
+        (1) copies the index entries, 
+        (2) sets the redshift to the input values
+        (3) redraw the model starting from the redshift (creating a new dataframe)
+        (4, optional) sets a new instance with the updated dataframe
+        
+
+        Parameters
+        ----------
+        index: 
+            index of a target (see self.data.index)
+
+        redshift: list, array
+            new redshifts to clone this target to
+
+        as_dataframe: bool
+            should this return the created new dataframe (True)
+            or a new instance (False)
+
+        Returns
+        -------
+        instance or DataFrame
+        """
+        dd = self.data.loc[index].to_frame().T
+        dd.loc[index, "z"] = redshifts
+        dd = dd.explode("z")
+        dd["z"] = dd["z"].astype(float)
+        data = self.model.redraw_from("z", dd, incl_name=False)
+        if as_dataframe:
+            return data
+        
+        return self.__class__.from_data(data)
     
     # -------------- #
     #   Getter       #
@@ -694,23 +736,29 @@ class Target( object ):
         elif nyears is not None:
             zmax = self.get_model_parameter("redshift", "zmax", None)
 
-        if zmin is not None:
+        if zmin is not None and "redshift" in self.model.model:
             kwargs.setdefault("redshift",{}).update({"zmin": zmin})
             
         elif nyears is not None:
             zmin = self.get_model_parameter("redshift", "zmin", None)
 
         if tstop is not None:
+            if type( tstop ) is str:
+                tstop = time.Time(tstop).mjd
+
             kwargs.setdefault("t0",{}).update({"high": tstop})
             
         # time range:        
         if tstart is not None:
+            if type( tstart ) is str:
+                tstart = time.Time(tstart).mjd
+                
             kwargs.setdefault("t0",{}).update({"low": tstart})
             if tstop is None and nyears is None: # do 1 year by default
                 kwargs.setdefault("t0",{}).update({"high": tstart+365.25})
-            
+        # tstart is None, then what ?
         elif tstop is not None and nyears is not None:
-            tstart = tstop - 365.25*nyears # fixed later
+            tstart = tstop - 365.25*nyears # fixed later            
         elif nyears is not None:
             tstart = self.get_model_parameter("t0", "low", None)
 
@@ -718,7 +766,9 @@ class Target( object ):
             rate_min = self.get_rate(zmin) if (zmin is not None and zmin >0) else 0
             kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
             size = int((self.get_rate(zmax)-rate_min) * nyears)
+            
 
+        # actually draw the data
         data = self.model.draw(size=size, **kwargs)
         if inplace:
             # lower precision
@@ -908,7 +958,7 @@ class Transient( Target ):
     def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
         """ """
         template = self.get_template(as_model=True)
-        m_current = template._source.peakmag(band,zpsys)
+        m_current = template._source.peakmag(band, zpsys)
         return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
 
     def draw_redshift(self, zmax, zmin=0, zstep=1e-3, size=None):
