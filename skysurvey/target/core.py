@@ -291,12 +291,12 @@ class Target( object ):
         return template.bandflux(band, template.get('t0')+phase, zp=zp, zpsys=zpsys)
 
 
-    def clone_target_at_redshifts(self, index, redshifts, as_dataframe=False):
+    def clone_target_change_entry(self, index, name, values, as_dataframe=False):
         """ get a clone of the given target at the given redshifts.
         This: 
         (1) copies the index entries, 
-        (2) sets the redshift to the input values
-        (3) redraw the model starting from the redshift (creating a new dataframe)
+        (2) sets the `name` to the input `values`
+        (3) redraw the model starting from `name` (creating a new dataframe)
         (4, optional) sets a new instance with the updated dataframe
         
 
@@ -304,9 +304,12 @@ class Target( object ):
         ----------
         index: 
             index of a target (see self.data.index)
+            
+        name: str
+            name of the entry to change
 
-        redshift: list, array
-            new redshifts to clone this target to
+        values: list, array
+            new values for this entry.
 
         as_dataframe: bool
             should this return the created new dataframe (True)
@@ -317,10 +320,10 @@ class Target( object ):
         instance or DataFrame
         """
         dd = self.data.loc[index].to_frame().T
-        dd.loc[index, "z"] = redshifts
-        dd = dd.explode("z")
-        dd["z"] = dd["z"].astype(float)
-        data = self.model.redraw_from("z", dd, incl_name=False)
+        dd.loc[index, name] = np.atleast_1d(values)
+        dd = dd.explode(name)
+        dd[name] = dd[name].astype(float)
+        data = self.model.redraw_from(name, dd, incl_name=False)
         if as_dataframe:
             return data
         

@@ -55,9 +55,65 @@ class ModelDAG( object ):
         """ """
         return self.__str__()
 
+
+    def to_graph(self, engine="networkx"):
+        """ converts the model into another graph library object 
+
+        Parameters
+        ----------
+        engine: string
+            Implemented:
+            - NetworkX (networkx.org/documentation/stable/tutorial.html)
+            - Graphviz (https://pygraphviz.github.io/documentation/stable/index.html)
+
+        Return
+        ------
+        Graph instance
+            a new instance object.
+        """
+        if engine == "networkx":
+            import networkx as nx
+            graph = nx.Graph()
+        elif engine in ["graphviz", "pygraphviz"]:
+            import pygraphviz as pgv
+            graph = pgv.AGraph(directed=True, strict=True)
+        else:
+            raise NotImplementedError(f"engine {engine} is not implemented. networkx and graphviz are")
+
+        # Nodes and Edges
+        for name in self.entries:
+            graph.add_node(name)
+    
+        for name, to_name in self.entry_inputof.items():
+            graph.add_edge(name, to_name)
+
+        return graph
+    
+    def to_networkx(self):
+        """ shortcut to to_graph('networkx') """
+        return self.to_graph(engine="networkx")
+
+    def to_graphviz(self):
+        """ shortcut to to_graph('graphviz') """
+        return self.to_graph(engine="graphviz")
+
+
     # ============ #
     #   Method     #
     # ============ #
+    def visualize(self, fileout="tmp_modelvisualize.svg"):
+        """ """
+        from IPython.display import SVG
+        
+        ag = self.to_graphviz()
+        ag.graph_attr["epsilon"] = "0.001"
+        
+        ag.layout("dot")  # layout with dot
+        ag.draw(fileout)
+        return SVG(fileout)
+
+
+    
     def get_model(self, **kwargs):
         """ get a copy of the model 
         
@@ -158,9 +214,22 @@ class ModelDAG( object ):
         return forward_entries
 
 
-    def get_modeldf(self):
-        """ """
+    def get_modeldf(self, explode=True):
+        """ get a pandas.DataFrame version of the model dict
+
+        Parameters
+        ----------
+        explode: bool
+            should the input entry be exploded ?
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         modeldf = modeldict_to_modeldf(self.model)
+        if not explode:
+            return modeldf.explode("entry").set_index("entry")
+        
         return modeldf.explode("entry").explode("input").set_index("entry")
         
     # ============ #
@@ -390,8 +459,3 @@ class ModelDAG( object ):
         modeldf = self.get_modeldf()
         return modeldf[~modeldf["input"].isna()].reset_index().set_index("input")["entry"]
         
-
-def get_modeldf(self):
-    """ """
-    modeldf = modeldict_to_modeldf(self.model)
-    return modeldf.explode("name").explode("input")    
