@@ -16,22 +16,27 @@ class TSTransient( Transient ):
     >>> _ = snii.show_lightcurve(["ztfg","ztfr"], index=10, in_mag=True)
     """
     
-    _MODEL = dict( redshift = {"param": {"zmax": 0.05}, 
+    _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05}, 
                                "as": "z"},
-                   t0 = {"model": np.random.uniform,
-                         "param": {"low": 56000, "high": 56000+4*365}},
+                   t0 = {"func": np.random.uniform,
+                         "kwargs": {"low": 56000, "high": 56000+4*365}
+                        },
                          
-                   magabs = {"model": np.random.normal,
-                             "param": {"loc": -18, "scale": 1}},
+                   magabs = {"func": np.random.normal,
+                             "kwargs": {"loc": -18, "scale": 1}
+                            },
                              
-                   magobs = {"model": "magabs_to_magobs",
-                               "input": ["z", "magabs"]},
+                   magobs = {"func": "magabs_to_magobs",
+                             "kwargs": {"z":"@z", "magabs": "@magabs"}
+                            },
                                
-                   amplitude = {"model": "magobs_to_amplitude",
-                                "input": ["magobs"]},
+                   amplitude = {"func": "magobs_to_amplitude",
+                                "kwargs": {"magobs": "@magobs"}
+                            },
                    # This you need to match with the survey
-                   radec={"model": "random",
-                          "as": ["ra","dec"]}
+                   radec = {"func": "random",
+                            "as": ["ra","dec"]
+                            }
                  )
     
     @classmethod

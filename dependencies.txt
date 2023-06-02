@@ -8,5 +8,8 @@ astropy
 sncosmo
 healpy
 
+# Special
+modeldag
+
 # ZTF
 ztffields

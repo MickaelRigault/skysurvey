@@ -186,7 +186,7 @@ class Target( object ):
         """
         import sncosmo
         if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
-            template = Template.from_sncosmo_model(template) # let's build a skysurvey.Template
+            template = Template.from_sncosmo(template) # let's build a skysurvey.Template
         elif sncosmo.Source in template.__class__.__mro__ or type(template) is str: # you provided a source
             template = Template.from_sncosmo(template) # let's build a skysurvey.Template
         else:
@@ -413,7 +413,7 @@ class Target( object ):
         ```
         With that, the 'magobs' columns with be changed and a magobs_err created. 
         """
-        from ..dag import ModelDAG
+        from modeldag import ModelDAG
         if type(error_model) is dict: # assumed to be a model's input
             error_model = ModelDAG(error_model).draw( len(self.data) )
         elif type(error_model) is ModelDAG: # assumed to be a model
@@ -549,14 +549,12 @@ class Target( object ):
         from_setting: loads an instance given model parameters (dict)
         from_draw: loads and draw random data.
         """
-        from ..dag import ModelDAG
+        from modeldag import ModelDAG
         if type( model ) is dict:
             from copy import deepcopy
             model = ModelDAG(deepcopy(model), self)
             
-        
         self._model = model
-
 
     def set_data(self, data, incl_template=True):
         """ attach data  to this instance. 

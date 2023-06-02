@@ -10,7 +10,7 @@ from setuptools import setup, find_packages
 
 packages = find_packages()
 
-VERSION = '0.4.3'
+VERSION = '0.5.1'
         
 setup(name='skysurvey',
       version=VERSION,
@@ -19,8 +19,7 @@ setup(name='skysurvey',
       author_email='m.rigault@ipnl.in2p3.fr',
       url='https://github.com/MickaelRigault/skysurvey',
       packages=packages,
-#      package_data={'ztfdr': ['data/*']},
-#      scripts=["bin/__.py",]
+
      )
 # End of setupy.py ========================================================
 

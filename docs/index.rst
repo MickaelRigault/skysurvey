@@ -6,7 +6,7 @@ skysurvey_ is a python package made to simulate transients as they
 would be observed by a survey.
 It is a modern implementation of simsurvey_ that speeds-up and
 simplifies the code. It also aim at replacing the simulation part of
-the snana_ package.
+the snana_ package, while simplifying the user experience.
 
 
 Concept
@@ -103,6 +103,10 @@ Transient
 
 The ``Transient`` object is able to generate
 realistic objects given a simple configuration dictionary.
+The directory, called ``model`` enable the easily generation of a any
+complex inter-dependency of the Transient parameters. See the
+modeldag_ package.
+
 Some ``Transient`` have already been implemented for you, such as
 ``SNIa``, ``SNII`` or ``SNIc-BL`` . (see:  `quickstart with transient
 <quickstart/quickstart_target.ipynb>`_ •
@@ -176,6 +180,7 @@ Indices and tables
 
 .. _simsurvey: https://simsurvey.readthedocs.io/en/latest/index.html
 .. _skysurvey: https://github.com/MickaelRigault/skysurvey
+.. _modeldag: https://github.com/MickaelRigault/modeldag
 .. _sncosmo: https://sncosmo.readthedocs.io/en/stable/
 .. _`see list here`: https://sncosmo.readthedocs.io/en/stable/source-list.html
 .. _snana: https://github.com/RickKessler/SNANA
