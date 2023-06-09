@@ -274,6 +274,26 @@ class DataSet( object ):
     # -------- #
     #  GETTER  #
     # -------- #
+    def get_data(self, detected=None, detlimit=5, 
+                     phase_range=None, t0=None):
+        """ """
+        data = self.data.copy()
+        if phase_range is not None:
+            if t0 is None:
+                t0 = self.targets.data["t0"].copy()
+            
+            data["phase"] = data["time"] - t0.reindex(data.index, level=0)
+            data = data[data["phase"].between(*phase_range)]
+
+        if detected is not None:
+            data["detection"] = data["flux"]/data["fluxerr"])
+            if detected:
+                data = data[ data["detection"] ] > detlimit
+            else:
+                data = data[ data["detection"] ] <= detlimit
+
+        return data
+        
     def get_ndetection(self, detlimit=5, per_band=False):
         """ get the number of detection for each lightcurves
 
@@ -303,7 +323,6 @@ class DataSet( object ):
         
         ndetection = data.groupby(groupby)["detected"].sum()
         return ndetection
-
 
     def get_target_lightcurve(self, index, detection_only=False, detlimit=5.):
         """ get the observation of the given target.
