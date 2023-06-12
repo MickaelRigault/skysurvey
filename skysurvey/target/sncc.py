@@ -47,7 +47,7 @@ class SNeII( VincenziModels, CompositeTransient ):
     _KIND = "SN II"
     # change the absolute magnitude parameters
     # This is from (Perley 2020)
-    _MAGABS = [(-16.0, 1.3) # Table 1 of Vincenzi19
+    _MAGABS = (-16.0, 1.3) # Table 1 of Vincenzi19
     
 class SNeIIn( VincenziModels, CompositeTransient ):
     _KIND = "SN IIn"
@@ -67,7 +67,6 @@ class SNeIb( VincenziModels, CompositeTransient ):
     # changing the errors averaging with R14
     _MAGABS = (-18.3, 0.5) # Table 1 of Vincenzi19
     
-
 class SNeIc( VincenziModels, CompositeTransient ):
     _KIND = "SN Ic"
     _MAGABS = (-17.4, 0.7) # Table 1 of Vincenzi19 

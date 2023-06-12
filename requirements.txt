@@ -1,0 +1,12 @@
+numpy
+pandas
+scipy
+
+astropy
+sncosmo
+healpy
+extinction
+
+modeldag
+
+ztffield

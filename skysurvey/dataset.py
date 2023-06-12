@@ -286,7 +286,7 @@ class DataSet( object ):
             data = data[data["phase"].between(*phase_range)]
 
         if detected is not None:
-            data["detection"] = data["flux"]/data["fluxerr"])
+            data["detection"] = data["flux"]/data["fluxerr"]
             if detected:
                 data = data[ data["detection"] ] > detlimit
             else:
