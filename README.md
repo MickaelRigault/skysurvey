@@ -32,32 +32,47 @@ This latter is called a `DataSet`. Here is a quick example:
 ```python
 import skysurvey
 snia = skysurvey.SNeIa()
-data = snia.draw(size=5000) # see options
+data = snia.draw(size=50_000, tstart=56_000, tstop=56_100) # see options
 data.head(5) # also snia.data
 ```
 
 ## Step 2: Survey (when you pointed and sky conditions)
 ```python
-import skysurvey
-starting_date = snia.data["t0"].min()-50 # 50 days before the first target, no need to simulate a survey before that
+import numpy as np
+from skysurvey.tools import utils
 
-# and this is a much-simplified version of ZTF (independent random draws)
-ztf = survey.ZTF.from_random(size=365*4*1000, # number of observation 
-                       bands=["ztfg","ztfr","ztfi"], # band to observed
-                       mjd_range=[starting_date, starting_date+365*4], # timerange of observation
-                       skynoise_range=[10,20], # sky noise
-                     )
-ztf.data.head(5)
+size = 10_000
+
+# footprint
+from shapely import geometry
+sq_footprint = geometry.box(-1, -1, +1, +1)
+
+# Observing data
+ra, dec = utils.random_radec(size=size, ra_range=[200,250], dec_range=[-20,10])
+
+data = {}
+data["ra"] = ra
+data["dec"] = dec
+data["gain"] = 1
+data["zp"] = 30
+data["skynoise"] = np.random.normal(size=size, loc=150, scale=20)
+data["mjd"] = np.random.uniform(56_000-10, 56_100 + 10, size=size)
+data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+
+# Build the survey
+survey = skysurvey.Survey.from_pointings(data, footprint=sq_footprint)
+survey.show()
 ```
 
 ## Step 3: Dataset
 
-And now let's build the dataset (computation split by fieldid)
+And now let's build the dataset. The simulated lightcurves are in
+dset.data, the input survey is stored in dset.survey, the input
+targets is stored in dset.targets
+
 ```python
-from survey import dataset
-dset = dataset.DataSet.from_targets_and_survey(snia, ztf) # this takes ~30s on a laptop for ~5000 targets
+from skysurvey import dataset
+dset = dataset.DataSet.from_targets_and_survey(snia, survey)
 dset.data
-# your survey (here ztf) is stored in dset.survey
-# your targets (here snia) is stored in dset.targets
 ```
 
