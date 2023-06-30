@@ -160,6 +160,7 @@ Tutorials
    :caption: How to
 	      
    quickstart/index
+   howto/index   
    advanced/index
    
 .. toctree::

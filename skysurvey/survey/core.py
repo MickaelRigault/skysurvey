@@ -6,7 +6,7 @@ __all__ = ["BaseSurvey"] # no import when 'import *'
 
 class BaseSurvey( object ):
     
-    REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', 'fieldid', "gain", "zp"]
+    REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', "gain", "zp"]
     
     def __init__(self, data):
         """ 
@@ -41,17 +41,28 @@ class BaseSurvey( object ):
         -------
         None
         """
-        if data is not None and not np.in1d(self.REQUIRED_COLUMNS, data.columns).all():
-            raise ValueError(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
+        if data is None:
+            self._data = None
+            return
+        
+        if not np.in1d(self.REQUIRED_COLUMNS, data.columns).all():
+            warnings.warn(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
 
-        if lower_precision and data is not None:
+        if self.fields is not None and self.fieldids.name is not None:
+            if not np.all([f_name in data for f_name in self.fieldids.names]):
+                warnings.warn(f"fieldid {self.fieldids.names} are not in the input data")
+            
+        if lower_precision:
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
             
         self._data = data
-        
     # ------------ #
     #   GETTER     #
     # ------------ #
+    def get_timerange(self, timekey="mjd"):
+        """ """
+        return self.data[timekey].agg([np.min, np.max]).values
+        
     def get_fieldcoverage(self, incl_zeros=False, fillna=np.NaN,
                           **kwargs):
         """ short cut to get_fieldstat('size') 
@@ -120,34 +131,47 @@ class BaseSurvey( object ):
         """
         if data is None:
             data = self.data.copy()
-            
+
+        fieldids = self.fieldids.names
+
+        fieldgrouped = self.data.groupby(fieldids)
         if stat in ["size","value_counts"]:
-            data = data["fieldid"].value_counts()
+            data = fieldgrouped.size()
             
         elif columns is None:
-            data = data.groupby("fieldid").agg(stat)
+            data = fieldgrouped.agg(stat)
         else:
-            data = data.groupby("fieldid")[columns].agg(stat)
+            data = fieldgrouped[columns].agg(stat)
             
         if not incl_zeros:
             return data
-        
-        if type(data) == pandas.Series: # Serie
-            all_data = np.ones(self.nfields)*fillna
-            all_data[data.index] = data.values
-            all_data = pandas.Series(all_data, name=f"fieldid_{stat}")
-            
-        else: # DataFrame
-            all_data = np.ones((self.nfields, data.shape[1]))*fillna
-            all_data[data.index] = data.values
-            all_data = pandas.DataFrame(all_data, columns=data.columns)
-            
-        return all_data
+
+        return data.reindex(self.fieldids, level=0)
         
         
     def radec_to_fieldid(self, radec):
         """ get the fieldid of the given (list of) coordinates """
         raise NotImplementedError("you have not implemented radec_to_fieldid for your survey")
+
+    def get_observations_from_coords(self, radec):
+        """ returns the data associated to the input radec coordinates
+        
+        (calls radec_to_fieldid and select data matching the fieldid)
+
+        Parameters
+        ----------
+        radec: pandas.DataFrame or 2d array
+            coordinates in degree
+            (see format radec_to_fieldid())
+            
+        Returns
+        -------
+        pandas.DataFrame
+            copy of the data observed in the given radec coordinates
+        
+        """
+        fields = self.radec_to_fieldid(radec, observed_fields=True)
+        return self.data[ self.data[self.fieldids.name].isin(fields[self.fieldids.name]) ].copy()
     
     # ----------- #
     #  PLOTTER    #
@@ -256,6 +280,14 @@ class BaseSurvey( object ):
             self._nfields =self.data["fieldid"].max()
             
         return self._nfields
+
+    @property
+    def fields(self):
+        """ geodataframe containing the fields coordinates """
+        if not hasattr(self,"_fields"):
+            return None
+        return self._fields
+
     
     @property
     def of_type(self):

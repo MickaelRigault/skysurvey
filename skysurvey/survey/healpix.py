@@ -83,7 +83,7 @@ class HealpixSurvey( BaseSurvey ):
 
         Returns
         -------
-        class instance
+        instance
 
         See also
         --------
@@ -118,7 +118,7 @@ class HealpixSurvey( BaseSurvey ):
 
         Returns
         -------
-        class instance
+        instance
         """
         this = cls(nside=nside)
         this.draw_random(size,  bands,  
@@ -126,22 +126,128 @@ class HealpixSurvey( BaseSurvey ):
                         ra_range=ra_range, dec_range=dec_range,
                         inplace=True, **kwargs)
         return this
+
+    @classmethod
+    def from_pointings(cls, nside, data, footprint,  rakey="ra", deckey="dec",
+                          backend="polars",
+                          use_pyarrow_extension_array=False,
+                          **kwargs):
+        """ loads an instance given observing poitings of a survey
+        
+        This loads an polygon.PolygonSurvey using from_pointing and 
+        converts that into an healpix using the to_healpix() method
+
+        Parameters
+        ----------
+        nside : int
+            healpix nside parameter
+
+        data: pandas.DataFrame or dict
+            observing data, must contain the rakey and deckey columns.
+
+        footprint: shapely.geometry
+            footprint in the sky of the observing camera
+
+        rakey: str
+            name of the R.A. column (in deg)
+
+        deckey: str
+            name of the Declination column (in deg)
+
+        backend: str
+            which backend to use to merge the data (speed issue):
+            - polars (fastest): requires polars installed -> converted to pandas at the end
+            - pandas (classic): the normal way
+            - dask (lazy): as persisted dask.dataframe is returned
+
+        use_pyarrow_extension_array: bool
+            = ignored in backend != 'polars' or polars_to_pandas is not True = 
+            should the pandas dataframe be based on numpy array (slow to load but faster then)
+            or based on pyarrow array (like in polars) ; faster but numpy.asarray will be 
+            used by pandas when need (which will then slow things down).
+
+        **kwargs goes to polygon.PolygonSurvey.from_pointings
+
+        Returns
+        -------
+        instance
+        """
+        from .polygon import PolygonSurvey
+        # Create a generic polygon survey
+        polysurvey = PolygonSurvey.from_pointings(data, footprint=footprint,
+                                               rakey=rakey, deckey=deckey,
+                                               **kwargs)
+        # convert it to healpix
+        return polysurvey.to_healpix(nside, backend=backend,
+                                         pass_data=True,
+                                         polars_to_pandas=True,
+                                         use_pyarrow_extension_array=use_pyarrow_extension_array)
+        
     
     # ============== #
     #   Methods      #
     # ============== #
+    def get_field_area(self):
+        """ area (deg**2) of a healpy pixel """
+        return hp.nside2pixarea(self.nside, degrees = True)
+    
+    def get_observed_area(self, min_obs=1):
+        """ get the observed area (in deg**2).
+        A healpix is consider observed if present more tha
+        """
+        if min_obs <=1: # 0 or 1 the same
+            nfields = self.data["fieldid"].nunique()
+        else:
+            nobs = self.data["fieldid"].value_counts()
+            nfields = len(nobs[nobs>min_obs])
+        
+        return self.get_field_area() * nfields
     # ------- #
     #  core   #
     # ------- #
-    def radec_to_fieldid(self, radec):
-        """ get the fieldid of the given (list of) coordinates """
+
+    def radec_to_fieldid(self, radec, origin=180, observed_fields=False):
+        """ get the fieldid associated to the given coordinates 
+
+        Parameters
+        ----------
+        radec: pandas.DataFrame or 2d array
+            coordinates in degree
+
+        origin: float
+            value of the central R.A.
+            
+        observed_fields: bool
+            should this be limited to fields actually observed ?
+            This is ignored is self.data is None.
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         if type(radec) is pandas.DataFrame:
             ra = np.asarray(radec["ra"].values, dtype="float")
             dec = np.asarray(radec["dec"].values, dtype="float")
         else:
-            ra, dec = np.asarray(radec)
+            ra, dec = np.atleast_1d(radec)
+            ra = np.atleast_1d(ra)
+            dec = np.atleast_1d(dec)
             
-        return hp.ang2pix(self.nside, (90 - ra) * np.pi/180, dec * np.pi/180)
+        fields = hp.ang2pix(self.nside, (90 - dec) * np.pi/180, (origin-ra) * np.pi/180)
+        df = pandas.DataFrame(fields, columns = [self.fieldids.name], index=np.arange( len(ra) ))
+        df.index.name = "index_radec"
+        if observed_fields:
+            observed_fields = self.data[self.fieldids.name].unique()
+            df = df[df[self.fieldids.name].isin(observed_fields)]
+        
+        return df
+
+    def get_field_centroid(self, origin=180):
+        """ """
+        dec, ra = np.asarray(hp.pix2ang(self.nside, self.fieldids))*180/np.pi
+        dec = 90-dec
+        ra = (origin-ra)%360
+        return ra, dec
 
     # ------- #
     #  draw   #
@@ -243,7 +349,21 @@ class HealpixSurvey( BaseSurvey ):
         --------
         get_fieldstat: get observing statistics for the fields
         """
-        data = self.get_fieldstat(stat=stat, columns=column, incl_zeros=True, fillna=np.NaN, data=data)
+        if data is None:
+            if self.data is None:
+                data = np.random.uniform(size=self.nfields)
+            else:
+                data = self.get_fieldstat(stat=stat, columns=column,
+                                              incl_zeros=True, fillna=np.NaN,
+                                              data=data)
+                
+        else:
+            if type(data) is dict:
+                data = pandas.Series(data)
+                
+            if type(data) is pandas.Series:
+                data = data.reindex(self.fieldids).values
+                
         return hp.mollview(data, title=title, **kwargs)
         
     # ============== #
@@ -256,7 +376,7 @@ class HealpixSurvey( BaseSurvey ):
                      gain_range=1,
                      zp_range=[27,30],
                      ra_range=None, dec_range=None):
-        """ draw observations = internal =
+        """ draw observations | internal.
 
         Parameters
         ----------
@@ -339,9 +459,14 @@ class HealpixSurvey( BaseSurvey ):
             self._npix = hp.nside2npix(self.nside)
             
         return self._npix
-    
-    
+
     @property
+    def fieldids(self):
+        """ id of the individual fields """
+        fieldids = np.arange( self.npix )
+        # use pandas.index for self consistency with polygon.survey
+        return pandas.Index(fieldids, name="fieldid")
+   
     def metadata(self):
         """ pandas Series containing meta data i formation """
         meta = super().metadata

@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas
 import inspect
@@ -6,9 +7,11 @@ from astropy.utils.decorators import classproperty
 
 
 from ..template import Template
+from ..tools.utils import parse_skyarea, surface_of_skyarea
 
 
 __all__ = ["Target", "Transient"]
+
 
 
 class Target( object ):
@@ -98,6 +101,7 @@ class Target( object ):
     def from_draw(cls, size=None, model=None, template=None,
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
+                      skyarea=None,
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -144,6 +148,13 @@ class Target( object ):
             This uses get_rate(zmax).
             - tstop: tstart+365.25*nyears
 
+        skyarea: None, string, geometry
+            sky area to be considered.
+            - str: full (equivalent to None), ['extra-galactic', not implemented yet]
+            - geometry: shapely.Geometry
+            - None: full sky 
+
+
         **kwargs goes to self.draw()
 
         Returns
@@ -160,10 +171,14 @@ class Target( object ):
             this.set_model(model)
 
         if template is not None:
-            self.set_template(template)
+            this.set_template(template)
             
-        _ = this.draw(size=size, zmax=zmax, tstart=tstart, tstop=tstop,
-                      nyears=nyears, **kwargs)
+        _ = this.draw(size=size,
+                        zmin=zmin, zmax=zmax,
+                        tstart=tstart, tstop=tstop,
+                        nyears=nyears,
+                        skyarea=skyarea,
+                          **kwargs)
         return this
         
     # ------------- # 
@@ -287,8 +302,8 @@ class Target( object ):
             to the requested zeropoint. Return value is `float` if all
             input parameters are scalars, `~numpy.ndarray` otherwise.
         """
-        template = self.get_target_template(index)
-        return template.bandflux(band, template.get('t0')+phase, zp=zp, zpsys=zpsys)
+        sncosmo_model = self.get_target_template(index).sncosmo_model
+        return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase, zp=zp, zpsys=zpsys)
 
 
     def clone_target_change_entry(self, index, name, values, as_dataframe=False):
@@ -322,7 +337,7 @@ class Target( object ):
         dd = self.data.loc[index].to_frame().T
         dd.loc[index, name] = np.atleast_1d(values)
         dd = dd.explode(name)
-        dd[name] = dd[name].astype(float)
+#        dd[name] = dd[name].convert_dtypes()
         data = self.model.redraw_from(name, dd, incl_name=False)
         if as_dataframe:
             return data
@@ -490,40 +505,7 @@ class Target( object ):
             array of observed magnitude (``distmod(z)+magabs``)
         
         """
-        return cosmology.distmod(np.asarray(z)).value + magabs
-
-    def draw_radec(cls, model="random", size=None, ra_range=[0,360], dec_range=[-90,90]):
-        """ draw the sky positions
-
-        Parameters
-        ----------
-        model: str
-            name of the model. Implemented:
-            - random: random homogeneous 2d-sky distribution
-            (accounts for dec deformation)
-
-        size: int, None
-            number of draw
-
-        ra_range: 2d-array
-            right-accension boundaries (min, max)
-
-        dec_range: 2d-array
-            declination boundaries
-            
-        Returns
-        -------
-        2d-array
-            list of ra, list of dec.
-        """
-        if model == "random":
-            dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
-            ra = np.random.uniform(*ra_range, size=size)
-            dec = np.arcsin( np.random.uniform(*dec_sin_range, size=size) ) / (np.pi/180)
-        else:
-            raise NotImplementedError("Only the 'random' radec model has been implemented. ")
-        
-        return ra, dec
+        return cosmology.distmod(np.asarray(z, dtype="float32")).value + magabs
 
     # -------------- #
     #   Model        #
@@ -631,7 +613,7 @@ class Target( object ):
         >>> self.get_model_parameter('redshift', 'zmax', None)
 
         """
-        return self.model.model[entry]["param"].get(key, default)
+        return self.model.model[entry]["kwargs"].get(key, default)
 
     def change_model_parameter(self, **kwargs):
         """ Change the model parameters
@@ -687,10 +669,10 @@ class Target( object ):
     # =============== #
     def draw(self, size=None,
                  zmax=None, zmin=0,
-                 tstart=None, tstop=None,
-                 nyears=None,
+                 tstart=None, tstop=None, nyears=None,
+                 skyarea=None,
                  inplace=True, **kwargs):
-        """ draws the parameter model (using self.model.draw() 
+        """ draws the parameter model (using self.model.draw()) 
 
         Parameters
         ----------
@@ -719,6 +701,12 @@ class Target( object ):
             This uses ``get_rate(zmax)``.
             - tstop: ``tstart+365.25*nyears``
 
+        skyarea: None, string, geometry
+            sky area to be considered.
+            - str: full (equivalent to None), 'extra-galactic'
+            - geometry: shapely.Geometry
+            - None: full sky
+
         inplace: bool
             sets self.data to the newly drawn dataframe
 
@@ -728,15 +716,31 @@ class Target( object ):
             the simulated dataframe.
 
         """
+        if nyears is None and (tstart is not None and tstop is not None):
+            nyears = (tstop-tstart)/365.25
+                
+        if nyears is not None and (tstart is not None and tstop is None):
+            tstop = tstart + nyears*365.25
+
+        if nyears is not None and (tstart is  None and tstop is not None):
+            tstart = tstop - nyears*365.25
+                
+        if nyears is None and size is None:
+            raise ValueError(" You must provide either nyears or size")
         
-        # short cut 
-        # -> change the redshift
+        if nyears is not None and size is not None:
+            nyears = None # its job is done.
+
+        #
+        # Redshift
+        #
+        # zmax
         if zmax is not None:
             kwargs.setdefault("redshift",{}).update({"zmax": zmax})
             
         elif nyears is not None:
             zmax = self.get_model_parameter("redshift", "zmax", None)
-
+        # zmin
         if zmin is not None and "redshift" in self.model.model:
             kwargs.setdefault("redshift",{}).update({"zmin": zmin})
             
@@ -748,8 +752,10 @@ class Target( object ):
                 tstop = time.Time(tstop).mjd
 
             kwargs.setdefault("t0",{}).update({"high": tstop})
-            
-        # time range:        
+
+        #
+        # time range
+        #
         if tstart is not None:
             if type( tstart ) is str:
                 tstart = time.Time(tstart).mjd
@@ -763,12 +769,28 @@ class Target( object ):
         elif nyears is not None:
             tstart = self.get_model_parameter("t0", "low", None)
 
-        if nyears is not None:
-            rate_min = self.get_rate(zmin) if (zmin is not None and zmin >0) else 0
-            kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
-            size = int((self.get_rate(zmax)-rate_min) * nyears)
-            
+        #
+        # Sky area
+        #
+        skyarea = parse_skyarea(skyarea) # shapely.geometry or skyarea
+        if skyarea is not None:
+            param_affected = [k for k, v in self.model.get_func_parameters().items() if "skyarea" in v]
+            if "radec" in self.model.model.keys() and "radec" not in param_affected:
+                warnings.warn("radec in model, skyarea given, but the radec func does not accept skyarea.")
+                
+            for k in param_affected:
+                kwargs.setdefault(k,{}).update({"skyarea": skyarea})
+                
 
+        #
+        # Size
+        #
+        # skyarea affect get_rate
+        if nyears is not None:
+            rate_min = self.get_rate(zmin, skyarea=skyarea) if (zmin is not None and zmin >0) else 0
+            kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
+            size = int((self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
+            
         # actually draw the data
         data = self.model.draw(size=size, **kwargs)
         if inplace:
@@ -861,13 +883,20 @@ class Transient( Target ):
         rates = np.diff(self.get_rate(z, **kwargs))
         return rates/np.nansum(rates)
     
-    def get_rate(self, z, **kwargs):
+    def get_rate(self, z, skyarea=None, **kwargs):
         """ number of target (per year) up to the given redshift
 
         Parameters
         ----------
         z: float
             redshift
+        
+        skyarea: None, str, float, geometry
+            sky area (in deg**2).
+            - None or 'full': 4pi
+            - "extra-galactic": 4pi - (milky-way b<5)
+            - float: area in deg**2
+            - geometry: shapely.geometry.area is used (assumed in deg**2)
 
         **wkwargs goes to the rate function (if a function, not a number)
 
@@ -884,6 +913,11 @@ class Transient( Target ):
             return self.rate(z, **kwargs)
         
         volume = self.cosmology.comoving_volume(z).to("Gpc**3").value
+        skyarea = surface_of_skyarea(skyarea) # in deg**2 or None
+        if skyarea is not None:
+            full_sky = 4*np.pi * (180/np.pi)**2 # 4pi in deg**2
+            volume *= (skyarea/full_sky)
+            
         z_rate = volume * self.rate
         return z_rate
         

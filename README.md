@@ -24,20 +24,21 @@ python setup.py install
 ```
 
 # Quick Start
-You need to create a `Target` object (or child of) and a `Survey` object (or child of) and then to simulate how your survey would see your targets. This latter is called a `DataSet`. Here is a quick example:
+You need to create a `Target` and a `Survey` and
+then to simulate how your survey would see your targets. 
+This latter is called a `DataSet`. Here is a quick example:
+
 ## Step 1: targets (truth)
 ```python
-from skysurvey import target
-snia = target.SNeIa() # create a pre-defined SN Ia target object
-data = snia.draw(size=5000) # and draw 5000 of them (you have many options)
-data.head(5) # data also stored in snia.data
+import skysurvey
+snia = skysurvey.SNeIa()
+data = snia.draw(size=5000) # see options
+data.head(5) # also snia.data
 ```
 
 ## Step 2: Survey (when you pointed and sky conditions)
 ```python
-from skysurvey import survey
-# Say I what a ztf-fields survey, observing 1000 fields per day for 4 years
-# Let get the starting date from the data
+import skysurvey
 starting_date = snia.data["t0"].min()-50 # 50 days before the first target, no need to simulate a survey before that
 
 # and this is a much-simplified version of ZTF (independent random draws)

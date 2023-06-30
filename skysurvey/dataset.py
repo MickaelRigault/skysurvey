@@ -14,7 +14,7 @@ from .template import Template
 
 __all__ = ["DataSet", "get_obsdata"]
 
-def get_obsdata(template, observations, parameters, zpsys="ab"):
+def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True):
     """ get observed data using ``sncosmo.realize_lcs()``
 
     Parameters
@@ -30,6 +30,11 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
     parameters: pandas.DataFrame
         Dataframe containing the target parameters information.
         These depend on you model. 
+
+    incl_error: bool
+        should the returned flux contain a random gaussian scatter
+        drawn from the flux_err ?
+        If False, lightcurve flux are "perfect".
 
     Returns
     -------
@@ -50,7 +55,9 @@ def get_obsdata(template, observations, parameters, zpsys="ab"):
     list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
     
     # realize LC
-    list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters)
+    list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
+                                               scatter=incl_error)
+    
     if len(list_of_observations) == 0:
         return None
     
@@ -108,7 +115,8 @@ class DataSet( object ):
         self.set_survey(survey)
         
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, template=None, client=None, **kwargs):
+    def from_targets_and_survey(cls, targets, survey, template=None, client=None,
+                                    incl_error=True, **kwargs):
         """ loads a dataset (observed data) given targets and a survey
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
@@ -122,12 +130,14 @@ class DataSet( object ):
             target data corresponding to the true target parameters  
             (as given by nature)
             
-        survey: skysurvey.Survey (or child of)
+        survey: skysurvey.Survey, skysurvey.GridSurvey (or child of)
             sky observation (what was observed when with which situation)
 
         client: dask.distributed.Client()
             dask client to use if any. This is used for 
             parallelization of the lc generation per field.
+
+        incl_error: bool
 
         **kwargs goes to realize_survey_target_lcs
 
@@ -142,7 +152,8 @@ class DataSet( object ):
         """
         lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey, template=template,
                                                                   client=client,
-                                                 **kwargs)
+                                                                  incl_error=incl_error,
+                                                                  **kwargs)
         data = pandas.concat(lightcurves, keys=fieldids # store fieldid
                                  ).reset_index(survey.fieldids.names)
         return cls(data, targets=targets, survey=survey)
@@ -294,7 +305,7 @@ class DataSet( object ):
 
         return data
         
-    def get_ndetection(self, detlimit=5, per_band=False):
+    def get_ndetection(self, detlimit=5, per_band=False, data=None):
         """ get the number of detection for each lightcurves
 
         Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
@@ -314,7 +325,11 @@ class DataSet( object ):
         pandas.Series
             the number of detected point per target (and per band if per_band=True)
         """
-        data = self.data.copy()
+        if data is None:
+            data = self.data.copy()
+        else:
+            data = data.copy()
+            
         data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
         if per_band:
             groupby = ["index","band"]
@@ -584,6 +599,7 @@ class DataSet( object ):
     @classmethod
     def realize_survey_target_lcs(cls, targets, survey, template=None,
                                   template_prop={}, nfirst=None,
+                                  incl_error=True,
                                   client=None):
         """ creates the lightcurve of the input targets as they 
         would be observed by the survey. 
@@ -614,6 +630,7 @@ class DataSet( object ):
             dask client to use if any. This is used for 
             parallelization of the lc generation per field.
         
+        incl_error: bool
             
         Returns
         -------
@@ -643,13 +660,15 @@ class DataSet( object ):
                                                           template=template,
                                                           template_prop=template_prop,
                                                           nfirst=nfirst,
-                                                          client=client)
+                                                          client=client,
+                                                          incl_error=incl_error)
         return lc_out, fieldids_indexes
 
         
     @staticmethod
     def _realize_survey_kindtarget_lcs( targets, survey, template=None,
                                            template_prop={}, nfirst=None,
+                                           incl_error=True,
                                            client=None):
         """ creates the lightcurve of the input single-kind 
         targets as they  would be observed by the survey. 
@@ -680,7 +699,8 @@ class DataSet( object ):
             dask client to use if any. This is used for 
             parallelization of the lc generation per field.
         
-            
+        incl_error: bool
+        
         Returns
         -------
         list, list
@@ -743,15 +763,16 @@ class DataSet( object ):
         data = [get_index_lc_input(index_) for index_ in fieldids_indexes]
         if client is not None:
             big_future = client.scatter(data) # scatter data
-            futures_ = client.map(_get_obsdata_, big_future)
+            futures_ = client.map(_get_obsdata_, big_future, incl_error=incl_error)
             lc_out = client.gather(futures_)
         else:
-            lc_out = [_get_obsdata_(data_) for data_ in data if data_ is not None]
+            lc_out = [_get_obsdata_(data_, incl_error=incl_error)
+                          for data_ in data if data_ is not None]
 
         return lc_out, fieldids_indexes
 
     # ============== #
-    #   Properties   #
+    #   Properties   # 
     # ============== #
     @property
     def data(self):

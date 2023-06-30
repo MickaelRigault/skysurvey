@@ -1,6 +1,8 @@
-from .core import *
+from .survey import *
+from .ztf import *
+from .des import *
 #from .healpix import *
 #from .polygon import *
 
 # real surveys
-from .ztf import *
+

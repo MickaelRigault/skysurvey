@@ -3,6 +3,7 @@ import numpy as np
 from .core import Transient
 
 from .environments import getpdf_asymetric_gaussian
+from ..tools.utils import random_radec
 
 __all__ = ["SNeIa"]
 
@@ -269,8 +270,8 @@ class SNeIa( Transient ):
                          "kwargs": {"magobs":"@magobs", "param_name": "x0"},
                         }, #because it needs to call sncosmo_model.get(param_name)
                        
-                   radec = {"func": "random",
-                            "kwargs": {"ra_range":[0, 360], "dec_range":[-30, 90]},
+                   radec = {"func": random_radec,
+                            "kwargs": {},
                             "as": ["ra","dec"]
                            }
                     )
@@ -308,8 +309,8 @@ class SNeIaHostMass( Transient ):
                          "kwargs": {"magobs": "@magobs", "param_name":"x0"}
                         }, #because it needs to call sncosmo_model.get(param_name)
                        
-                   radec = {"func": "random",
-                            "kwargs": dict(ra_range=[0, 360], dec_range=[-30, 90]),
+                   radec = {"func": random_radec,
+                            "kwargs": {},
                             "as": ["ra","dec"]}
                     )
 

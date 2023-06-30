@@ -1,6 +1,6 @@
 import numpy as np
 from .core import Transient
-
+from ..tools.utils import random_radec
 __all__ = ["TSTransient"]
 
 class TSTransient( Transient ):
@@ -34,7 +34,7 @@ class TSTransient( Transient ):
                                 "kwargs": {"magobs": "@magobs"}
                             },
                    # This you need to match with the survey
-                   radec = {"func": "random",
+                   radec = {"func": random_radec,
                             "as": ["ra","dec"]
                             }
                  )
