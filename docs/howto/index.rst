@@ -1,5 +1,5 @@
-How to
-=====
+Examples
+======
 
 list of short notebook illustrating some commun usage
 
@@ -9,3 +9,4 @@ list of short notebook illustrating some commun usage
 
   radec_in_survey
   target_and_skyarea
+  build_a_new_transient

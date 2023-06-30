@@ -167,6 +167,19 @@ class TransientCollection( TargetCollection ):
     # ============= #
     #  Methods      #
     # ============= #
+    def set_rate(self, float_or_func):
+        """ set the transient rate
+
+        Parameters
+        ----------
+        float_or_func: float, func
+            
+        """
+        if callable(float_or_func):
+            self._rate = float_or_func
+        else:
+            self._rate = float(float_or_func)
+    
     def get_rates(self, z, relative=False, **kwargs):
         """ """
         rates = self.call_down("get_rate", margs=z, **kwargs)
@@ -306,11 +319,9 @@ class CompositeTransient( TransientCollection ):
         
     @property
     def rate(self):
-        """ rate.
-        (If float, assumed to be volumetric rate in Gpc-3 / yr-1.)
-        """
+        """ rate. (If float, assumed to be volumetric rate in Gpc-3 / yr.) """
         if not hasattr(self,"_rate"):
-            self._rate = self._RATE # default
+            self.set_rate( self._RATE) # default
             
         return self._rate
     

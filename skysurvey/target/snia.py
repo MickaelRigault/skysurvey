@@ -284,7 +284,7 @@ class SNeIaHostMass( Transient ):
     _RATE = 2.35 * 10**4 # Perley 2020
 
     # {'func': func, 'prop': dict, 'input':, 'as':}
-    _MODEL = dict( redshift = {"param":{"zmax":0.2},
+    _MODEL = dict( redshift = {"kwargs":{"zmax":0.2},
                                   "as":"z"},
                               
                    x1 = {"func": SNeIaStretch.nicolas2021}, 
