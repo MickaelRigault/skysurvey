@@ -38,13 +38,12 @@ Step 1: transients
 
 ..  code-block:: python
 		 
-    from skysurvey import target
-    # let's use pre-built transients e.g. SNeIa, SNeII, SNeIb etc...
-    snia = target.SNeIa() # create a pre-defined SN Ia target object
-    data = snia.draw(size=5000) # and draw 5000 of them
-    data.head(5) # data also stored in snia.data
+    import skysurvey
+    snia = skysurvey.SNeIa()
+    data = snia.draw(size=50_000, tstart=56_000, tstop=56_100) # see options
+    data.head(5) # also snia.data
     # **tip**: you can also directly load and draw using
-    #              snia = target.SNeIa.from_draw(size=5000)
+    #              snia = target.SNeIa.from_draw(size=50_000)
     
 
 
@@ -55,80 +54,100 @@ Step 2: survey
 
 ..  code-block:: python
 		 
-    from skysurvey import survey
-    # Say I what a ztf-fields survey, observing 1000 fields per day for 4 years
-    # Let get the starting date from the data
+    import numpy as np
+    from skysurvey.tools import utils
 
-    # 50 days before the first target, no need to simulate a survey before that
-    starting_date = snia.data["t0"].min()-50
+    size = 10_000 # number of pointings
 
-    # and this is a much-simplified version of ZTF (independent random draws)
-    ztf = survey.ZTF.from_random(size=365*4*1000, # number of observation 
-                       bands=["ztfg","ztfr","ztfi"], # band to observed
-                       mjd_range=[starting_date, starting_date+365*4],
-		       # time range
-                       skynoise_range=[10,20], # sky noise
-                     )
-    ztf.data.head(5)
+    # camera footprint in the sky, here a 2deg large square field.
+    from shapely import geometry
+    sq_footprint = geometry.box(-1, -1, +1, +1) 
+
+    # Observing data
+    ra, dec = utils.random_radec(size=size, ra_range=[200,250], dec_range=[-20,10])
+
+    data = {}
+    data["ra"] = ra
+    data["dec"] = dec
+    data["gain"] = 1
+    data["zp"] = 30
+    data["skynoise"] = np.random.normal(size=size, loc=300, scale=30)
+    data["mjd"] = np.random.uniform(56_000-10, 56_100 + 10, size=size)
+    data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+
+    # Build the survey
+    survey = skysurvey.Survey.from_pointings(data, footprint=sq_footprint)
+    survey.show()
+    
 
 Step 3: dataset 
 ------------------
 
 **and get the lightcurve you should observe**
+i.e., the dataset. The simulated lightcurves are in
+dset.data, the input survey is stored in dset.survey, the input
+targets is stored in dset.targets. This runs a ~10s.
 
 ..  code-block:: python
 		 
     from skysurvey import dataset
-    # the following takes ~30s on a laptop for ~5000 targets
-    dset = dataset.DataSet.from_targets_and_survey(snia, ztf) 
+    dset = dataset.DataSet.from_targets_and_survey(snia, survey)
     dset.data
-    # your survey (here ztf) is stored in dset.survey
-    # your targets (here snia) is stored in dset.targets
 
-   
+
+
 Definitions
 =======
 
 Template
 -----------
 
-The package is using the sncosmo_ for the **template** structure
-(``sncosmo.Model``).
+The package is pimilarly using the sncosmo_ for the **template** structure
+(``sncosmo.Model``). The ``skysurvey.Template`` object does the
+interface between sncosmo_ and skysurvey_ objects. It is unlikely that
+you will need to interact directly with a ``skysurvey.Template`` but
+rather with ``Target``.
 
 
-Transient
------------
+Target
+-----
 
 **Data as given by nature.**
 
-The ``Transient`` object is able to generate
-realistic objects given a simple configuration dictionary.
-The directory, called ``model`` enable the easily generation of a any
-complex inter-dependency of the Transient parameters. See the
-modeldag_ package.
+The ``Target`` object is able to generate
+realistic objects given a simple configuration dictionary that connect
+togehter their properties. This simple dictionary, called a ``model`` enable the easily generation of a any
+complex inter-dependency of the Target parameters.
+See the modeldag_ package for details.
 
-Some ``Transient`` have already been implemented for you, such as
-``SNIa``, ``SNII`` or ``SNIc-BL`` . (see:  `quickstart with transient
-<quickstart/quickstart_target.ipynb>`_ •
-`built-in transient <builtin_transients.ipynb>`_ •
-`create a new transient <quickstart/quickstart_target.ipynb>`_)
+Usual ``Target`` objects have been implemented for you, such as
+``SNIa``, ``SNII``, ``SNIc-BL`` etc. and ``TSTransient`` that can
+accept any sncosmo_ TimeSerie source (see *how-to*).
 
 Survey
 -----------
 
 **What has been observed when under which condition.**
 
-The ``Survey`` object handle the observing logs. A pointing is
-identified by a ``fieldid`` and each line corresponds to new a
-pointing condition. A Survey has a ``fields`` attribute that contains
-the survey field id footprint. Some survey have already been
-implemented, such as ``ZTF`` for which the field footprint are pre-registered.
-A healpix-based survey (``HealpixSurvey``) has also been implemented
-where ``fieldid`` corresponds to the healpix ``ipix``. (See
-`quickstart with survey <quickstart/quickstart_survey.ipynb>`_  •
-`create a new survey <quickstart/quickstart_survey.ipynb>`_ • `match
-survey fields to target coordinates
-<quickstart/quickstart_survey.ipynb>`_ ) 
+A ``Survey`` object handle the observing logs. There are two kinds of
+*Survey* in skysurvey: ``Survey`` that accepts any observing pattern
+and ``GridSurvey`` that handles surveys following pre-define pointing
+parterns (such as poiting grid like ZTF, or deep fields like DES)
+adding some usage simplifications, memory optimisation  and speed-up.
+
+In both case, a pointing is identified by a **fieldid** and each line
+of ``survey.data`` corresponds to new a pointing condition.
+
+``(Grid)Survey`` has a ``fields`` attribute that contains
+the survey fieldid footprint. To handle coordinates to observing
+history association, ``Survey`` uses healpy_ while ``GridSurvey`` is
+based on geopandas_ and shapely_ (so no pixel approximations).
+
+
+Some survey have already been
+implemented, such as ``ZTF`` (GridSurvey), ``DES`` (GridSurvey | 10
+deep-fields) and ``LSST`` (Survey). That basically means that there
+footprint have been pre-defined. 
 
      
 Dataset
@@ -136,12 +155,9 @@ Dataset
 
 **Join target and survey to create realisitc lightcurves.**
 
-Finally, the  ``DataSet`` takes a ``target`` and a ``survey`` as input
+The  ``DataSet`` takes a ``target`` and a ``survey`` as input
 and knows how to match target with fieldid and thereby how to create
-lightcurves given the observing conditions of the survey. (See
-`quickstart with dataset
-<quickstart/quickstart_survey_target_dataset.ipynb>`_  • 
-`lightcurve fit <quickstart/quickstart_survey.ipynb>`_)
+lightcurves given the observing conditions of the survey. 
 
 
 Tutorials
@@ -152,9 +168,7 @@ Tutorials
    :caption: Getting Starting
 
    installation
-   builtin_transients
-   combining_transients
-   
+
 .. toctree::
    :maxdepth: 2
    :caption: How to
@@ -185,3 +199,6 @@ Indices and tables
 .. _sncosmo: https://sncosmo.readthedocs.io/en/stable/
 .. _`see list here`: https://sncosmo.readthedocs.io/en/stable/source-list.html
 .. _snana: https://github.com/RickKessler/SNANA
+.. _shapely: https://shapely.readthedocs.io/en/stable/manual.html
+.. _geopandas: https://geopandas.org/en/stable/gallery/index.html
+.. _healpy: https://healpy.readthedocs.io/en/latest/

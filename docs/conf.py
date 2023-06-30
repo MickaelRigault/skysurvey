@@ -51,6 +51,7 @@ extensions = [
 
 # Class to another class
 nbsphinx_execute = 'never'
+nb_execution_mode = "off"
 
 autoclass_content = "both"              # Insert class and __init__ docstrings
 autodoc_member_order = "bysource"
