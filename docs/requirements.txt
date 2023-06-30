@@ -12,6 +12,7 @@ geopandas
 
 modeldag
 ztfquery
+ztffields
 
 numpydoc
 sphinx-book-theme
