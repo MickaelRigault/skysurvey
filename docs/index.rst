@@ -70,7 +70,7 @@ Elements
       :columns: 12 6 6 4
       :link: quickstart/quickstart_survey_target_dataset.html
 
-.. image:: ./galery/concept_image.png
+.. image:: ./gallery/concept_image.png
 		   
 
 
@@ -145,7 +145,7 @@ targets is stored in dset.targets. This runs a ~10s.
     dset = dataset.DataSet.from_targets_and_survey(snia, survey)
     dset.data
 
-.. image:: ./galery/lc_example.png
+.. image:: ./gallery/lc_example.png
 
 
 
