@@ -33,6 +33,7 @@ from skysurvey import target
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
+    'sphinx_design',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
@@ -86,6 +87,7 @@ html_logo = '_static/skysurvey_logo.png'
 
 #html_theme = 'alabaster'
 html_theme = 'sphinx_book_theme'
+#html_theme = "pydata_sphinx_theme"
 
 html_theme_options = {
     'logo_only': True,

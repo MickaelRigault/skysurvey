@@ -716,6 +716,18 @@ class Target( object ):
             the simulated dataframe.
 
         """
+        # => tstart, tstop format
+        if type(tstart) is str:
+            tstart = time.Time(tstart).mjd
+        elif type(tstart) is time.Time:
+            tstart = tstart.mjd
+
+        if type(tstop) is str:
+            tstop = time.Time(tstop).mjd
+        elif type(tstop) is time.Time:
+            tstop = tstop.mjd
+        
+        # => nyears and times    
         if nyears is None and (tstart is not None and tstop is not None):
             nyears = (tstop-tstart)/365.25
                 

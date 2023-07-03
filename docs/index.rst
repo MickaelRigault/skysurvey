@@ -2,26 +2,77 @@
 skysurvey
 ========================
 
-skysurvey_ is a python package made to simulate transients as they
+skysurvey_ is a python package made to simulate astronomical targets as they
 would be observed by a survey.
-It is a modern implementation of simsurvey_ that speeds-up and
-simplifies the code. It also aim at replacing the simulation part of
-the snana_ package, while simplifying the user experience.
 
-
-Concept
-========
-
-To simulate transient lightcurves you need three things:
+To simulate a realistic lightcurves you need two things:
 
 1.  **target** properties as given by nature.
-2. a **survey** observing data providing what has been observed when
+2. **survey** observing data providing what has been observed when
    and under which condition.
-3. a **template** that can convert target properties into photometric points
 
-Following this logic, skysurvey_ produces realistic lightcurves in a few minutes for multi-years surveys
-observing tens of thousands of transients. In skysurvey_ the
-simulated lightcurve data are stored in a **Dataset**.
+Joining these to create:
+
+3. a **dataset**, i.e. simulated data of the targets observed by your survey.
+
+
+Elements
+======
+	   
+.. grid:: 3
+   :margin: 0
+   :padding: 0
+   :gutter: 0
+
+   .. grid-item-card:: Targets
+      :columns: 12 6 6 4
+      :class-card: sd-border-0
+      :shadow: None
+
+      ``Target`` are objects as given by natures. You can generate
+      realistic targets, building complex parametrisation thanks to
+      the modeldag_ backend.
+      skysurvey_ provides multi-predefined targets, such as SNeIa, SNII,
+      or any sncosmo_ TimeSerie Source. 
+
+   .. grid-item-card:: Survey
+      :columns: 12 6 6 4
+      :class-card: sd-border-0
+      :shadow: None
+
+      Survey objects handle your observations. It can
+      match sky positions with observing logs and provide observing
+      statistics.  There are two kinds of
+      surveys: ``Survey`` that accept any observing pattern and
+      ``GridSurvey`` that are customed for field-based surveys.
+
+   .. grid-item-card:: DataSet
+      :columns: 12 6 6 4
+      :class-card: sd-border-0
+      :shadow: None
+
+      ``DataSet`` corresponds the actual data you would have collected
+      observing ``target`` (s) with your ``survey``. A dataset is easy
+      and fast to load, and it contains analytical and visualisation tools.
+
+.. grid:: 3
+
+    .. grid-item-card:: :material-regular:`star;2em` Make Targets
+      :columns: 12 6 6 4
+      :link: quickstart/quickstart_target.html
+
+    .. grid-item-card:: :material-regular:`scatter_plot;2em` Build a Survey
+      :columns: 12 6 6 4
+      :link: quickstart/quickstart_survey.html
+
+    .. grid-item-card:: :material-regular:`timeline;2em`
+			Create a DataSet
+      :columns: 12 6 6 4
+      :link: quickstart/quickstart_survey_target_dataset.html
+
+.. image:: ./galery/concept_image.png
+		   
+
 
 Sharp start
 ============
@@ -94,70 +145,8 @@ targets is stored in dset.targets. This runs a ~10s.
     dset = dataset.DataSet.from_targets_and_survey(snia, survey)
     dset.data
 
+.. image:: ./galery/lc_example.png
 
-
-Definitions
-=======
-
-Template
------------
-
-The package is pimilarly using the sncosmo_ for the **template** structure
-(``sncosmo.Model``). The ``skysurvey.Template`` object does the
-interface between sncosmo_ and skysurvey_ objects. It is unlikely that
-you will need to interact directly with a ``skysurvey.Template`` but
-rather with ``Target``.
-
-
-Target
------
-
-**Data as given by nature.**
-
-The ``Target`` object is able to generate
-realistic objects given a simple configuration dictionary that connect
-togehter their properties. This simple dictionary, called a ``model`` enable the easily generation of a any
-complex inter-dependency of the Target parameters.
-See the modeldag_ package for details.
-
-Usual ``Target`` objects have been implemented for you, such as
-``SNIa``, ``SNII``, ``SNIc-BL`` etc. and ``TSTransient`` that can
-accept any sncosmo_ TimeSerie source (see *how-to*).
-
-Survey
------------
-
-**What has been observed when under which condition.**
-
-A ``Survey`` object handle the observing logs. There are two kinds of
-*Survey* in skysurvey: ``Survey`` that accepts any observing pattern
-and ``GridSurvey`` that handles surveys following pre-define pointing
-parterns (such as poiting grid like ZTF, or deep fields like DES)
-adding some usage simplifications, memory optimisation  and speed-up.
-
-In both case, a pointing is identified by a **fieldid** and each line
-of ``survey.data`` corresponds to new a pointing condition.
-
-``(Grid)Survey`` has a ``fields`` attribute that contains
-the survey fieldid footprint. To handle coordinates to observing
-history association, ``Survey`` uses healpy_ while ``GridSurvey`` is
-based on geopandas_ and shapely_ (so no pixel approximations).
-
-
-Some survey have already been
-implemented, such as ``ZTF`` (GridSurvey), ``DES`` (GridSurvey | 10
-deep-fields) and ``LSST`` (Survey). That basically means that there
-footprint have been pre-defined. 
-
-     
-Dataset
------------
-
-**Join target and survey to create realisitc lightcurves.**
-
-The  ``DataSet`` takes a ``target`` and a ``survey`` as input
-and knows how to match target with fieldid and thereby how to create
-lightcurves given the observing conditions of the survey. 
 
 
 Tutorials
@@ -184,13 +173,6 @@ Tutorials
    skysurvey
    
    
-Indices and tables
-============
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
 
 
 .. _simsurvey: https://simsurvey.readthedocs.io/en/latest/index.html
