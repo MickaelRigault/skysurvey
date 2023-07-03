@@ -255,7 +255,7 @@ class SNeIa( Transient ):
                    c = {"func": SNeIaColor.intrinsic_and_dust},
 
                    t0 = {"func": np.random.uniform, 
-                         "kwargs": {"low":56000, "high":57000} },
+                         "kwargs": {"low":56_000, "high":56_200} },
                        
                    magabs = {"func": SNeIaMagnitude.tripp1998,
                              "kwargs": {"x1": "@x1", "c": "@c",
@@ -294,7 +294,7 @@ class SNeIaHostMass( Transient ):
                    hostmass = {"func": getpdf_asymetric_gaussian},
 
                    t0 = {"func": np.random.uniform, 
-                         "kwargs": {"low":56000, "high":57000} },
+                         "kwargs": {"low":56_000, "high":56_200} },
                        
                    magabs = {"func": SNeIaMagnitude.tripp_and_massstep,
                              "kwargs": { "x1": "@x1", "c": "@c", "hostmass": "@hostmass",

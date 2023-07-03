@@ -74,6 +74,8 @@ Elements
 		   
 
 
+	   
+
 Sharp start
 ============
 
@@ -87,64 +89,164 @@ Step 1: transients
 
 **Draw the 'truth'**
 
-..  code-block:: python
-		 
-    import skysurvey
-    snia = skysurvey.SNeIa()
-    data = snia.draw(size=50_000, tstart=56_000, tstop=56_100) # see options
-    data.head(5) # also snia.data
-    # **tip**: you can also directly load and draw using
-    #              snia = target.SNeIa.from_draw(size=50_000)
-    
+.. tab-set::
 
+    .. tab-item:: SNeIa
+
+       .. code-block:: python
+
+	  import skysurvey
+	  snia = skysurvey.SNeIa()
+	  data = snia.draw(size=50_000)
+	  data.head(5) # see also self.data
+
+
+    .. tab-item:: SNeII
+
+       .. code-block:: python
+
+	  import skysurvey
+	  snii = skysurvey.SNII()
+	  data = snii.draw(size=50_000)
+	  data.head(5) # see also self.data
+
+    .. tab-item:: Any TimeSerie
+
+       .. code-block:: python
+
+	  import skysurvey
+	  snib = skysurvey.TSTransient("v19-2005bf-corr")
+	  # see https://sncosmo.readthedocs.io/en/stable/source-list.html
+	  snib.draw(50_000)
+	  snib.data.head(5) # also self.data
+
+
+You have more built-in targets. You can also directly use ``target = Target.from_draw()``.
 
 Step 2: survey
 -----------------
 
 **provide what has been observed when**
 
-..  code-block:: python
-		 
-    import numpy as np
-    from skysurvey.tools import utils
 
-    size = 10_000 # number of pointings
+.. tab-set::
 
-    # camera footprint in the sky, here a 2deg large square field.
-    from shapely import geometry
-    sq_footprint = geometry.box(-1, -1, +1, +1) 
+    .. tab-item:: Survey
 
-    # Observing data
-    ra, dec = utils.random_radec(size=size, ra_range=[200,250], dec_range=[-20,10])
+       .. code-block:: python
 
-    data = {}
-    data["ra"] = ra
-    data["dec"] = dec
-    data["gain"] = 1
-    data["zp"] = 30
-    data["skynoise"] = np.random.normal(size=size, loc=300, scale=30)
-    data["mjd"] = np.random.uniform(56_000-10, 56_100 + 10, size=size)
-    data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+            import skysurvey
+	  
+            # footprint
+            from shapely import geometry
+            footprint = geometry.Point(0,0).buffer(2)
 
-    # Build the survey
-    survey = skysurvey.Survey.from_pointings(data, footprint=sq_footprint)
-    survey.show()
-    
+            # observing logs
+            import numpy as np
+            from skysurvey.tools import utils
+            size = 10_000
+
+            data = {}
+            data["gain"] = 1
+            data["zp"] = 30
+            data["skynoise"] = np.random.normal(size=size, loc=200, scale=20)
+            data["mjd"] = np.random.uniform(56_000, 56_200, size=size)
+            data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+
+            data["ra"], data["dec"] = utils.random_radec(size=size, 
+                                                         ra_range=[200,250], 
+                                                         dec_range=[-20,10])
+
+            # Load a GridSurvey
+            survey = skysurvey.Survey.from_pointings(data, footprint=footprint)
+	    
+    .. tab-item:: GridSurvey
+
+       .. code-block:: python
+
+            import skysurvey
+	    
+            # footprint
+            from shapely import geometry
+            footprint = geometry.Point(0,0).buffer(2)
+
+            # fields
+            import numpy as np
+            radec = {'C1': {'dec': -27.11161, 'ra': 54.274292+180},
+                     'C2': {'dec': -29.08839, 'ra': 54.274292+180},
+                     'C3': {'dec': -28.10000, 'ra': 52.648417+180}
+                     }
+
+            # observing logs
+            size = 10_000
+
+            data = {}
+            data["gain"] = 1
+            data["zp"] = 30
+            data["skynoise"] = np.random.normal(size=size, loc=200, scale=20)
+            data["mjd"] = np.random.uniform(56_000, 56_200, size=size)
+            data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+
+            data["fieldid"] = np.random.choice(list(radec.keys()), size=size)
+
+            # Load a GridSurvey
+            survey = skysurvey.GridSurvey.from_pointings(data, radec,
+	                                       	         footprint=footprint)
+
+    .. tab-item:: ZTF
+
+       .. code-block:: python
+		       
+            import skysurvey
+	    
+            survey = skysurvey.ZTF.from_logs() # need password.
+		       
+``Survey`` is uses healpy_ as backend to match position with observing
+history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both
+can be used equally in any skysurvey_ input ;
+especially for DataSet.
+
+You have several surveys already implemented, such as ``ZTF`` and ``DES``
+(shallow and deep fields).
 
 Step 3: dataset 
 ------------------
 
-**and get the lightcurve you should observe**
+**get lightcurve data**  as you would observe them
 i.e., the dataset. The simulated lightcurves are in
 dset.data, the input survey is stored in dset.survey, the input
-targets is stored in dset.targets. This runs a ~10s.
+targets is stored in dset.targets. 
 
-..  code-block:: python
-		 
-    from skysurvey import dataset
-    dset = dataset.DataSet.from_targets_and_survey(snia, survey)
-    dset.data
 
+.. tab-set::
+
+    .. tab-item:: Realistic
+
+       .. code-block:: python
+		       
+            import skysurvey
+            dset = skysurvey.DataSet.from_targets_and_survey(snia, survey)
+            dset.data
+
+    .. tab-item:: Noise-free
+
+       .. code-block:: python
+		       
+            import skysurvey
+            dset = skysurvey.DataSet.from_targets_and_survey(snia, survey,
+                                                             incl_error=False)
+            dset.data
+	    
+
+    .. tab-item:: Multi-targets
+
+       .. code-block:: python
+		       
+            import skysurvey
+	    targets = skysurvey.TargetCollection([snia, snii])
+            dset = skysurvey.DataSet.from_targets_and_survey(targets, survey)
+            dset.data
+	    
 .. image:: ./gallery/lc_example.png
 
 
@@ -156,12 +258,12 @@ Tutorials
    :maxdepth: 1
    :caption: Getting Starting
 
-   installation
+
 
 .. toctree::
    :maxdepth: 2
    :caption: How to
-	      
+
    quickstart/index
    howto/index   
    advanced/index

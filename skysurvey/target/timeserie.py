@@ -15,11 +15,11 @@ class TSTransient( Transient ):
     >>> snii = TSTransient.from_draw("snana-2004fe", 4000)
     >>> _ = snii.show_lightcurve(["ztfg","ztfr"], index=10, in_mag=True)
     """
-    
+    _RATE = 0.001
     _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05}, 
                                "as": "z"},
                    t0 = {"func": np.random.uniform,
-                         "kwargs": {"low": 56000, "high": 56000+4*365}
+                         "kwargs": {"low": 56_000, "high": 56_200}
                         },
                          
                    magabs = {"func": np.random.normal,
@@ -38,6 +38,25 @@ class TSTransient( Transient ):
                             "as": ["ra","dec"]
                             }
                  )
+
+
+    def __init__(self, source_or_template=None, *args, **kwargs):
+        """ loads a TimeSerie Transient 
+
+        Parameters
+        ----------
+        source_or_template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
+            the sncosmo TimeSeriesSource, you can provide:
+            - str: the name, e.g. "v19-2013ge-corr"
+            - sncosmo.Source: a loaded sncosmo.Source
+            - sncosmo.Model: a  loaded sncosmo.Model
+            this is eventually converted into a generic skysurvey.Template.
+
+        """
+        if source_or_template is not None:
+            self.set_template(source_or_template)
+
+        super().__init__(*args, **kwargs)
     
     @classmethod
     def from_sncosmo(cls, source,
@@ -85,9 +104,7 @@ class TSTransient( Transient ):
         --------
         from_draw: load an instance and draw the transient parameters
         """
-        this = cls()
-        if source is not None:
-            this.set_template(source)
+        this = cls(source_or_template=source)            
         if rate is not None:
             this.set_rate(rate)
         
