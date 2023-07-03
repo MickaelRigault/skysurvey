@@ -212,8 +212,9 @@ You have several surveys already implemented, such as ``ZTF`` and ``DES``
 Step 3: dataset 
 ------------------
 
-**get lightcurve data**  as you would observe them
-i.e., the dataset. The simulated lightcurves are in
+**and get lightcurve data**
+
+as you would observe them i.e., the dataset. The simulated lightcurves are in
 dset.data, the input survey is stored in dset.survey, the input
 targets is stored in dset.targets. 
 
