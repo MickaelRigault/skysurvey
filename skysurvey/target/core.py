@@ -1,7 +1,6 @@
 import warnings
 import numpy as np
 import pandas
-import inspect
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
 
