@@ -255,15 +255,10 @@ Tutorials
 ======
 
 .. toctree::
-   :maxdepth: 1
-   :caption: Getting Starting
-
-
-
-.. toctree::
    :maxdepth: 2
    :caption: How to
 
+   installation
    quickstart/index
    howto/index   
    advanced/index
