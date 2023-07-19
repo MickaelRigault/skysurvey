@@ -266,7 +266,7 @@ class Target( object ):
 
         """
         return self.get_template(index=index, **kwargs)
-
+    
     def get_target_flux(self, index, band, phase, zp=None, zpsys=None):
         """ Flux through the given bandpass(es) at the given time(s).
 
