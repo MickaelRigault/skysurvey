@@ -101,6 +101,7 @@ class Target( object ):
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
                       skyarea=None,
+                      funcs={},
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -113,7 +114,7 @@ class Target( object ):
 
         model: dict, None
             defines how  template parameters to draw and how they are connected
-            See "target model documentation"
+            model will update the default cls._MODEL if any
             = leave to None if unsure, cls._MODEL used as default = 
 
         template_source: str, None
@@ -167,17 +168,18 @@ class Target( object ):
         """
         this = cls()
         if model is not None:
-            this.set_model(model)
+            this.update_model(**model) # will update any model entry.
 
         if template is not None:
             this.set_template(template)
             
-        _ = this.draw(size=size,
-                        zmin=zmin, zmax=zmax,
-                        tstart=tstart, tstop=tstop,
-                        nyears=nyears,
-                        skyarea=skyarea,
-                          **kwargs)
+        _ = this.draw( size=size,
+                       zmin=zmin, zmax=zmax,
+                       tstart=tstart, tstop=tstop,
+                       nyears=nyears,
+                       skyarea=skyarea,
+                       inplace=True, # creates self.data
+                       **kwargs)
         return this
         
     # ------------- # 
@@ -266,7 +268,7 @@ class Target( object ):
 
         """
         return self.get_template(index=index, **kwargs)
-
+    
     def get_target_flux(self, index, band, phase, zp=None, zpsys=None):
         """ Flux through the given bandpass(es) at the given time(s).
 
@@ -303,7 +305,6 @@ class Target( object ):
         """
         sncosmo_model = self.get_target_template(index).sncosmo_model
         return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase, zp=zp, zpsys=zpsys)
-
 
     def clone_target_change_entry(self, index, name, values, as_dataframe=False):
         """ get a clone of the given target at the given redshifts.
@@ -562,6 +563,57 @@ class Target( object ):
             data["template"] = templatename
 
         self._data = data
+
+    def get_noisy_data(self, errmodel):
+        """ get a copy of the data with error applied on it.
+        
+
+        Parameters
+        ----------
+        errmodel: dict or ModelDAG
+            error model for self.data entries. 
+            It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
+            a dataframe with the same size as self.data will be created 
+            and each entry of the errmodel will affect the corresponding entry in the data. 
+            if "key_err" is given in the model, this entry will be passed to data.
+            = warning: no error on the error implemented yet. =
+            
+        Returns
+        -------
+        pandas.DataFrame
+            a copy of self.data affected by errors.
+
+        Example
+        -------
+        creating a random gaussian error with a scale of 2. 
+        The error also has error, and will not be given perfectly 2 but a random error of 0.01.
+        ```python
+        errmodel = {"a": {"func":np.random.normal, "kwargs":{"loc":0, "scale":2 }},
+                   "a_err": {"func":np.random.normal, "kwargs":{"loc":2, "scale":0.01 }},
+                   }
+        datanoisy = self.get_noisy_data(errmodel)
+        ```
+    
+        """
+
+        if type(errmodel) is dict:
+            from modeldag import ModelDAG
+            errmodel = ModelDAG(errmodel)
+
+
+        data_err=  errmodel.draw( len(self.data) )
+        column_to_noisify = data_err.columns
+
+
+        datanoisy = self.data.copy()
+        for k in column_to_noisify:
+            datanoisy[k] = datanoisy[k] + data_err[k]
+            if f"{k}_err" in data_err.columns:
+                datanoisy[f"{k}_err"] = data_err[f"{k}_err"].abs() # abs in case
+            else:
+                warnings.warn(f"no error given for {k}_err entry.")
+
+        return datanoisy
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 
@@ -584,12 +636,12 @@ class Target( object ):
            
         See also
         --------
-        change_model_parameter: change the current model (not just the one you get)
+        update_model: change the current model (not just the one you get)
         get_model_parameter: access the model parameters.
         """
         self.model.get_model(**kwargs)
 
-    def get_model_parameter(self, entry, key, default=None):
+    def get_model_parameter(self, entry, key, default=None, model=None):
         """ access a parameter of the model.
 
         Parameters
@@ -603,6 +655,10 @@ class Target( object ):
         default: 
             value returned if the parameter is not found.
 
+        model: modelDAG
+            get the parameter of this model instead of self.model
+            = use with caution =
+
         Returns
         -------
         value of the entry parameter
@@ -612,19 +668,33 @@ class Target( object ):
         >>> self.get_model_parameter('redshift', 'zmax', None)
 
         """
-        return self.model.model[entry]["kwargs"].get(key, default)
+        if model is None:
+            model = self.model
+            
+        return model.model[entry]["kwargs"].get(key, default)
 
-    def change_model_parameter(self, **kwargs):
-        """ Change the model parameters
 
-        **kwargs will update any model entry parameters (i.e., the "param", e.g. t0["param"]).
+    def update_model_parameter(self, **kwargs):
+        """ change the kwargs entry of a model. """
+
+        for k, v in kwargs.items():
+            self.model.model[k]["kwargs"] = {**self.model.model[k]["kwargs"], **v}
+            
+    def update_model(self, **kwargs):
+        """ Change the given entries of the model.
+
+        **kwargs will update any model entry (or create a new one at the end).
 
         Example
         -------
-        Change the maximum redshift to 1.
-        >>> self.change_model_parameter(redshift={"zmax":1})
+        Changing the b entry function and make it depends on "a"
+        >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
-        _ = self.model.change_model(**kwargs)
+        new_model = {**self.model.model, **kwargs}
+        if not new_model.keys() == self.model.model.keys():
+            warnings.warn("updating the model has changed the model entries")
+
+        _ = self.set_model(new_model)
         
     # -------------- #
     #   Plotter      #
@@ -670,7 +740,9 @@ class Target( object ):
                  zmax=None, zmin=0,
                  tstart=None, tstop=None, nyears=None,
                  skyarea=None,
-                 inplace=True, **kwargs):
+                 inplace=False,
+                 model=None,
+                 **kwargs):
         """ draws the parameter model (using self.model.draw()) 
 
         Parameters
@@ -715,6 +787,16 @@ class Target( object ):
             the simulated dataframe.
 
         """
+        #
+        # Drawn model
+        # 
+        if model is None:
+            drawn_model = self.model # a modelDAG
+        else:
+            from modeldag import ModelDAG
+            current_model_dict = self.model.model
+            drawn_model = ModelDAG( {**current_model_dict, **model}, obj=self)
+            
         # => tstart, tstop format
         if type(tstart) is str:
             tstart = time.Time(tstart).mjd
@@ -750,13 +832,14 @@ class Target( object ):
             kwargs.setdefault("redshift",{}).update({"zmax": zmax})
             
         elif nyears is not None:
-            zmax = self.get_model_parameter("redshift", "zmax", None)
+            zmax = self.get_model_parameter("redshift", "zmax", None, model=drawn_model)
+            
         # zmin
         if zmin is not None and "redshift" in self.model.model:
             kwargs.setdefault("redshift",{}).update({"zmin": zmin})
             
         elif nyears is not None:
-            zmin = self.get_model_parameter("redshift", "zmin", None)
+            zmin = self.get_model_parameter("redshift", "zmin", None, model=drawn_model)
 
         if tstop is not None:
             if type( tstop ) is str:
@@ -774,19 +857,21 @@ class Target( object ):
             kwargs.setdefault("t0",{}).update({"low": tstart})
             if tstop is None and nyears is None: # do 1 year by default
                 kwargs.setdefault("t0",{}).update({"high": tstart+365.25})
+                
         # tstart is None, then what ?
         elif tstop is not None and nyears is not None:
-            tstart = tstop - 365.25*nyears # fixed later            
+            tstart = tstop - 365.25*nyears # fixed later
+            
         elif nyears is not None:
-            tstart = self.get_model_parameter("t0", "low", None)
+            tstart = self.get_model_parameter("t0", "low", None, model=drawn_model)
 
         #
         # Sky area
         #
         skyarea = parse_skyarea(skyarea) # shapely.geometry or skyarea
         if skyarea is not None:
-            param_affected = [k for k, v in self.model.get_func_parameters().items() if "skyarea" in v]
-            if "radec" in self.model.model.keys() and "radec" not in param_affected:
+            param_affected = [k for k, v in drawn_model.get_func_parameters().items() if "skyarea" in v]
+            if "radec" in drawn_model.model.keys() and "radec" not in param_affected:
                 warnings.warn("radec in model, skyarea given, but the radec func does not accept skyarea.")
                 
             for k in param_affected:
@@ -803,7 +888,7 @@ class Target( object ):
             size = int((self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
             
         # actually draw the data
-        data = self.model.draw(size=size, **kwargs)
+        data = drawn_model.draw(size=size, **kwargs)
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
