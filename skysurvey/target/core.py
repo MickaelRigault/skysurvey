@@ -306,7 +306,6 @@ class Target( object ):
         sncosmo_model = self.get_target_template(index).sncosmo_model
         return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase, zp=zp, zpsys=zpsys)
 
-
     def clone_target_change_entry(self, index, name, values, as_dataframe=False):
         """ get a clone of the given target at the given redshifts.
         This: 
@@ -674,6 +673,13 @@ class Target( object ):
             
         return model.model[entry]["kwargs"].get(key, default)
 
+
+    def update_model_parameter(self, **kwargs):
+        """ change the kwargs entry of a model. """
+
+        for k, v in kwargs.items():
+            self.model.model[k]["kwargs"] = {**self.model.model[k]["kwargs"], **v}
+            
     def update_model(self, **kwargs):
         """ Change the given entries of the model.
 
@@ -791,7 +797,6 @@ class Target( object ):
             current_model_dict = self.model.model
             drawn_model = ModelDAG( {**current_model_dict, **model}, obj=self)
             
-        print(drawn_model)
         # => tstart, tstop format
         if type(tstart) is str:
             tstart = time.Time(tstart).mjd

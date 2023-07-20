@@ -9,4 +9,5 @@ list of short notebook illustrating some commun usage
 
   radec_in_survey
   target_and_skyarea
+  change_model_while_draw
   build_a_new_transient
