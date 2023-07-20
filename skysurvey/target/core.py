@@ -567,6 +567,7 @@ class Target( object ):
 
     def get_noisy_data(self, errmodel):
         """ get a copy of the data with error applied on it.
+        
 
         Parameters
         ----------
@@ -575,13 +576,25 @@ class Target( object ):
             It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
             a dataframe with the same size as self.data will be created 
             and each entry of the errmodel will affect the corresponding entry in the data. 
-            "key_err" will be added to the returned data corresponding to the input error.
+            if "key_err" is given in the model, this entry will be passed to data.
             = warning: no error on the error implemented yet. =
             
         Returns
         -------
         pandas.DataFrame
             a copy of self.data affected by errors.
+
+        Example
+        -------
+        creating a random gaussian error with a scale of 2. 
+        The error also has error, and will not be given perfectly 2 but a random error of 0.01.
+        ```python
+        errmodel = {"a": {"func":np.random.normal, "kwargs":{"loc":0, "scale":2 }},
+                   "a_err": {"func":np.random.normal, "kwargs":{"loc":2, "scale":0.01 }},
+                   }
+        datanoisy = self.get_noisy_data(errmodel)
+        ```
+    
         """
 
         if type(errmodel) is dict:
@@ -596,7 +609,10 @@ class Target( object ):
         datanoisy = self.data.copy()
         for k in column_to_noisify:
             datanoisy[k] = datanoisy[k] + data_err[k]
-            datanoisy[k+"_err"] = data_err[k].abs()
+            if f"{k}_err" in data_err.columns:
+                datanoisy[f"{k}_err"] = data_err[f"{k}_err"].abs() # abs in case
+            else:
+                warnings.warn(f"no error given for {k}_err entry.")
 
         return datanoisy
         
@@ -775,6 +791,7 @@ class Target( object ):
             current_model_dict = self.model.model
             drawn_model = ModelDAG( {**current_model_dict, **model}, obj=self)
             
+        print(drawn_model)
         # => tstart, tstop format
         if type(tstart) is str:
             tstart = time.Time(tstart).mjd

@@ -33,14 +33,50 @@ class Rigault_AgePop( object ):
 
     @classmethod    
     def get_promptpdf(cls, redshift, xx=[0,1]):
-        """ """
+        """ get the pdf of the probability to be prompt or delayed as a function of redshift.
+        (see self.psiz)
+        """
         xx = np.asarray(xx)
         delayed_cut = cls.psiz(np.atleast_1d(redshift))
         return xx, np.asarray( [delayed_cut, 1-delayed_cut]).T
 
     @staticmethod    
     def get_massdistribution(redshift, fprompt, xx="6:13:300j", normed=True):
-        """ new model ou
+        """ get the host mass distribution as a function of redshift and fraction
+        of prompt in your sample. 
+
+        This is based on stellar mass function (SMF) from the literature (see get_stellarmassfunction).
+        
+        As prompt SNeIa rate follows the star formation, the mass-distribution of prompt SNeIa is
+        - smf_bluegalaxies * SFR_of_SF_galaxies.
+        Here SFR_of_SF_galaxies is defined by the host mass (See Wiseman et al. 2021).
+        
+        As delayed SNeIa rate follows that of stellar mass, the mass-distribution of delayed SNeIa is:
+        - smf_allgalaxies * stellar_mass
+
+        
+        Parameters
+        ----------
+        redshift: float, array
+            redshift of the mass distribution. 
+            If array, same size (N) as fprompt.
+
+        fprompt: float, array
+            fraction of prompt in the sample
+            If array, same size (N) as redshift.
+
+        xx: str, array
+            binning of the pdf (size M)
+
+        normed: bool
+            should the returned pdf be normalized to 1 ?
+        
+        Returns
+        -------
+        array, array
+            - xx (M)
+            - pdf (M,) or (N, M) see redshift and fprompt.
+        
         """
         from . import host
         
@@ -77,7 +113,7 @@ class Rigault_AgePop( object ):
 class SNeIaColor( object ):
 
     @staticmethod
-    def intrinsic_and_dust(xx="-0.3:1:0.01", cint=-0.05, sigmaint=0.05, tau=0.1):
+    def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.05, sigmaint=0.05, tau=0.1):
         """ exponential decay convolved with and intrinsic gaussian color distribution.
 
         Parameters
@@ -119,10 +155,10 @@ class SNeIaColor( object ):
 class SNeIaStretch( object ):
 
     @staticmethod
-    def nicolas2021( xx="-4:4:0.05", 
+    def nicolas2021( xx="-4:4:0.005", 
                      mu1=0.33, sigma1=0.64, 
                      mu2=-1.50, sigma2=0.58, a=0.45,
-                     fprompt=0.5):
+                     fprompt=0.5, redshift=None):
         
         """ pdf of the Nicolas (2021) model
         
@@ -147,20 +183,30 @@ class SNeIaStretch( object ):
 
         fprompt: float
             fraction of prompt SNeIa.
-            
+            = ignored if redshift given = 
+
+        redshift: 
+            target's redshift. This defined fprompt.
+
         Returns
         -------
-        2d-array:
-           xx, pdf
+        array, array
+            - xx (M)
+            - pdf (M,) or (N, M) see redshift and fprompt.
+
         """
         from scipy.stats import norm
         if type(xx) == str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
 
+        if redshift is not None:
+            fprompt = Rigault_AgePop.deltaz(redshift)
+            
         mode1 = norm.pdf(xx, loc=mu1, scale=sigma1)
         mode2 = norm.pdf(xx, loc=mu2, scale=sigma2)
         if type(fprompt) is not float: 
-            fprompt = np.asarray(fprompt)[:,None]            
+            fprompt = np.asarray(fprompt)[:,None]
+            
         pdf = fprompt*mode1 + (1-fprompt)*(a*mode1 + (1-a)*mode2)
         return xx, pdf
     
