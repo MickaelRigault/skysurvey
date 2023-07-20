@@ -159,7 +159,7 @@ class SNeIaStretch( object ):
 
         mode1 = norm.pdf(xx, loc=mu1, scale=sigma1)
         mode2 = norm.pdf(xx, loc=mu2, scale=sigma2)
-        if type(fprompt) is not float:
+        if type(fprompt) is not float: 
             fprompt = np.asarray(fprompt)[:,None]            
         pdf = fprompt*mode1 + (1-fprompt)*(a*mode1 + (1-a)*mode2)
         return xx, pdf

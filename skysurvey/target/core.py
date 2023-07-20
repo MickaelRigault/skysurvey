@@ -101,6 +101,7 @@ class Target( object ):
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
                       skyarea=None,
+                      funcs={},
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -113,7 +114,7 @@ class Target( object ):
 
         model: dict, None
             defines how  template parameters to draw and how they are connected
-            See "target model documentation"
+            model will update the default cls._MODEL if any
             = leave to None if unsure, cls._MODEL used as default = 
 
         template_source: str, None
@@ -167,17 +168,18 @@ class Target( object ):
         """
         this = cls()
         if model is not None:
-            this.set_model(model)
+            this.update_model(**model) # will update any model entry.
 
         if template is not None:
             this.set_template(template)
             
-        _ = this.draw(size=size,
-                        zmin=zmin, zmax=zmax,
-                        tstart=tstart, tstop=tstop,
-                        nyears=nyears,
-                        skyarea=skyarea,
-                          **kwargs)
+        _ = this.draw( size=size,
+                       zmin=zmin, zmax=zmax,
+                       tstart=tstart, tstop=tstop,
+                       nyears=nyears,
+                       skyarea=skyarea,
+                       inplace=True, # creates self.data
+                       **kwargs)
         return this
         
     # ------------- # 
@@ -619,12 +621,12 @@ class Target( object ):
            
         See also
         --------
-        change_model_parameter: change the current model (not just the one you get)
+        update_model: change the current model (not just the one you get)
         get_model_parameter: access the model parameters.
         """
         self.model.get_model(**kwargs)
 
-    def get_model_parameter(self, entry, key, default=None):
+    def get_model_parameter(self, entry, key, default=None, model=None):
         """ access a parameter of the model.
 
         Parameters
@@ -638,6 +640,10 @@ class Target( object ):
         default: 
             value returned if the parameter is not found.
 
+        model: modelDAG
+            get the parameter of this model instead of self.model
+            = use with caution =
+
         Returns
         -------
         value of the entry parameter
@@ -647,19 +653,26 @@ class Target( object ):
         >>> self.get_model_parameter('redshift', 'zmax', None)
 
         """
-        return self.model.model[entry]["kwargs"].get(key, default)
+        if model is None:
+            model = self.model
+            
+        return model.model[entry]["kwargs"].get(key, default)
 
-    def change_model_parameter(self, **kwargs):
-        """ Change the model parameters
+    def update_model(self, **kwargs):
+        """ Change the given entries of the model.
 
-        **kwargs will update any model entry parameters (i.e., the "param", e.g. t0["param"]).
+        **kwargs will update any model entry (or create a new one at the end).
 
         Example
         -------
-        Change the maximum redshift to 1.
-        >>> self.change_model_parameter(redshift={"zmax":1})
+        Changing the b entry function and make it depends on "a"
+        >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
-        _ = self.model.change_model(**kwargs)
+        new_model = {**self.model.model, **kwargs}
+        if not new_model.keys() == self.model.model.keys():
+            warnings.warn("updating the model has changed the model entries")
+
+        _ = self.set_model(new_model)
         
     # -------------- #
     #   Plotter      #
@@ -705,7 +718,9 @@ class Target( object ):
                  zmax=None, zmin=0,
                  tstart=None, tstop=None, nyears=None,
                  skyarea=None,
-                 inplace=True, **kwargs):
+                 inplace=False,
+                 model=None,
+                 **kwargs):
         """ draws the parameter model (using self.model.draw()) 
 
         Parameters
@@ -750,6 +765,16 @@ class Target( object ):
             the simulated dataframe.
 
         """
+        #
+        # Drawn model
+        # 
+        if model is None:
+            drawn_model = self.model # a modelDAG
+        else:
+            from modeldag import ModelDAG
+            current_model_dict = self.model.model
+            drawn_model = ModelDAG( {**current_model_dict, **model}, obj=self)
+            
         # => tstart, tstop format
         if type(tstart) is str:
             tstart = time.Time(tstart).mjd
@@ -785,13 +810,14 @@ class Target( object ):
             kwargs.setdefault("redshift",{}).update({"zmax": zmax})
             
         elif nyears is not None:
-            zmax = self.get_model_parameter("redshift", "zmax", None)
+            zmax = self.get_model_parameter("redshift", "zmax", None, model=drawn_model)
+            
         # zmin
         if zmin is not None and "redshift" in self.model.model:
             kwargs.setdefault("redshift",{}).update({"zmin": zmin})
             
         elif nyears is not None:
-            zmin = self.get_model_parameter("redshift", "zmin", None)
+            zmin = self.get_model_parameter("redshift", "zmin", None, model=drawn_model)
 
         if tstop is not None:
             if type( tstop ) is str:
@@ -809,19 +835,21 @@ class Target( object ):
             kwargs.setdefault("t0",{}).update({"low": tstart})
             if tstop is None and nyears is None: # do 1 year by default
                 kwargs.setdefault("t0",{}).update({"high": tstart+365.25})
+                
         # tstart is None, then what ?
         elif tstop is not None and nyears is not None:
-            tstart = tstop - 365.25*nyears # fixed later            
+            tstart = tstop - 365.25*nyears # fixed later
+            
         elif nyears is not None:
-            tstart = self.get_model_parameter("t0", "low", None)
+            tstart = self.get_model_parameter("t0", "low", None, model=drawn_model)
 
         #
         # Sky area
         #
         skyarea = parse_skyarea(skyarea) # shapely.geometry or skyarea
         if skyarea is not None:
-            param_affected = [k for k, v in self.model.get_func_parameters().items() if "skyarea" in v]
-            if "radec" in self.model.model.keys() and "radec" not in param_affected:
+            param_affected = [k for k, v in drawn_model.get_func_parameters().items() if "skyarea" in v]
+            if "radec" in drawn_model.model.keys() and "radec" not in param_affected:
                 warnings.warn("radec in model, skyarea given, but the radec func does not accept skyarea.")
                 
             for k in param_affected:
@@ -838,7 +866,7 @@ class Target( object ):
             size = int((self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
             
         # actually draw the data
-        data = self.model.draw(size=size, **kwargs)
+        data = drawn_model.draw(size=size, **kwargs)
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
