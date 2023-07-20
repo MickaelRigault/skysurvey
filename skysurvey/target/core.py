@@ -562,6 +562,41 @@ class Target( object ):
             data["template"] = templatename
 
         self._data = data
+
+    def get_noisy_data(self, errmodel):
+        """ get a copy of the data with error applied on it.
+
+        Parameters
+        ----------
+        errmodel: dict or ModelDAG
+            error model for self.data entries. 
+            It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
+            a dataframe with the same size as self.data will be created 
+            and each entry of the errmodel will affect the corresponding entry in the data. 
+            "key_err" will be added to the returned data corresponding to the input error.
+            = warning: no error on the error implemented yet. =
+            
+        Returns
+        -------
+        pandas.DataFrame
+            a copy of self.data affected by errors.
+        """
+
+        if type(errmodel) is dict:
+            from modeldag import ModelDAG
+            errmodel = ModelDAG(errmodel)
+
+
+        data_err=  errmodel.draw( len(self.data) )
+        column_to_noisify = data_err.columns
+
+
+        datanoisy = self.data.copy()
+        for k in column_to_noisify:
+            datanoisy[k] = datanoisy[k] + data_err[k]
+            datanoisy[k+"_err"] = data_err[k].abs()
+
+        return datanoisy
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 

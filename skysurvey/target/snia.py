@@ -159,8 +159,8 @@ class SNeIaStretch( object ):
 
         mode1 = norm.pdf(xx, loc=mu1, scale=sigma1)
         mode2 = norm.pdf(xx, loc=mu2, scale=sigma2)
-        
-        fprompt = np.asarray(fprompt)[:,None]            
+        if type(fprompt) is not float:
+            fprompt = np.asarray(fprompt)[:,None]            
         pdf = fprompt*mode1 + (1-fprompt)*(a*mode1 + (1-a)*mode2)
         return xx, pdf
     
@@ -418,5 +418,51 @@ class SNeIa_AgePop( Transient ):
 
                  )
 
+class SNeIa_MassStepAgeStretch( Transient ):
+    
+    _KIND = "SNIa"
+    _TEMPLATE = "salt2"
+    _RATE = 2.35 * 10**4 # Perley 2020
+
+    # {'func': func, 'prop': dict, 'input':, 'as':}
+    _MODEL = dict( redshift = {"kwargs":{"zmax":0.4}, "as":"z"},
+                  
+                   prompt = {"func": Rigault_AgePop.get_promptpdf,
+                             "kwargs":{"redshift":"@z"}
+                            }, 
+                  
+                   x1 = {"func": SNeIaStretch.nicolas2021,
+                        "kwargs":{"fprompt":"@prompt"}
+                        }, 
+                  
+                   mass = {"func": Rigault_AgePop.get_massdistribution,
+                          "kwargs": {"redshift":"@z", "fprompt":"@prompt"}
+                          },
+                  
+                   c = {"func": SNeIaColor.intrinsic_and_dust},
+                  
+                   t0 = {"func": np.random.uniform, 
+                         "kwargs": {"low":56_000, "high":56_200} 
+                        },
+                       
+                   magabs = {"func": SNeIaMagnitude.tripp_and_massstep,
+                             "kwargs": {"x1": "@x1", "c": "@c", "hostmass":'@mass',
+                                        "mabs":-19.3, "sigmaint":0.10, "gamma":0.2}
+                            },
+                           
+                   magobs = {"func": "magabs_to_magobs", # defined in Target()
+                             "kwargs": {"z":"@z", "magabs":"@magabs"},
+                            },
+
+                   x0 = {"func": "magobs_to_amplitude", # defined in Transients()
+                         "kwargs": {"magobs":"@magobs", "param_name": "x0"},
+                        }, #because it needs to call sncosmo_model.get(param_name)
+                       
+                   radec = {"func": random_radec,
+                            "kwargs": {},
+                            "as": ["ra","dec"]
+                           }
+
+                 )
 
 
