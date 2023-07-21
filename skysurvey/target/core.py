@@ -639,7 +639,7 @@ class Target( object ):
         update_model: change the current model (not just the one you get)
         get_model_parameter: access the model parameters.
         """
-        self.model.get_model(**kwargs)
+        return self.model.get_model(**kwargs)
 
     def get_model_parameter(self, entry, key, default=None, model=None):
         """ access a parameter of the model.
