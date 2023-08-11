@@ -109,7 +109,7 @@ class TSTransient( Transient ):
             this.set_rate(rate)
         
         if model is not None:
-            self._model = model
+            this._model = model
 
         if magabs is not None:
             this.change_model_parameter(magabs={"loc":magabs})
