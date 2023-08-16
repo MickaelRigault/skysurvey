@@ -100,8 +100,7 @@ class Target( object ):
     def from_draw(cls, size=None, model=None, template=None,
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
-                      skyarea=None,
-                      funcs={},
+                      skyarea=None, rate=None,
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -117,7 +116,7 @@ class Target( object ):
             model will update the default cls._MODEL if any
             = leave to None if unsure, cls._MODEL used as default = 
 
-        template_source: str, None
+        template: str, None
             name of the template (sncosmo.Model(source)). 
             = leave to None if unsure, cls._TEMPLATE used as default =
 
@@ -154,6 +153,11 @@ class Target( object ):
             - geometry: shapely.Geometry
             - None: full sky 
 
+        rate: float, func
+            the transient rate
+            - float: assumed volumetric rate
+            - func: function of redshift rate(z) 
+                    that provides the rate as a function of z
 
         **kwargs goes to self.draw()
 
@@ -167,12 +171,25 @@ class Target( object ):
         from_setting:  loads an instance given model parameters (dict)            
         """
         this = cls()
-        if model is not None:
-            this.update_model(**model) # will update any model entry.
 
+        # backward compatibility
+        if template is None:
+            if "source" in kwargs:
+                warnings.warn("Deprecation warning: source option is now called template")
+                template = kwargs.pop("source")
+                
+            if "source_or_template" in kwargs:
+                template = kwargs.pop("source_or_template")
+        
+        if rate is not None:
+            this.set_rate(rate)
+            
         if template is not None:
             this.set_template(template)
             
+        if model is not None:
+            this.update_model(**model) # will update any model entry.
+
         _ = this.draw( size=size,
                        zmin=zmin, zmax=zmax,
                        tstart=tstart, tstop=tstop,
