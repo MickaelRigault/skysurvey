@@ -23,7 +23,7 @@ class BaseSurvey( object ):
     # ============== #
     #   Methods      #
     # ============== #    
-    def set_data(self, data, lower_precision=True):
+    def set_data(self, data, lower_precision=True, sort_mjd=True):
         """ set the observing data 
 
         = It is unlikely you need to use that directly. =
@@ -31,12 +31,15 @@ class BaseSurvey( object ):
         Parameters
         ----------
         data: pandas.DataFrame
-             observing data. see REQUIRED_COLUMNS for the list of
-             required columns.
+            observing data. see REQUIRED_COLUMNS for the list of
+            required columns.
 
         lower_precision: bool
-             change the types from 64 to 32 precision when possible.
+            change the types from 64 to 32 precision when possible.
 
+        sort_mjd: bool
+            should this sort by mjd (if needed) as required to draw dataset
+            
         Returns
         -------
         None
@@ -54,6 +57,9 @@ class BaseSurvey( object ):
             
         if lower_precision:
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
+
+        if sort_mjd and not (data["mjd"].is_monotonic_increasing or data["mjd"].is_monotonic_decreasing):
+            data = data.sort_values("mjd")
             
         self._data = data
     # ------------ #

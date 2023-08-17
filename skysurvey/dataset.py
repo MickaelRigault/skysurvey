@@ -581,13 +581,18 @@ class DataSet( object ):
 
 
         for band_, color_ in zip(bands, colors):
+            if color_ is None:
+                ecolor = to_rgba("0.4", 0.2)
+            else:
+                ecolor = to_rgba(color_, 0.2)
+                
             obs_band = obs_[obs_["band"] == band_]
             times = obs_band["time"] if not format_time else Time(obs_band["time"], format=t0_format).datetime
             ax.scatter(times, obs_band["flux_zp"],
                        color=color_, zorder=4, **kwargs)
             ax.errorbar(times, obs_band["flux_zp"],
                         yerr= obs_band["fluxerr_zp"],
-                        ls="None", marker="None", ecolor=to_rgba(color_, 0.2), 
+                        ls="None", marker="None", ecolor=ecolor, 
                         zorder=3,
                         **kwargs)
 

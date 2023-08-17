@@ -117,7 +117,7 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
     @classmethod
     def from_pointings(cls, data, footprint=None,
                           rakey="ra", deckey="dec",
-                          nside=200,                          
+                          nside=200,
                           backend="polars",
                           use_pyarrow_extension_array=True,
                           **kwargs):
