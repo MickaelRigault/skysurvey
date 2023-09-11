@@ -1,5 +1,6 @@
 import pandas
 import numpy as np
+import warnings
 from .healpix  import HealpixSurvey
 from .polygon  import PolygonSurvey
 
