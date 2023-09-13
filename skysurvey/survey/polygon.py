@@ -268,7 +268,8 @@ class PolygonSurvey( BaseSurvey ):
         import cartopy.crs as ccrs
 
         if data is None and self.data is not None and len(self.data)>0:
-            data = self.get_fieldstat(stat=stat, columns=column, incl_zeros=True, fillna=np.NaN, data=data)
+            data = self.get_fieldstat(stat=stat, columns=column, incl_zeros=True,
+                                          fillna=np.NaN, data=data)
 
         geodf = self.fields.copy()
         xy = np.stack(geodf["geometry"].apply(lambda x: ((np.asarray(x.exterior.xy)).T) ).values)

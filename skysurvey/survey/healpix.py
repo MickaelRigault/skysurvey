@@ -202,6 +202,55 @@ class HealpixSurvey( BaseSurvey ):
             nfields = len(nobs[nobs>min_obs])
         
         return self.get_field_area() * nfields
+
+    def get_polygons(self, observed_fields=False, as_vertices=False, origin=180):
+        """ returns a list of polygon 
+
+        Parameters
+        ----------
+        observed_fields: bool
+            should this be limited to observed fields ?
+
+        as_vertices: bool
+            should this returns a list of shapely.geometry.Polygon (False)
+            or its vertices (shape N [fields], 2 [ra, dec], 4[corners]).
+
+        origin: float
+            origin of the R.A. coordinate (center of image)
+
+        Returns
+        -------
+        list
+            (as_vertices)
+            - list of polygon
+            - list of vertices
+        """
+        if observed_fields:
+            fieldid = self.data[self.fieldids.name].unique()
+        else:
+            fieldid = ultrasat.fieldids
+
+        corners = hp.boundaries(nside=self.nside, pix=fieldid)
+        corners = np.moveaxis(corners,1,2)
+        ang = np.asarray([hp.vec2ang(corners_, lonlat=True) for corners_ in corners])
+        ang[:,0,:] = (origin-ang[:,0,:])%360 # set back origin
+
+        if as_vertices:
+            return ang
+        
+        from shapely import geometry
+        polygons = [geometry.Polygon(ang_.T) for ang_ in ang]
+        return polygons
+
+    def get_skyarea(self, as_multipolygon=True):
+        """ multipolygon (or list) of field geometries  """
+        from shapely import ops, geometry
+        
+        ps = self.get_polygons(observed_fields=True, as_vertices=False)
+        if as_multipolygon:
+            return geometry.MultiPolygon(ps)
+
+        return ops.unary_union(ps)    
     # ------- #
     #  core   #
     # ------- #

@@ -50,7 +50,7 @@ def get_sncosmo_sourcenames(of_type=None, startswith=None, endswith=None):
 
 
 def get_sncosmo_model(source="salt2",
-                             incl_dust=True, 
+                        incl_dust=False, 
                              **params):
     """ get the template (sncosmo.Model)
 
@@ -122,7 +122,7 @@ class Template( object ):
         
     @classmethod
     def from_sncosmo(cls, source, incl_dust=True, **kwargs):
-        """ 
+        """
         loads the instance given the source name.
 
         Parameters
@@ -164,7 +164,10 @@ class Template( object ):
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, in_mag=False, zp=25, zpsys="ab",
                            **kwargs):
-        """ """
+        """ get the lightcurves (flux or mag) 
+
+        
+        """
 
         if sncosmo_model is None:
             sncosmo_model = self.get(**kwargs)
@@ -172,8 +175,7 @@ class Template( object ):
         # patch for odd sncosmo behavior (see https://github.com/sncosmo/sncosmo/issues/346)
         squeeze = type(band) in [str, np.str_] # for the output format
 
-        # make sure all are array
-        # make sure all are array
+        # make sure all are arrays
         band_ = np.atleast_1d(band)
         times_ = np.atleast_1d(times)
         # flatten for bandflux
