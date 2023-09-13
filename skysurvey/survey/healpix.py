@@ -3,6 +3,7 @@ from .core import BaseSurvey
 import pandas
 import numpy as np
 import healpy as hp
+import warnings
 
 
 __all__ = ["HealpixSurvey"]
