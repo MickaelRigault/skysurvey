@@ -4,6 +4,7 @@ from .core import Transient
 
 from .environments import getpdf_asymetric_gaussian
 from ..tools.utils import random_radec
+from ..effects import dust
 
 __all__ = ["SNeIa"]
 
@@ -375,7 +376,10 @@ class SNeIa( Transient ):
                    radec = {"func": random_radec,
                             "kwargs": {},
                             "as": ["ra","dec"]
-                           }
+                           },
+                        
+                    mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+                    
                     )
 
 
@@ -413,8 +417,10 @@ class SNeIaHostMass( Transient ):
                        
                    radec = {"func": random_radec,
                             "kwargs": {},
-                            "as": ["ra","dec"]}
-                    )
+                            "as": ["ra","dec"]},
+
+                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+                   )
 
 
 class SNeIa_AgePop( Transient ):
@@ -460,8 +466,10 @@ class SNeIa_AgePop( Transient ):
                    radec = {"func": random_radec,
                             "kwargs": {},
                             "as": ["ra","dec"]
-                           }
-
+                           },
+                           
+                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+                    
                  )
 
 class SNeIa_MassStepAgeStretch( Transient ):
@@ -507,8 +515,9 @@ class SNeIa_MassStepAgeStretch( Transient ):
                    radec = {"func": random_radec,
                             "kwargs": {},
                             "as": ["ra","dec"]
-                           }
+                           },
 
+                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                  )
 
 

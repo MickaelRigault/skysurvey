@@ -17,7 +17,7 @@ class Target( object ):
 
     _KIND = "unknow"
     _TEMPLATE = None
-    _MODEL = None # dict config 
+    _MODEL = None # dict config
     
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
@@ -40,7 +40,6 @@ class Target( object ):
         import pprint
         return pprint.pformat(self.model.model, sort_dicts=False)
 
-    
     @classmethod
     def from_setting(cls, setting, **kwargs):
         """ loads the target from a setting dictionary
@@ -249,21 +248,22 @@ class Target( object ):
         get_target_template: get a template set to the target parameters.
         get_template_parameters: get the template parameters for the given target
         """
-        from ..template import Template
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
             kwargs = {**prop, **kwargs}
 
         sncosmo_model = self.template.get(**kwargs)
-        if as_model:
-            return sncosmo_model
-        return Template.from_sncosmo(sncosmo_model)
+        if not as_model:
+            from ..template import Template
+            return Template.from_sncosmo(sncosmo_model)
+        
+        return sncosmo_model
 
     def get_target_template(self, index, **kwargs):
         """ get a template set to the target parameters.
 
         This is a shortcut to 
-        ``get_template(index=index, incl_dust=incl_dust, **kwargs)``
+        ``get_template(index=index, **kwargs)``
 
         Parameters
         ----------

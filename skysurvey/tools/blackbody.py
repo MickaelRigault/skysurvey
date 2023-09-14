@@ -12,7 +12,6 @@ _flam_units = u.erg / (u.cm**2 * u.s * u.AA)
 
 
 
-
 def get_blackbody_transient_source(phase, temperature, amplitude,
                                        lbda="1_000:10_000:1000j",
                                        zero_before=True, name="bb_transient"):
@@ -48,7 +47,7 @@ def get_blackbody_transient_source(phase, temperature, amplitude,
     fluxes = get_blackbody_transient_flux(lbda, temperature=temperature, amplitude=amplitude)
     bb_source = TimeSeriesSource(phase=phase, wave=lbda, flux=fluxes, zero_before=zero_before, 
                                 name=name)
-    return bb_source    
+    return bb_source 
 
 
 def get_blackbody_transient_flux(lbda, temperature, amplitude, normed=True):

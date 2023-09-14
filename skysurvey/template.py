@@ -50,8 +50,7 @@ def get_sncosmo_sourcenames(of_type=None, startswith=None, endswith=None):
 
 
 def get_sncosmo_model(source="salt2",
-                        incl_dust=False, 
-                             **params):
+                      **params):
     """ get the template (sncosmo.Model)
 
     Parameters
@@ -61,10 +60,6 @@ def get_sncosmo_model(source="salt2",
         is given, it is used to retrieve a `~sncosmo.Source` from
         the registry.
 
-    incl_dust: bool
-        shall this add the dust modeling offset ? 
-        (CCM89Dust)
-
     **kwargs goes to model.set() to change the parameter's model
 
     Returns
@@ -72,15 +67,9 @@ def get_sncosmo_model(source="salt2",
     `sncosmo.Model`
         the sncosmo.Model template
     """
-    modelprop = dict(source=source)
-    if incl_dust:
-        dust = sncosmo.CCM89Dust()
-        modelprop["effects"] = [dust]
-        modelprop["effect_names"]=['mw']
-        modelprop["effect_frames"]=['obs']
-        
+    modelprop = dict(source=source)        
     model = sncosmo.Model(**modelprop)
-    model.set(**params)
+    model.set(**params)        
     return model      
 
 def sncosmoresult_to_pandas(result):
@@ -121,7 +110,7 @@ class Template( object ):
         self._sncosmo_model = sncosmo_model
         
     @classmethod
-    def from_sncosmo(cls, source, incl_dust=True, **kwargs):
+    def from_sncosmo(cls, source, **kwargs):
         """
         loads the instance given the source name.
 
@@ -132,6 +121,7 @@ class Template( object ):
             is given, it is used to retrieve a `~sncosmo.Source` from
             the registry.
 
+
         **kwargs goes to ``get_sncosmo_model(source, **kwargs)``
 
         Returns
@@ -139,26 +129,52 @@ class Template( object ):
         instance
         """
         if type(source) != sncosmo.Model:
-            # useless for now but I may change things in init.
-            sncosmo_model = get_sncosmo_model(source, incl_dust=incl_dust,
-                                          **kwargs)
+            sncosmo_model = get_sncosmo_model(source,
+                                              **kwargs)
         else:
             sncosmo_model = source
             
         return cls(sncosmo_model)
-        
+
     # ============== #
     #   Methods      #
     # ============== #
     # -------- #
+    #  Effect  #
+    # -------- #
+    def add_effect(self, effects):
+        """ add effects to the sncosmo model
+        
+        Parameters
+        ----------
+        effects: `skysurvey.effect`, list
+            effect to be applied to the sncosmo model 
+            It could be a list of effects.
+            (see skysurvey.effect.from_sncosmo, if you have a sncosmo.PropagationEffect, name and frame)
+            
+        Returns
+        -------
+        None
+        """
+        for eff_ in np.atleast_1d(effects):
+            self.sncosmo_model.add_effect(eff_.effect, eff_.name, eff_.frame)
+        
+    # -------- #
     #  GETTER  #
     # -------- #
-    def get(self,**kwargs):
-        """ return a copy of the model you can set new parameter with the options """
+    def get(self, **kwargs):
+        """ return a copy of the model. 
+        You can set new parameter to this copy using kwargs
+
+        Returns
+        -------
+        sncosmo.Model
+        """
         from copy import deepcopy
         model = deepcopy(self.sncosmo_model)
         if kwargs:
             model.set(**kwargs)
+            
         return model
     
     def get_lightcurve(self, band, times,
@@ -188,7 +204,7 @@ class Template( object ):
                                             ).reshape( len(band),len(times) )
         # in mag
         else:                
-            values = sncosmo_model.bandmag(band_, zpsys, times_).reshape( len(band),len(times) )
+            values = sncosmo_model.bandmag(band_, zpsys, times_).reshape( len(band), len(times) )
 
         return np.squeeze(values) if squeeze else values
 
@@ -236,7 +252,6 @@ class Template( object ):
         flux[sel] = sncosmo_model.flux(time, lbdas[sel])  
         return flux
 
-    
     # -------- #
     # Plotter  #
     # -------- #
@@ -453,9 +468,9 @@ class GridTemplate( Template ):
     # ================= #
     #  handle Elements  #
     # ================= #
-    def get(self, grid_element, incl_dust=True, **kwargs):
+    def get(self, grid_element,  **kwargs):
         """ return a sncosmo model for the template's source name (self.source) """
-        return self.grid.loc[grid_element]["template"].get(incl_dust=True, **kwargs)
+        return self.grid.loc[grid_element]["template"].get(**kwargs)
 
     def get_lightcurve(self, grid_element, band, times,
                            sncosmo_model=None, params=None,

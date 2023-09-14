@@ -21,7 +21,6 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True)
     ----------
     template: sncosmo.Model
         an sncosmo model from which we can draw observations
-        (passed to 
         
     observations: pandas.DataFrame
         Dataframe containing the observing infortation.
@@ -676,7 +675,7 @@ class DataSet( object ):
                                            incl_error=True,
                                            client=None):
         """ creates the lightcurve of the input single-kind 
-        targets as they  would be observed by the survey. 
+        targets as they would be observed by the survey. 
         = These are split per survey fields. =
         
         
