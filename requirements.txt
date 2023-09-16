@@ -6,6 +6,7 @@ astropy
 sncosmo
 healpy
 extinction
+dustmaps
 
 modeldag
 
