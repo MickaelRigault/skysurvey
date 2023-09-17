@@ -32,7 +32,7 @@ Here is a quick example:
 ```python
 import skysurvey
 snia = skysurvey.SNeIa()
-data = snia.draw(size=50_000, tstart=56_000, tstop=56_100) # see options
+data = snia.draw(size=50_000, tstart=56_000, tstop=56_100, inplace=True) # see options
 data.head(5) # also snia.data
 ```
 
