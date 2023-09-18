@@ -2,6 +2,7 @@ numpy
 pandas
 scipy
 
+afterglowpy
 astropy
 sncosmo
 healpy
