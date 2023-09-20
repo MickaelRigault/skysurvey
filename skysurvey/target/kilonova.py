@@ -9,7 +9,7 @@ optional_injection_parameters={}
 
 def read_possis_file(filename):
     """Read in a spectral model created by POSSIS (1906.04205), as appropriate
-       for injestion as a simsurvey.models.AngularTimeSeriesSource. Model
+       for injestion as a skysurvey.target.AngularTimeSeriesSource. Model
        grids can be found here: https://github.com/mbulla/kilonova_models.
     Parameters
     ----------
