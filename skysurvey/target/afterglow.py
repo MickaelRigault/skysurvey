@@ -9,7 +9,11 @@ except:
     raise ImportError("could not import afterglowpy ; run pip install afterglowpy")
 
 
-from .target import Transient
+from .core import Transient
+
+
+__all__ = ["Afterglow"]
+
 
 phases = np.linspace(1.0e3, 1.0e7, 300)
 wave = np.linspace(3600,6600,300)
@@ -43,7 +47,7 @@ for phase in phases:
 
 template = sncosmo.Model(sncosmo.TimeSeriesSource(phases, wave, np.array(flux)))
 
-class afterglow( Transient ):
+class Afterglow( Transient ):
 
     _KIND = "afterglow"
     _TEMPLATE = template
