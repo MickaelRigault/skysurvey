@@ -581,9 +581,19 @@ class Target( object ):
 
         self._data = data
 
-    def get_noisy_data(self, errmodel):
-        """ get a copy of the data with error applied on it.
-        
+    def get_noisy(self, errmodel, 
+                      errorlabel="_err", keeptrue=True,
+                      propagate=True,
+                      **kwargs):
+        """ get a new instance with noise applied to.
+
+        This is made in 2 steps:
+        >>>
+        get the noisified data according to the input errmodel (using get_noisy_data)
+        if propagate=True:
+           redraw the model data from the changed variables (using model.redraw_from).
+           This way the noise is propagated to derived data. Use propagate=False to bypass that.
+        >>>
 
         Parameters
         ----------
@@ -594,11 +604,59 @@ class Target( object ):
             and each entry of the errmodel will affect the corresponding entry in the data. 
             if "key_err" is given in the model, this entry will be passed to data.
             = warning: no error on the error implemented yet. =
-            
+
+        errorlabel: str
+            how an error is idendified ?
+
+        keeptrue: bool
+            if true, changed entry will be kept with the _true label. 
+
+        propagate: bool
+            should this redraw the data starting from the noisified entries ?
+
         Returns
         -------
-        pandas.DataFrame
-            a copy of self.data affected by errors.
+        Class
+            new instance of the class loaded from noisified data.
+
+        See also
+        --------
+        get_noisy_data: get a copy of the data with error applied on it.
+
+        """
+        newdata, changed_columns = self.get_noisy_data(errmodel, 
+                                                       errorlabel=errorlabel, 
+                                                       keeptrue=keeptrue, 
+                                                       **kwargs)
+        if propagate:
+            newdata = self.model.redraw_from(changed_columns, newdata, 
+                                             incl_name=False)
+        return self.__class__.from_data(newdata)
+
+    def get_noisy_data(self, errmodel, errorlabel="_err", keeptrue=True):
+        """ get a copy of the data with error applied on it.
+
+        Parameters
+        ----------
+        errmodel: dict or ModelDAG
+            error model for self.data entries. 
+            It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
+            a dataframe with the same size as self.data will be created 
+            and each entry of the errmodel will affect the corresponding entry in the data. 
+            if "key_err" is given in the model, this entry will be passed to data.
+            = warning: no error on the error implemented yet. =
+
+        errorlabel: str
+            how an error is idendified ?
+
+        keeptrue: bool
+            if true, changed entry will be kept with the _true label. 
+
+        Returns
+        -------
+        pandas.DataFrame, list
+            a copy of self.data affected by errors
+            the list of changed parameters
 
         Example
         -------
@@ -610,27 +668,31 @@ class Target( object ):
                    }
         datanoisy = self.get_noisy_data(errmodel)
         ```
-    
-        """
 
+        """
         if type(errmodel) is dict:
             from modeldag import ModelDAG
             errmodel = ModelDAG(errmodel)
-
-
-        data_err=  errmodel.draw( len(self.data) )
-        column_to_noisify = data_err.columns
-
-
+        # columns to be changed (
+        column_to_noisify = [l for l in errmodel.entries if not l.endswith(errorlabel)]
+        # store the truth in case you need it as input parameter
+        truths = self.data[column_to_noisify].copy()
+        truths.columns = truths.columns.astype("str")+"_true"
+        # draw the errors starting from the truths if needed be.
+        data_err = errmodel.draw( len(self.data), data=truths)
+        
         datanoisy = self.data.copy()
         for k in column_to_noisify:
-            datanoisy[k] = datanoisy[k] + data_err[k]
-            if f"{k}_err" in data_err.columns:
-                datanoisy[f"{k}_err"] = data_err[f"{k}_err"].abs() # abs in case
-            else:
-                warnings.warn(f"no error given for {k}_err entry.")
+            if keeptrue:
+                datanoisy[f"{k}_true"] = data_err[f"{k}_true"]
 
-        return datanoisy
+            datanoisy[k] = datanoisy[k] + data_err[k]
+            if f"{k}{errorlabel}" in data_err.columns:
+                datanoisy[f"{k}{errorlabel}"] = data_err[f"{k}{errorlabel}"].abs() # abs in case
+            else:
+                warnings.warn(f"no error given for {k}{errorlabel} entry.")
+
+        return datanoisy, column_to_noisify
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 
