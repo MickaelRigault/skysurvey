@@ -718,6 +718,7 @@ class Target( object ):
     # -------------- #
     def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None, 
                          index=None, data=None, colorbar=True,
+                         bins=None, bcolor="0.6",
                          **kwargs):
         """ """
         import matplotlib.pyplot as plt
@@ -727,7 +728,7 @@ class Target( object ):
         # ------- #
         if data is None:
             data = self.data if index is None else self.data.loc[index]
-
+            
         xvalue = data[xkey]
         yvalue = data[ykey]
         cvalue = None if ckey is None else data[ckey]
@@ -747,6 +748,21 @@ class Target( object ):
         sc = ax.scatter(xvalue, yvalue, c=cvalue, **kwargs)
         if cvalue is not None and colorbar:
             fig.colorbar(sc, ax=ax)
+
+        if bins is not None:
+            from matplotlib.colors import to_rgba
+            binned = pandas.cut(xvalue, bins) # defines the bins
+            # Add them to a copy of the dataframe along with the y-data
+            data_tmp = data[[ykey]].copy()
+            data_tmp["xbins"] = binned
+            # compute the binned mean, std and size (err_mean = std/sqrt(size-1)
+            gbins = data_tmp.groupby("xbins")[ykey].agg(["mean","std", "size"]).reset_index()
+            # get the bin centroid
+            bincentroid = gbins["xbins"].apply(lambda x: x.mid)
+            # and show the bins
+            ax.errorbar(bincentroid.values, gbins["mean"], yerr=gbins["std"]/np.sqrt(gbins["size"]-1), 
+                        ls="None", marker="s", mfc=to_rgba(bcolor, 0.8),
+                        mec=bcolor, zorder=9, ms=7, ecolor=bcolor)
             
         return fig
             

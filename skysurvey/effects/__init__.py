@@ -64,7 +64,7 @@ class Effect( object ):
                 effect = dust.ColorScatter_G10.from_saltsource()
                 
             elif which.lower() == "c11":
-                effect = dust.ColorScatter_C11.from_saltsource()
+                effect = dust.ColorScatter_C11()
             else:
                 raise NotImplementedError("Only G10 and C11 color scatter implemented")
                 
