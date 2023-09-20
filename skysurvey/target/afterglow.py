@@ -1,9 +1,6 @@
 import numpy as np
 from scipy import stats
 import sncosmo
-
-
-
 from skysurvey.target import Transient
 from ..tools.utils import random_radec
 try:
@@ -50,6 +47,7 @@ def rate(redshift_):
         psiarr.append(psi)
     return psiarr
 
+__all__ = ["Afterglow"]
 class afterglow( Transient):
 
     _KIND = "afterglow"
