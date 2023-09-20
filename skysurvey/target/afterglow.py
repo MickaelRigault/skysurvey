@@ -2,10 +2,14 @@ import numpy as np
 from scipy import stats
 import sncosmo
 
-import afterglowpy
+
 
 from skysurvey.target import Transient
 from ..tools.utils import random_radec
+try:
+     import afterglowpy
+except:
+     raise ImportError("could not import afterglowpy ; run pip install afterglowpy")
 
 phases = np.linspace(1.0e3, 1.0e7, 300)
 wave = np.linspace(3600,6600,300)
