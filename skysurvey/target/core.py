@@ -583,7 +583,7 @@ class Target( object ):
 
     def get_noisy(self, errmodel, 
                       errorlabel="_err", keeptrue=True,
-                      propagate=True,
+                      propagate=False,
                       **kwargs):
         """ get a new instance with noise applied to.
 
@@ -673,11 +673,17 @@ class Target( object ):
         if type(errmodel) is dict:
             from modeldag import ModelDAG
             errmodel = ModelDAG(errmodel)
-        # columns to be changed (
+            
+        # columns to be changed 
         column_to_noisify = [l for l in errmodel.entries if not l.endswith(errorlabel)]
-        # store the truth in case you need it as input parameter
-        truths = self.data[column_to_noisify].copy()
-        truths.columns = truths.columns.astype("str")+"_true"
+        columns_needed = [l for l in list(errmodel.entry_dependencies.dropna().unique())
+                              if not l.endswith("_true")]
+
+        # store the truth and what you need it as input parameter.
+        # Specify _true for changed variables
+        truths = self.data[column_to_noisify+columns_needed].copy()
+        truths.rename({k:k+"_true" for k in column_to_noisify}, axis=1, inplace=True)
+        
         # draw the errors starting from the truths if needed be.
         data_err = errmodel.draw( len(self.data), data=truths)
         

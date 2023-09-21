@@ -12,3 +12,4 @@ list of short notebook illustrating some commun usage
   change_model_while_draw
   blackbody_transient  
   build_a_new_transient
+  noise_to_target

@@ -2,6 +2,33 @@ import numpy as np
 from shapely import geometry
 
 
+def apply_gaussian_noise(target, propagate=False, **kwargs):
+    """ apply random gaussian noise to the target
+    pass the entries and error scale as kwargs 
+    (e.g. a=0.1 to randomly scatter `a` by a gaussian of scale=0.1)
+    
+    Parameters
+    ----------
+    target: `skysurvey.Target`
+        a target (of child of)
+
+    propagate: bool
+        should this redraw the data starting from the noisified entries ?
+
+    Returns
+    -------
+    target.__class__
+    """
+    errormodel = {}
+    for k,v in kwargs.items():
+        errormodel[k] = {'func':np.random.normal, "kwargs":{"loc":0, "scale":v}}
+        # no error on the error
+        errormodel[f"{k}_err"] = {'func':np.random.uniform, "kwargs":{"low":v, "high":v}}
+    
+    noisy_target = target.get_noisy(errormodel, propagate=propagate, errorlabel='_err')
+    return noisy_target
+
+
 def random_radec(size=None, skyarea=None,
                 ra_range=[0,360], dec_range=[-90,90]):
     """ draw the sky positions
@@ -65,7 +92,6 @@ def random_radec(size=None, skyarea=None,
         ra, dec = ra[indexes], dec[indexes] 
     
     return ra, dec
-
 
 def surface_of_skyarea(skyarea):
     """ convert input skyarea into deg**2
