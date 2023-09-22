@@ -38,7 +38,7 @@ for phase in phases:
     # convert to erg/s/cm^2/A
     flux.append(Jys * 2.99792458e-05 / (wave**2))
 
-template = sncosmo.Model(sncosmo.TimeSeriesSource(phases, wave, np.array(flux)))
+template = sncosmo.Model(sncosmo.TimeSeriesSource(phases/(3600*24), wave, np.array(flux)))
 
 def rate(redshift_):
     psiarr=[]
