@@ -1,12 +1,18 @@
 import numpy as np
 from scipy import stats
+
 import sncosmo
-from skysurvey.target import Transient
-from ..tools.utils import random_radec
 try:
-     import afterglowpy
+    import afterglowpy
 except:
-     raise ImportError("could not import afterglowpy ; run pip install afterglowpy")
+    raise ImportError("could not import afterglowpy ; run pip install afterglowpy")
+
+
+from .core import Transient
+
+
+__all__ = ["Afterglow"]
+
 
 phases = np.linspace(1.0e3, 1.0e7, 300)
 wave = np.linspace(3600,6600,300)
@@ -41,14 +47,10 @@ for phase in phases:
 template = sncosmo.Model(sncosmo.TimeSeriesSource(phases/(3600*24), wave, np.array(flux)))
 
 def rate(redshift_):
-    psiarr=[]
-    for z in redshift_:
-        psi=0.0157+0.118*z/(1+(z/3.23)**4.66)
-        psiarr.append(psi)
-    return psiarr
+    psi=0.0157+0.118*redshift_/(1+(redshift_/3.23)**4.66)
+    return psi
 
-__all__ = ["Afterglow"]
-class afterglow( Transient):
+class Afterglow( Transient ):
 
     _KIND = "afterglow"
     _TEMPLATE = template
@@ -58,10 +60,6 @@ class afterglow( Transient):
 
                    t0 = {"func": np.random.uniform,
                          "kwargs": {"low":56_000, "high":56_200} },
-                    radec = {"func": random_radec,
-                            "kwargs": {},
-                            "as": ["ra","dec"]
-                           },
 
                    )
 
