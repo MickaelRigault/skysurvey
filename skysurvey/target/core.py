@@ -583,7 +583,7 @@ class Target( object ):
 
     def get_noisy(self, errmodel, 
                       errorlabel="_err", keeptrue=True,
-                      propagate=True,
+                      propagate=False,
                       **kwargs):
         """ get a new instance with noise applied to.
 
@@ -673,11 +673,17 @@ class Target( object ):
         if type(errmodel) is dict:
             from modeldag import ModelDAG
             errmodel = ModelDAG(errmodel)
-        # columns to be changed (
+            
+        # columns to be changed 
         column_to_noisify = [l for l in errmodel.entries if not l.endswith(errorlabel)]
-        # store the truth in case you need it as input parameter
-        truths = self.data[column_to_noisify].copy()
-        truths.columns = truths.columns.astype("str")+"_true"
+        columns_needed = [l for l in list(errmodel.entry_dependencies.dropna().unique())
+                              if not l.endswith("_true")]
+
+        # store the truth and what you need it as input parameter.
+        # Specify _true for changed variables
+        truths = self.data[column_to_noisify+columns_needed].copy()
+        truths.rename({k:k+"_true" for k in column_to_noisify}, axis=1, inplace=True)
+        
         # draw the errors starting from the truths if needed be.
         data_err = errmodel.draw( len(self.data), data=truths)
         
@@ -780,7 +786,7 @@ class Target( object ):
     # -------------- #
     def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None, 
                          index=None, data=None, colorbar=True,
-                         bins=None, bcolor="0.6",
+                         bins=None, bcolor="0.6", err_suffix="_err",
                          **kwargs):
         """ """
         import matplotlib.pyplot as plt
@@ -806,8 +812,18 @@ class Target( object ):
         else:
             fig = ax.figure
 
-
-        sc = ax.scatter(xvalue, yvalue, c=cvalue, **kwargs)
+        # scatter
+        prop = {**dict(zorder=3), **kwargs}
+        sc = ax.scatter(xvalue, yvalue, c=cvalue, **prop)
+        # errorbar        
+        if f"{xkey}{err_suffix}" in data or f"{ykey}{err_suffix}" in data:
+            xerr = data.get(f"{xkey}{err_suffix}")
+            yerr = data.get(f"{ykey}{err_suffix}")
+            zorder = prop.pop("zorder") - 1
+            _ = ax.errorbar(xvalue, yvalue, xerr=xerr, yerr=yerr,
+                                ls="None", marker="None",
+                                zorder=zorder, ecolor="0.7")
+           
         if cvalue is not None and colorbar:
             fig.colorbar(sc, ax=ax)
 
