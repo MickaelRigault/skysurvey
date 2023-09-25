@@ -4,7 +4,7 @@ import numpy as np
 
 from .timeserie import TSTransient
 from .collection import CompositeTransient
-from ..template import get_sncosmo_sourcenames
+from ..source import get_sncosmo_sourcenames
 
 
 __all__ = ["SNeII", "SNeIIn", "SNeIIb",
