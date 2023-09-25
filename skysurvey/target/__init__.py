@@ -9,3 +9,4 @@ from .collection import *
 
 # Not this one since requires afterglowpy
 #from .afterglow import *
+from .kilonova import *
