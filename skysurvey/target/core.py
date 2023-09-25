@@ -786,7 +786,7 @@ class Target( object ):
     # -------------- #
     def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None, 
                          index=None, data=None, colorbar=True,
-                         bins=None, bcolor="0.6",
+                         bins=None, bcolor="0.6", err_suffix="_err",
                          **kwargs):
         """ """
         import matplotlib.pyplot as plt
@@ -812,8 +812,18 @@ class Target( object ):
         else:
             fig = ax.figure
 
-
-        sc = ax.scatter(xvalue, yvalue, c=cvalue, **kwargs)
+        # scatter
+        prop = {**dict(zorder=3), **kwargs}
+        sc = ax.scatter(xvalue, yvalue, c=cvalue, **prop)
+        # errorbar        
+        if f"{xkey}{err_suffix}" in data or f"{ykey}{err_suffix}" in data:
+            xerr = data.get(f"{xkey}{err_suffix}")
+            yerr = data.get(f"{ykey}{err_suffix}")
+            zorder = prop.pop("zorder") - 1
+            _ = ax.errorbar(xvalue, yvalue, xerr=xerr, yerr=yerr,
+                                ls="None", marker="None",
+                                zorder=zorder, ecolor="0.7")
+           
         if cvalue is not None and colorbar:
             fig.colorbar(sc, ax=ax)
 
