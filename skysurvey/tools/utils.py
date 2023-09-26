@@ -1,33 +1,105 @@
 import numpy as np
 from shapely import geometry
 
+# ================= #
+#  Noise Generator  #
+# ================= #
 
-def apply_gaussian_noise(target, propagate=False, **kwargs):
+def build_covariance(as_dataframe=False, **kwargs):
+    """ convert kwargs into covariance matrix
+
+    Parameters
+    ----------
+    as_dataframe: bool
+        should this return a np.array (False) or build a datraframe
+        from it ? (True)
+
+    kwargs: 
+        the format is the following:
+        {'{key1}': err,
+         '{key2}': err,
+         'cov_{key1}{key2}': covariance, # or 'cov_{key2}{key1}' both are looked for
+        }
+        
+    Returns
+    -------
+    array or dataframe, param_names
+        see as_dataframe
+
+    """
+    param_names, errors = np.stack([[l,v] for l,v in kwargs.items() if not l.startswith("cov")]).T
+    cov_diag = np.diag(np.asarray(errors, dtype="float")**2)
+    # not sure I need this for loop though...
+    for i, ikey in enumerate(param_names):
+        for j, jkey in enumerate(param_names):
+            if j==i: continue
+            cov_diag[i,j] = kwargs.get(f"cov_{ikey}{jkey}", kwargs.get(f"cov_{jkey}{ikey}", 0))
+    
+    if as_dataframe:
+        cov_diag = pandas.DataFrame(cov_diag, 
+                                    index=param_names, 
+                                    columns=param_names)
+    return cov_diag, param_names
+
+def apply_gaussian_noise(target_or_data, **kwargs):
     """ apply random gaussian noise to the target
-    pass the entries and error scale as kwargs 
-    (e.g. a=0.1 to randomly scatter `a` by a gaussian of scale=0.1)
+    
+    pass the entries error and covariance as kwargs 
+    following this format:
+    {'{key1}': err,
+     '{key2}': err,
+     'cov_{key1}{key2}': covariance, # or 'cov_{key2}{key1}' both are looked for
+     }
     
     Parameters
     ----------
-    target: `skysurvey.Target`
-        a target (of child of)
-
-    propagate: bool
-        should this redraw the data starting from the noisified entries ?
+    target_or_data: `skysurvey.Target` or pandas.DataFrame
+        a target (of child of) or directly it's target.data
+        This will affect what is returned.
 
     Returns
     -------
-    target.__class__
+    target or dataframe
+        according to input
     """
-    errormodel = {}
-    for k,v in kwargs.items():
-        errormodel[k] = {'func':np.random.normal, "kwargs":{"loc":0, "scale":v}}
-        # no error on the error
-        errormodel[f"{k}_err"] = {'func':np.random.uniform, "kwargs":{"low":v, "high":v}}
+    import pandas
+    if type(target_or_data) is pandas.DataFrame:
+        data = target_or_data
+        target = None
+    else:
+        target = target_or_data
+        data = target.data
+        
     
-    noisy_target = target.get_noisy(errormodel, propagate=propagate, errorlabel='_err')
-    return noisy_target
+    # create the covariance matrix
+    covmatrix, names = build_covariance(**kwargs)
 
+    # create the noise
+    noise = np.random.multivariate_normal( np.zeros( len(names)),
+                                               covmatrix,
+                                               size=( len(target.data), )
+                                         )
+    
+    # create the noisy data form
+    datanoisy = data.copy()
+    datanoisy[[f"{k}_true" for k in names]] = datanoisy[names] # set truth
+    datanoisy[names] += pandas.DataFrame(noise, index=data.index,
+                                               columns=names)   # affect data
+
+    # store the input noise information
+    info = pandas.DataFrame(data=np.atleast_2d(list(kwargs.values())),
+                       columns=list(kwargs.keys()))
+    info= info.reindex(data.index, method="ffill")
+    info.rename({k:f"{k}_err" for k in names}, axis=1, inplace=True)
+
+    # to finally get the new data.
+    newdata = datanoisy.merge(info, left_index=True, right_index=True)
+
+    # returns a target or a dataframe according to input
+    if target is not None:
+        return target.__class__.from_data(newdata)
+    
+    return newdata
 
 def random_radec(size=None, skyarea=None,
                 ra_range=[0,360], dec_range=[-90,90]):
