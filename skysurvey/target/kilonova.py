@@ -135,7 +135,7 @@ class AngularTimeSeriesSource(sncosmo.Source):
         return f
 
 phase, wave, cos_theta, flux =read_possis_file(
-                "nsns_nph1.0e+06_mejdyn0.020_mejwind0.130_phi30.txt")
+                "data/nsns_nph1.0e+06_mejdyn0.020_mejwind0.130_phi30.txt")
 model= sc.Model(AngularTimeSeriesSource(phase=phase, wave=wave, flux=flux, cos_theta=cos_theta
                     )
                 )
