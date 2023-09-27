@@ -4,14 +4,18 @@ import numpy as np
 
 import sncosmo
 from .core import Transient
+from ..tools.utils import random_radec
+from ..effects import dust
+
 
 __all__ = ["Kilonova"]
 
 
 def read_possis_file(filename):
     """Read in a spectral model created by POSSIS (1906.04205), as appropriate
-       for injestion as a skysurvey.target.AngularTimeSeriesSource. Model
-       grids can be found here: https://github.com/mbulla/kilonova_models.
+       for injestion as a skysurvey.source.angular.AngularTimeSeriesSource.
+       Model grids can be found here: https://github.com/mbulla/kilonova_models.
+
     Parameters
     ----------
     filename : str
@@ -63,10 +67,10 @@ def get_kilonova_model(filename=None):
         filename = os.path.join(_PACKAGE_PATH, "data", "nsns_nph1.0e+06_mejdyn0.020_mejwind0.130_phi30.txt")
     
     phase, wave, cos_theta, flux = read_possis_file(filename)
-    source = AngularTimeSeriesSource(phase=phase, wave=wave, flux=flux, cos_theta=cos_theta)
+    source = AngularTimeSeriesSource(phase=phase, wave=wave, flux=flux, cos_theta=cos_theta,
+                                         name="kilonova")
     model = sncosmo.Model(source)
     return model
-
 
 # =============== #
 #                 #
@@ -80,12 +84,36 @@ class Kilonova( Transient ):
     _KIND = "kilonova"
     _TEMPLATE = _KILONOVA_MODEL
     _RATE = 1e3 # event per Gyr**3
-    _MODEL = dict( redshift = {"kwargs":{"zmax":0.2},
-                                  "as":"z"},
-
+    _MODEL = dict( # when
                    t0 = {"func": np.random.uniform,
-                         "kwargs": {"low":56_000, "high":56_200} },
+                         "kwargs": {"low":56_000, "high":56_200}
+                        },
+                         
+                   # what
+                   redshift = {"kwargs":{"zmax":0.2}, "as":"z"},
+                                  
+                   magabs = {"func": np.random.normal,
+                             "kwargs": {"loc": -18, "scale": 1}
+                            },
+                             
+                   magobs = {"func": "magabs_to_magobs",
+                             "kwargs": {"z":"@z", "magabs": "@magabs"}
+                            },
+                               
+                   amplitude = {"func": "magobs_to_amplitude",
+                                "kwargs": {"magobs": "@magobs"}
+                            },
 
+                   theta = {"func": np.random.uniform,
+                            "kwargs": {"low":0., "high":90.}
+                            },
+                   # where
+                   radec = {"func": random_radec,
+                            "kwargs": {},
+                            "as": ["ra","dec"]
+                           },
+                        
+                    mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                    )
 
     
