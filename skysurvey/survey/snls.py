@@ -27,7 +27,13 @@ def get_snls_footprint():
     return footprint
 
 def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
-    """ """
+    """ load and parse data from the input url 
+    
+    Parameters
+    ----------
+    data
+        pandas.DataFrame
+    """
     data_snls = pandas.read_csv(url)
     # merge RA, Dec as one of the four fields
     radec_groups = data_snls[["ra","dec"]].round(0).groupby(["ra","dec"]).groups
@@ -86,6 +92,7 @@ class SNLS( GridSurvey ):
     @classmethod
     def from_logs(cls, logpath=None, **kwargs):
         """ loads the data from the observing logs. 
+
         If None provided, this uses:
         https://supernovae.in2p3.fr/snls5/snls_obslogs.csv
 
