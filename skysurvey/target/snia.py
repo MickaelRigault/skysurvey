@@ -378,7 +378,7 @@ class SNeIa( Transient ):
                             "as": ["ra","dec"]
                            },
                         
-                    mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+                   # mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                     
                     )
 

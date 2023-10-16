@@ -10,7 +10,8 @@ class ZTF( GridSurvey ):
         """ """
         
         footprint = Fields.get_contours(level=level,
-                                              as_polygon=True, allow_multipolygon=True)
+                                        as_polygon=True,
+                                        allow_multipolygon=True)
         fields = Fields.get_field_geometry(level=level)
         
         super().__init__(data=data, fields=fields, footprint=footprint)

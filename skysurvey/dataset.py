@@ -1,5 +1,3 @@
-
-
 """ This library concerns the data as observed """
 
 #

@@ -196,8 +196,8 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
         fields: geodataframe
         
         """
-        super().__init__(data=data, fields=fields)
         self._footprint = footprint
+        super().__init__(data=data, fields=fields)
         
     @classmethod
     def from_pointings(cls, data, fields_or_coords=None, footprint=None, **kwargs):
@@ -215,7 +215,7 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
 
     # ============== #
     #   Internal     #
-    # ============== #    
+    # ============== #
     @classmethod
     def _parse_fields(cls, fields_or_coords, footprint=None):
         """ """
