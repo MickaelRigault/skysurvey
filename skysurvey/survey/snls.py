@@ -38,7 +38,7 @@ def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
                             left_index=True, right_index=True)
     # url logs provide RA,Dec in radian, skysurvey works in degree
     data_snls[["ra", "dec"]] = data_snls[["ra", "dec"]] * 180 / np.pi
-    
+    data_snls["band"] = data_snls["band"].str.lower() # forcing low-cap
     return data_snls
 
 def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacampsf", at_radius=13.):
