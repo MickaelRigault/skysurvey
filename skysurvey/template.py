@@ -28,10 +28,10 @@ def get_sncosmo_model(source="salt2",
     `sncosmo.Model`
         the sncosmo.Model template
     """
-    modelprop = dict(source=source)        
+    modelprop = dict(source=source)
     model = sncosmo.Model(**modelprop)
-    model.set(**params)        
-    return model      
+    model.set(**params)
+    return model
 
 def sncosmoresult_to_pandas(result):
     """ takes a sncosmo.Results (lc fit output) and converts it in pandas's objects.
@@ -40,7 +40,7 @@ def sncosmoresult_to_pandas(result):
     ----------
     result: sncosmo.Result
         output of sncosmo's lightcurve fit function.
-        
+
     Returns
     -------
     pandas.DataFrame, pandas.Series
@@ -51,7 +51,7 @@ def sncosmoresult_to_pandas(result):
                                 index=result.get("param_names"),
                                 name="value")
 
-    cov = pandas.DataFrame( result.get("covariance"), 
+    cov = pandas.DataFrame( result.get("covariance"),
                                 index=error.index, columns="cov_"+error.index)
 
     fit_res = pandas.concat( [values,error, cov], axis=1)
@@ -69,7 +69,7 @@ class Template( object ):
     def __init__(self, sncosmo_model):
         """ """
         self._sncosmo_model = sncosmo_model
-        
+
     @classmethod
     def from_sncosmo(cls, source, **kwargs):
         """
@@ -94,7 +94,7 @@ class Template( object ):
                                               **kwargs)
         else:
             sncosmo_model = source
-            
+
         return cls(sncosmo_model)
 
     # ============== #
@@ -105,26 +105,26 @@ class Template( object ):
     # -------- #
     def add_effect(self, effects):
         """ add effects to the sncosmo model
-        
+
         Parameters
         ----------
         effects: `skysurvey.effect`, list
-            effect to be applied to the sncosmo model 
+            effect to be applied to the sncosmo model
             It could be a list of effects.
             (see skysurvey.effect.from_sncosmo, if you have a sncosmo.PropagationEffect, name and frame)
-            
+
         Returns
         -------
         None
         """
         for eff_ in np.atleast_1d(effects):
             self.sncosmo_model.add_effect(eff_.effect, eff_.name, eff_.frame)
-        
+
     # -------- #
     #  GETTER  #
     # -------- #
     def get(self, **kwargs):
-        """ return a copy of the model. 
+        """ return a copy of the model.
         You can set new parameter to this copy using kwargs
 
         Returns
@@ -135,15 +135,15 @@ class Template( object ):
         model = deepcopy(self.sncosmo_model)
         if kwargs:
             model.set(**kwargs)
-            
+
         return model
-    
+
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, in_mag=False, zp=25, zpsys="ab",
                            **kwargs):
-        """ get the lightcurves (flux or mag) 
+        """ get the lightcurves (flux or mag)
 
-        
+
         """
 
         if sncosmo_model is None:
@@ -158,13 +158,13 @@ class Template( object ):
         # flatten for bandflux
         band_ = np.hstack([np.resize(band_, len(times)) for band_ in band])
         times_ = np.resize(times, len(band)*len(times))
-        
+
         # in flux
         if not in_mag:
             values = sncosmo_model.bandflux(band_, times_, zp=zp, zpsys=zpsys
                                             ).reshape( len(band),len(times) )
         # in mag
-        else:                
+        else:
             values = sncosmo_model.bandmag(band_, zpsys, times_).reshape( len(band), len(times) )
 
         return np.squeeze(values) if squeeze else values
@@ -173,7 +173,7 @@ class Template( object ):
         """ get the spectrum at phase (time) for the given wavelength
 
         (based in sncosmo_model.flux(time, lbda)
-        
+
         Parameters
         ----------
         time: float or list_like
@@ -191,12 +191,12 @@ class Template( object ):
         -------
         flux : float or `~numpy.ndarray`
             Spectral flux density values in ergs / s / cm^2 / Angstrom.
-        
+
         See also
         --------
-        get_lightcurve: get the transient lightcurve 
+        get_lightcurve: get the transient lightcurve
         """
-        if sncosmo_model is None:            
+        if sncosmo_model is None:
             sncosmo_model = self.get(**kwargs)
 
 
@@ -208,9 +208,11 @@ class Template( object ):
 
         flux = np.zeros_like(lbdas)
         if as_phase:
+            time *= (1+sncosmo_model.get("z"))
             time += sncosmo_model.get("t0")
-        
-        flux[sel] = sncosmo_model.flux(time, lbdas[sel])  
+
+
+        flux[sel] = sncosmo_model.flux(time, lbdas[sel])
         return flux
 
     # -------- #
@@ -220,10 +222,10 @@ class Template( object ):
                          ax=None, fig=None, **kwargs):
         """ """
         spec = self.get_spectrum(time, lbdas, **params)
-        
+
         # ------- #
         #  axis   #
-        # ------- #                    
+        # ------- #
         if ax is None:
             if fig is None:
                 import matplotlib.pyplot as plt
@@ -233,12 +235,12 @@ class Template( object ):
             fig = ax.figure
 
         ax.plot(lbdas, spec, **kwargs)
-        
+
     def show_lightcurve(self, band, params=None,
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
                             zp=25, zpsys="ab",
-                            format_time=True, t0_format="mjd", 
+                            format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
         """ """
         from .config import get_band_color
@@ -247,7 +249,7 @@ class Template( object ):
             params = {}
 
         sncosmo_model = self.get(**params)
-        
+
         # ------- #
         #  x-data #
         # ------- #
@@ -257,17 +259,17 @@ class Template( object ):
 
         # ------- #
         #  y-data #
-        # ------- #        
+        # ------- #
         # flux
         band = np.atleast_1d(band)
         values = self.get_lightcurve(band,
                                      times, in_mag=in_mag,
                                      zp=zp, zpsys=zpsys,
                                      sncosmo_model=sncosmo_model)
-        
+
         # ------- #
         #  axis   #
-        # ------- #                    
+        # ------- #
         if ax is None:
             if fig is None:
                 import matplotlib.pyplot as plt
@@ -278,7 +280,7 @@ class Template( object ):
 
         # ------- #
         #  Plot   #
-        # ------- #  
+        # ------- #
         # The plot
         if format_time:
             from astropy.time import Time
@@ -293,13 +295,13 @@ class Template( object ):
 
         # ------- #
         #  Format #
-        # ------- #  
+        # ------- #
         # mag upside down
         if in_mag and invert_mag:
             ax.invert_yaxis()
         # time format
         if format_time:
-            from matplotlib import dates as mdates        
+            from matplotlib import dates as mdates
             locator = mdates.AutoDateLocator()
             formatter = mdates.ConciseDateFormatter(locator)
             ax.xaxis.set_major_locator(locator)
@@ -315,7 +317,7 @@ class Template( object ):
             ax.set_ylabel(f"Flux [zp={zp}]", fontsize="large")
 
         return fig
-    
+
     # -------- #
     #  FITTER  #
     # -------- #
@@ -334,13 +336,13 @@ class Template( object ):
             fixedparams = {}
         else:
             vparam_names = [k for k in vparam_names if k not in fixedparams.keys()]
-            
+
         if guessparams is None:
             guessparams = {}
-            
+
         if bounds is None:
             bounds = {}
-            
+
         sncosmo_model = self.get(**{**guessparams,**fixedparams}) # sets the default parameters fixed win
         return self._fit_data(data, sncosmo_model,
                               vparam_names=vparam_names,
@@ -359,28 +361,28 @@ class Template( object ):
     # ============== #
     #   Properties   #
     # ============== #
-    
+
     # sncosmo_model
     @property
     def source(self):
         """ """
         return self.sncosmo_model.source
-    
+
     @property
     def sncosmo_model(self):
-        """ hiden sncosmo_model model to check what's inside. 
+        """ hiden sncosmo_model model to check what's inside.
         """
         return self._sncosmo_model
-        
+
     @property
     def parameters(self):
         """ """
         return self.sncosmo_model.param_names
-    
+
     @property
     def effect_parameters(self):
         """ """
-        return self.sncosmo_model.effect_names        
+        return self.sncosmo_model.effect_names
 
     @property
     def core_parameters(self):
@@ -392,40 +394,40 @@ class Template( object ):
 class GridTemplate( Template ):
 
     _GRID_OF = None
-    
+
     @staticmethod
     def _read_single_file(filename, sncosmo_source):
         source = sncosmo_source.from_filename(filename)
         return Template.from_sncosmo(source)
-    
+
     @classmethod
     def from_filenames(cls, filenames, refindex=0, grid_of=None):
         """ """
         if grid_of is None:
             grid_of = cls.grid_of
-            
+
         datafile = pandas.Series(filenames, name="filepath").to_frame()
         datafile["basename"] = datafile["filepath"].apply(os.path.basename)
         datafile["template"] = datafile["filepath"].apply(lambda x: cls._read_single_file(x, grid_of))
-        
+
         source = grid_of.from_filename(filenames[refindex]) # first
         this = cls(source)
         this.set_grid_datafile(datafile)
         return this
-    
+
     # ============== #
     #   Methods      #
-    # ============== #    
+    # ============== #
     def set_grid_datafile(self, datafile):
         """ """
         self._grid_datafile = datafile
         self._grid = None
-        
+
     def set_grid_data(self, data):
         """ """
         self._grid_data = data
         self._grid
-        
+
     # ================= #
     #  handle Elements  #
     # ================= #
@@ -445,7 +447,7 @@ class GridTemplate( Template ):
                      if k not in ["self", "grid_element"]}
         print(props)
         return super().get_lightcurve(**props)
-    
+
     def fit_data(self, data, grid_element,
                      guessparams=None,
                      fixedparams=None,
@@ -459,59 +461,58 @@ class GridTemplate( Template ):
         _ = props.pop("self")
         _ = props.pop("grid_element")
         return super().fit_data(**props)
-    
-    
+
+
     def show_lightcurve(self, band, grid_element,
                             params=None,
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
                             zp=25, zpsys="ab",
-                            format_time=True, t0_format="mjd", 
+                            format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
         """ """
         params["grid_element"]= grid_element
         props = locals()
         _ = props.pop("self")
         _ = props.pop("grid_element")
-        
+
         return super().show_lightcurve(**props)
 
     # ============== #
     #   Grid         #
-    # ============== #        
+    # ============== #
     # grid
     @property
     def grid(self):
         """ """
         if self._grid is None:
             self._grid = self.grid_datafile.join(self.grid_data).set_index(self.grid_parameters)
-            
+
         return self._grid
-    
+
     @property
     def grid_datafile(self):
         """ """
         return self._grid_datafile
-    
+
     @property
     def grid_data(self):
         """ """
         return self._grid_data
-    
+
     @property
     def grid_parameters(self):
         """ """
         return list(self._grid_data.columns)
-    
+
     @property
     def full_parameters(self):
         """ template parameters plus grid parameters """
         return self.parameters + self.grid_parameters
 
-    
+
     @classproperty
     def grid_of(cls):
         if not hasattr(cls,"_grid_of"):
             return cls._GRID_OF
         return cls._grid_of
-        
