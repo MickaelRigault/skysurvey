@@ -186,6 +186,7 @@ class Template( object ):
 
         as_phase: bool
             Is the given time a phase ? (as_phase=True) or a actual time (False)
+            If phase, it is multiplied by (1+z) to be in restframe
 
         Returns
         -------
