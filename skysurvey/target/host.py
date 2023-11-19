@@ -13,7 +13,6 @@ def get_sfr_as_function_of_mass_and_redshift(mass, redshift):
     fraction = np.exp(1.9*redshift)/ (np.exp(1.7* (redshift-2)) + np.exp(0.2* (redshift-2)))
     return  ampl * fraction
 
-
 def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
     """ """
     delta_logmass = mass-mstar

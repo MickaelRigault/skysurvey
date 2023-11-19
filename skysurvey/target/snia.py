@@ -2,7 +2,7 @@
 import numpy as np
 from .core import Transient
 
-from .environments import getpdf_asymetric_gaussian
+from .environments import get_hostmass_rvs
 from ..tools.utils import random_radec
 from ..effects import dust
 
@@ -33,12 +33,12 @@ class Rigault_AgePop( object ):
         return (k * (1+redshift)**(phi) + 1)**(-1)
 
     @classmethod    
-    def get_promptpdf(cls, redshift, xx=[0,1]):
+    def get_promptpdf(cls, redshift, xx=[0,1], k=0.87, phi=2.8):
         """ get the pdf of the probability to be prompt or delayed as a function of redshift.
         (see self.psiz)
         """
         xx = np.asarray(xx)
-        delayed_cut = cls.psiz(np.atleast_1d(redshift))
+        delayed_cut = cls.psiz(np.atleast_1d(redshift), phi=phi, k=k)
         return xx, np.asarray( [delayed_cut, 1-delayed_cut]).T
 
     @staticmethod    
@@ -378,7 +378,7 @@ class SNeIa( Transient ):
                             "as": ["ra","dec"]
                            },
                         
-                   # mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                     
                     )
 
@@ -397,7 +397,7 @@ class SNeIaHostMass( Transient ):
                    
                    c = {"func": SNeIaColor.intrinsic_and_dust},
 
-                   hostmass = {"func": getpdf_asymetric_gaussian},
+                   hostmass = {"func": get_hostmass_rvs},
 
                    t0 = {"func": np.random.uniform, 
                          "kwargs": {"low":56_000, "high":56_200} },
@@ -419,7 +419,7 @@ class SNeIaHostMass( Transient ):
                             "kwargs": {},
                             "as": ["ra","dec"]},
 
-                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
+#                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                    )
 
 

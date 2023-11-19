@@ -11,8 +11,6 @@ from ..tools.utils import parse_skyarea, surface_of_skyarea
 
 __all__ = ["Target", "Transient"]
 
-
-
 class Target( object ):
 
     _KIND = "unknow"
@@ -407,67 +405,54 @@ class Target( object ):
     # -------------- #
     #   Apply        #
     # -------------- #
-    def apply_noise(self, error_model, relat_err=0.01):
-        """ returns a DataFrame corresponding to self.data affected by the noise given in error_model.
-        
-        *Careful*: Only parameters explicitly mentioned in the input error_model will be changed. 
-        This could breaks the natural connection between DAG parameters. 
-        e.g. if magobs is changed, this does not automatically update x0.
+    def apply_gaussian_noise(self, errmodel, data=None):
+        """ apply gaussian noise to current entries.
 
         Parameters
         ----------
-        error_model: dict, DataFrame or ModelDAG
-            error model that will be applied to the data. The keys must correspond.
-            several input format are accepted. 
-            The error_model keys must correspond to the data keys to be affected.
-            - dict: assumed to be an input of a ModelDAG.
-            - ModelDAG: uses draw to generate the dataframe
-            - dataframe: keys must correspond to self.data keys to be affected.
+        errmodel: dict
+            dict that will feed a ModelDAG. 
+            format: {x: {func:, kwargs:{}}}. 
+            this will draw x_err following the this formula and will update 
+            x assuming x_true for the original x and x_err for the given x drawn here.
+            you can refeer to the original x using '@x_true' in the func kwargs.
 
-        relat_err: float or None
-            if given, the stored parameters error will randomly drawn (gaussian)
-            around the true input error with a scale corresponding to
-            true_err * relat_err.
+        data: None
+            original dataframe to be noisified. If None self.data is used.
 
         Returns
         -------
-        DataFrame:
-            self.data with all matching columns from error_model changed {param}.
-            {param}_err columns will be added.
-            
-            
+        self or dataframe
+            - self if data is None
+            - dataframe otherwise.
+
         Example
         -------
-        Say you want to affect 'magobs' with a random gaussian noise of 
-        1 +/- 0.1.
-        ```
-        error_model = {'magobs': {"model": np.random.normal, "param": {'loc':1, 'scale':0.1}}}
-        ```
-        With that, the 'magobs' columns with be changed and a magobs_err created. 
+        >>>python
+        import skysurvey
+        from scipy import stats
+        errmodel = {"x1": {"func": stats.lognorm.rvs, "kwargs":{"s":0.6, "loc":0.001, "scale":0.15}},
+                    "c": {"func": stats.lognorm.rvs, "kwargs":{"s":0.7, "loc":0.03, "scale":0.01}},
+                    "magobs": {"func": stats.lognorm.rvs, "kwargs":{"s":0.9, "loc":0.03, "scale":0.01}},
+                    }
+        snia = skysurvey.SNeIa.from_draw(1000)
+        noisy_data = snia.apply_gaussian_noise(errmodel, data=snia.data)
+        >>>
         """
-        from modeldag import ModelDAG
-        if type(error_model) is dict: # assumed to be a model's input
-            error_model = ModelDAG(error_model).draw( len(self.data) )
-        elif type(error_model) is ModelDAG: # assumed to be a model
-            error_model = error_model.draw( len(self.data) )
-        # else: dataframe
+        from modeldag.tools import apply_gaussian_noise
         
-        data_ = self.data.copy()
-        colums = data_.columns[np.in1d(data_.columns, error_model.columns)]
-        
-        
-        for column in colums:
-            err_true = error_model[column]
-            data_[column] = np.random.normal(loc=data_[column], scale=err_true)
-            if relat_err is not None and relat_err>0:
-                err_eff = np.random.normal(loc=err_true, scale=err_true*relat_err)
-            else:
-                err_eff = err_true
-                
-            data_[f"{column}_err"] = err_eff
+        if data is None:
+            data = self.data
+            as_dataframe = False
+        else:
+            as_dataframe = True
             
-        return data_
+        new_data = apply_gaussian_noise(errmodel, data=data)
+        if as_dataframe:
+            return new_data
         
+        return self.__class__.from_data(new_data)
+    
     # -------------- #
     #   Converts     #
     # -------------- #
@@ -550,8 +535,7 @@ class Target( object ):
         """
         from modeldag import ModelDAG
         if type( model ) is dict:
-            from copy import deepcopy
-            model = ModelDAG(deepcopy(model), self)
+            model = ModelDAG(model, self)
             
         self._model = model
 
@@ -580,125 +564,6 @@ class Target( object ):
             data["template"] = templatename
 
         self._data = data
-
-    def get_noisy(self, errmodel, 
-                      errorlabel="_err", keeptrue=True,
-                      propagate=False,
-                      **kwargs):
-        """ get a new instance with noise applied to.
-
-        This is made in 2 steps:
-        >>>
-        get the noisified data according to the input errmodel (using get_noisy_data)
-        if propagate=True:
-           redraw the model data from the changed variables (using model.redraw_from).
-           This way the noise is propagated to derived data. Use propagate=False to bypass that.
-        >>>
-
-        Parameters
-        ----------
-        errmodel: dict or ModelDAG
-            error model for self.data entries. 
-            It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
-            a dataframe with the same size as self.data will be created 
-            and each entry of the errmodel will affect the corresponding entry in the data. 
-            if "key_err" is given in the model, this entry will be passed to data.
-            = warning: no error on the error implemented yet. =
-
-        errorlabel: str
-            how an error is idendified ?
-
-        keeptrue: bool
-            if true, changed entry will be kept with the _true label. 
-
-        propagate: bool
-            should this redraw the data starting from the noisified entries ?
-
-        Returns
-        -------
-        Class
-            new instance of the class loaded from noisified data.
-
-        See also
-        --------
-        get_noisy_data: get a copy of the data with error applied on it.
-
-        """
-        newdata, changed_columns = self.get_noisy_data(errmodel, 
-                                                       errorlabel=errorlabel, 
-                                                       keeptrue=keeptrue, 
-                                                       **kwargs)
-        if propagate:
-            newdata = self.model.redraw_from(changed_columns, newdata, 
-                                             incl_name=False)
-        return self.__class__.from_data(newdata)
-
-    def get_noisy_data(self, errmodel, errorlabel="_err", keeptrue=True):
-        """ get a copy of the data with error applied on it.
-
-        Parameters
-        ----------
-        errmodel: dict or ModelDAG
-            error model for self.data entries. 
-            It follows the ModelDAG format (if dict: {key: {"func": {}, "kwarg":{}}, }).
-            a dataframe with the same size as self.data will be created 
-            and each entry of the errmodel will affect the corresponding entry in the data. 
-            if "key_err" is given in the model, this entry will be passed to data.
-            = warning: no error on the error implemented yet. =
-
-        errorlabel: str
-            how an error is idendified ?
-
-        keeptrue: bool
-            if true, changed entry will be kept with the _true label. 
-
-        Returns
-        -------
-        pandas.DataFrame, list
-            a copy of self.data affected by errors
-            the list of changed parameters
-
-        Example
-        -------
-        creating a random gaussian error with a scale of 2. 
-        The error also has error, and will not be given perfectly 2 but a random error of 0.01.
-        ```python
-        errmodel = {"a": {"func":np.random.normal, "kwargs":{"loc":0, "scale":2 }},
-                   "a_err": {"func":np.random.normal, "kwargs":{"loc":2, "scale":0.01 }},
-                   }
-        datanoisy = self.get_noisy_data(errmodel)
-        ```
-
-        """
-        if type(errmodel) is dict:
-            from modeldag import ModelDAG
-            errmodel = ModelDAG(errmodel)
-            
-        # columns to be changed 
-        column_to_noisify = [l for l in errmodel.entries if not l.endswith(errorlabel)]
-        columns_needed = [l for l in list(errmodel.entry_dependencies.dropna().unique())
-                              if not l.endswith("_true")]
-
-        # store the truth and what you need it as input parameter.
-        # Specify _true for changed variables
-        truths = self.data[column_to_noisify+columns_needed].copy()
-        truths.rename({k:k+"_true" for k in column_to_noisify}, axis=1, inplace=True)
-        
-        # draw the errors starting from the truths if needed be.
-        data_err = errmodel.draw( len(self.data), data=truths)
-        
-        datanoisy = self.data.copy()
-        for k in column_to_noisify:
-            if keeptrue:
-                datanoisy[f"{k}_true"] = data_err[f"{k}_true"]
-
-            datanoisy[k] = datanoisy[k] + data_err[k]
-            if f"{k}{errorlabel}" in data_err.columns:
-                datanoisy[f"{k}{errorlabel}"] = data_err[f"{k}{errorlabel}"].abs() # abs in case
-            else:
-                warnings.warn(f"no error given for {k}{errorlabel} entry.")
-
-        return datanoisy, column_to_noisify
         
     def get_model(self, **kwargs):
         """ get a copy of the model (dict) 
@@ -758,7 +623,6 @@ class Target( object ):
             
         return model.model[entry]["kwargs"].get(key, default)
 
-
     def update_model_parameter(self, **kwargs):
         """ change the kwargs entry of a model. """
 
@@ -776,11 +640,8 @@ class Target( object ):
         >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
         new_model = {**self.model.model, **kwargs}
-        if not new_model.keys() == self.model.model.keys():
-            warnings.warn("updating the model has changed the model entries")
-
         _ = self.set_model(new_model)
-        
+    
     # -------------- #
     #   Plotter      #
     # -------------- #
