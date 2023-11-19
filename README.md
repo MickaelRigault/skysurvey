@@ -4,7 +4,7 @@
 
 # skysurvey 
 
-modern version of simsurvey to simulate transients within the sky
+Simulate transients within the sky
 
 skysurvey relies on sncosmo for bandpass and lightcurve generations. (https://sncosmo.readthedocs.io/en/stable/)
 
