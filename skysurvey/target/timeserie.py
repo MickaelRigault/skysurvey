@@ -70,7 +70,7 @@ class TSTransient( Transient ):
 
         Parameters
         ----------
-        source: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
+        source_or_template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
             the sncosmo TimeSeriesSource, you can provide:
             - str: the name, e.g. "v19-2013ge-corr"
             - sncosmo.Source: a loaded sncosmo.Source
@@ -111,8 +111,8 @@ class TSTransient( Transient ):
         if rate is not None:
             this.set_rate(rate)
             
-        if template is not None:
-            this.set_template(template)
+        if source_or_template is not None:
+            this.set_template(source_or_template)
             
         if model is not None:
             this.update_model(**model) # will update any model entry.

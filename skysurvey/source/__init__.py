@@ -28,6 +28,8 @@ def get_sncosmo_sourcenames(of_type=None, startswith=None, endswith=None):
         list of names
 
     """
+    import numpy as np
+    
     sources = SNCOSMO_SOURCES_DF.copy()
     if of_type is not None:
         typenames = sources[sources["type"].isin(np.atleast_1d(of_type))]["name"]

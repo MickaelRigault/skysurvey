@@ -1,4 +1,4 @@
-from .survey import GridSurvey
+from .basesurvey import GridSurvey
 from ztffields.fields import Fields
 
 __all__ = ["ZTF"]

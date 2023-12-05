@@ -1077,7 +1077,7 @@ class Transient( Target ):
         m_current = template._source.peakmag(band, zpsys)
         return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
 
-    def draw_redshift(self, zmax, zmin=0, zstep=1e-3, size=None):
+    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None):
         """ based on the rate (see get_rate()) """
         xx = np.arange(zmin, zmax, zstep)
         pdf = self.getpdf_redshift(xx)

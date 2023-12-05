@@ -1,5 +1,5 @@
 import numpy as np
-from .survey import Survey
+from .basesurvey import Survey
 
 
 def get_lsst_footprint():

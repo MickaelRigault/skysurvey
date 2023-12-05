@@ -1,4 +1,4 @@
-__version__ = "0.10.7"
+__version__ = "0.11.0"
 
 import os
 _PACKAGE_PATH = os.path.dirname( os.path.realpath(__file__) )

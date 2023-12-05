@@ -5,7 +5,7 @@ import numpy as np
 
 from ztffields.projection import project_to_radec
 
-from .survey import Survey, GridSurvey
+from .basesurvey import Survey, GridSurvey
 from .polygon import PolygonSurvey
 
 __all__ = ["DES"]

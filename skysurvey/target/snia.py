@@ -1,5 +1,6 @@
 
 import numpy as np
+from scipy import stats
 from .core import Transient
 
 from .environments import get_hostmass_rvs
@@ -14,6 +15,11 @@ __all__ = ["SNeIa"]
 # ================== #
 class SNeIaColor( object ):
 
+    @staticmethod
+    def color_rvs(size, a=3.63, loc=-0.416, scale=1.62):
+        """ rvs draw from the alpha function (scipy.stats.alpha)."""
+        return stats.alpha.rvs(size=size, a=a, loc=loc, scale=scale)
+    
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.05, sigmaint=0.05, tau=0.1):
         """ exponential decay convolved with and intrinsic gaussian color distribution.
@@ -256,7 +262,7 @@ class SNeIa( Transient ):
                               
                    x1 = {"func": SNeIaStretch.nicolas2021}, 
                    
-                   c = {"func": SNeIaColor.intrinsic_and_dust},
+                   c = {"func": SNeIaColor.color_rvs},
 
                    t0 = {"func": np.random.uniform, 
                          "kwargs": {"low":56_000, "high":56_200} },

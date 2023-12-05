@@ -2,7 +2,7 @@ import numpy as np
 import pandas
 import sncosmo
 
-from .survey import GridSurvey
+from .basesurvey import GridSurvey
 
 __all__ = ["SNLS"]
 
