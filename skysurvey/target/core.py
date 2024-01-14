@@ -156,7 +156,7 @@ class Target( object ):
             - func: function of redshift rate(z) 
                     that provides the rate as a function of z
 
-        **kwargs goes to self.draw()
+        **kwargs goes to self.update_model_parameter()
 
         Returns
         -------
@@ -187,13 +187,16 @@ class Target( object ):
         if model is not None:
             this.update_model(**model) # will update any model entry.
 
+        if kwargs:
+            this.update_model_parameter(**kwargs)
+            
         _ = this.draw( size=size,
                        zmin=zmin, zmax=zmax,
                        tstart=tstart, tstop=tstop,
                        nyears=nyears,
                        skyarea=skyarea,
                        inplace=True, # creates self.data
-                       **kwargs)
+                       )
         return this
         
     # ------------- # 

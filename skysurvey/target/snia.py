@@ -257,7 +257,7 @@ class SNeIa( Transient ):
     _TEMPLATE = "salt2"
     _RATE = 2.35 * 10**4 # Perley 2020
 
-    # {'model': func, 'prop': dict, 'input':, 'as':}
+    # {'name': {func: ,'kwargs': {}, 'as': str_or_list }}
     _MODEL = dict( redshift = {"kwargs": {"zmax":0.2}, "as":"z"},
                               
                    x1 = {"func": SNeIaStretch.nicolas2021}, 
@@ -272,11 +272,11 @@ class SNeIa( Transient ):
                                         "mabs":-19.3, "sigmaint":0.10}
                             },
                            
-                   magobs = {"func": "magabs_to_magobs", # defined in Target (mother of Transients)
+                   magobs = {"func": "magabs_to_magobs", # str-> method of the class
                              "kwargs": {"z":"@z", "magabs":"@magabs"},
                             },
 
-                   x0 = {"func": "magobs_to_amplitude", # defined in Transients
+                   x0 = {"func": "magobs_to_amplitude", # str-> method of the class
                          "kwargs": {"magobs":"@magobs", "param_name": "x0"},
                         }, #because it needs to call sncosmo_model.get(param_name)
                        
