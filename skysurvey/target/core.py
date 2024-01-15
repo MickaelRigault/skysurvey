@@ -98,6 +98,7 @@ class Target( object ):
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
                       skyarea=None, rate=None,
+                      effect=None,
                       **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
@@ -187,6 +188,9 @@ class Target( object ):
         if model is not None:
             this.update_model(**model) # will update any model entry.
 
+        if effect is not None:
+            this.add_effect(effect) # may update the model entry.
+
         if kwargs:
             this.update_model_parameter(**kwargs)
             
@@ -199,7 +203,7 @@ class Target( object ):
                        )
         return this
         
-    # ------------- # 
+    # ------------- #
     #   Template    #
     # ------------- #
     def set_template(self, template):
@@ -644,7 +648,30 @@ class Target( object ):
         """
         new_model = {**self.model.model, **kwargs}
         _ = self.set_model(new_model)
-    
+
+    def add_effect(self, effect):
+        """ add an effect to the target affecting how spectra or lightcurve are generated
+        
+        This changes the template, using self.template.add_effect(), and changes the target's model
+        if effect.model is set.
+
+        Parameters
+        ----------
+        effect: skysurvey.effect.Effect
+            Effect that should be used to change the target.
+            e.g. mw_ebv = skysurvey.effect.Effect.from_name('mw')
+            
+        Returns
+        -------
+        None
+        """
+        if effect.model is not None:
+            self.update_model(**effect.model)
+
+        _ = self.template.add_effect(effect)
+        
+        
+        
     # -------------- #
     #   Plotter      #
     # -------------- #

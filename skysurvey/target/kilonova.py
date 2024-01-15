@@ -5,7 +5,6 @@ import numpy as np
 import sncosmo
 from .core import Transient
 from ..tools.utils import random_radec
-from ..effects import dust
 
 
 __all__ = ["Kilonova"]
@@ -112,8 +111,6 @@ class Kilonova( Transient ):
                             "kwargs": {},
                             "as": ["ra","dec"]
                            },
-                        
-                    mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
                    )
 
     

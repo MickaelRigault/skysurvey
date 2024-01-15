@@ -8,6 +8,7 @@ list of short notebook illustrating some commun usage
   :caption: Tutorials
 
   radec_in_survey
+  add_mwebv
   target_and_skyarea
   change_model_while_draw
   blackbody_transient  

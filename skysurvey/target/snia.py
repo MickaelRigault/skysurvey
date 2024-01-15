@@ -5,7 +5,6 @@ from .core import Transient
 
 from .environments import get_hostmass_rvs
 from ..tools.utils import random_radec
-from ..effects import dust
 
 __all__ = ["SNeIa"]
 # ================== #
@@ -284,9 +283,6 @@ class SNeIa( Transient ):
                             "kwargs": {},
                             "as": ["ra","dec"]
                            },
-                        
-                   mwebv = {"func": dust.get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}
-                    
                     )
 
 
