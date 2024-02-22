@@ -206,7 +206,7 @@ history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both
 can be used equally in any skysurvey_ input ;
 especially for DataSet.
 
-You have several surveys already implemented, such as ``ZTF`` and ``DES``
+There are several surveys already implemented, such as ``ZTF`` and ``DES``
 (shallow and deep fields).
 
 Step 3: dataset 
