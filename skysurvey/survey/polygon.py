@@ -90,7 +90,7 @@ class PolygonSurvey( BaseSurvey ):
         hsurvey = self.to_healpix(nside=nside, pass_data=False)
         return hsurvey.get_observed_area()# min_obs=min_obs) # not correct with pass_data=False yet.
 
-    def to_healpix(self, nside, pass_data=True, backend="pandas",
+    def to_healpix(self, nside, pass_data=True, backend="polars",
                        polars_to_pandas=True,
                        use_pyarrow_extension_array=False):
         """ convert the current polygon survey into a healpix survey.

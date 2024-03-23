@@ -71,7 +71,7 @@ class LSST( Survey ):
     _FOOTPRINT = get_lsst_footprint()
 
     @classmethod
-    def from_opsim(cls, filepath, sql_where=None, zp=30, **kwargs):
+    def from_opsim(cls, filepath, sql_where=None, zp=30, backend="polars", **kwargs):
         """ load a LSST survey object from an opsim db path.
 
         Parameters
@@ -84,6 +84,12 @@ class LSST( Survey ):
 
         zp: float
             zp to convert maglimit into skynoise and used for LC flux definition
+
+        backend: str
+            backend used to merge the data:
+            - polars (fastest): requires polars installed -> converted to pandas at the end
+            - pandas (classic): the normal way
+            - dask (lazy): as persisted dask.dataframe is returned
 
         **kwargs goes to read_opsim(): columns
 
@@ -107,5 +113,5 @@ class LSST( Survey ):
             },
             index=df.index)
 
-        return cls.from_pointings(simdata)
+        return cls.from_pointings(simdata, backend=backend)
         

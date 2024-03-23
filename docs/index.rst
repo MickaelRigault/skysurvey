@@ -206,9 +206,9 @@ Step 2: survey
        .. code-block:: python
 		       
             import skysurvey
-	    # lsst opsim files are large, this may take a minute (see options)
+	    # lsst opsim files are large, this may take a few minutes (see options)
 	    opsim_path = "baseline_v3.3_10yrs.db" # provide fullpath
-            survey = skysurvey.LSST.lsst_yr1 = skysurvey.LSST.from_opsim(opsim_path)
+            survey = skysurvey.LSST.from_opsim(opsim_path)
 	    
 		       
 ``Survey`` uses healpy_ as backend to match position with observing
