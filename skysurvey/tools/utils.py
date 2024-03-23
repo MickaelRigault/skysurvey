@@ -1,10 +1,16 @@
 import numpy as np
 from shapely import geometry
 
+
+def get_skynoise_from_maglimit(maglim, zp=30):
+    """ get the noise associated to the 5sigma limit magnitude """
+    flux_5sigma = 10**(-0.4*(maglim - zp))
+    skynoise = flux_5sigma/5.
+    return skynoise
+
 # ================= #
 #  Noise Generator  #
 # ================= #
-
 def build_covariance(as_dataframe=False, **kwargs):
     """ convert kwargs into covariance matrix
 
@@ -176,13 +182,11 @@ def surface_of_skyarea(skyarea):
     
     return skyarea
     
-
 def parse_skyarea(skyarea):
     """ convert input skyarea into a geometry
     """
     if  type(skyarea) is str and skyarea != "full":
         return None
 
-    
     return skyarea
     

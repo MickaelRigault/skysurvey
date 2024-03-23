@@ -200,6 +200,16 @@ Step 2: survey
             import skysurvey
 	    
             survey = skysurvey.ZTF.from_logs() # need password.
+
+    .. tab-item:: LSST
+
+       .. code-block:: python
+		       
+            import skysurvey
+	    # lsst opsim files are large, this may take a minute (see options)
+	    opsim_path = "baseline_v3.3_10yrs.db" # provide fullpath
+            survey = skysurvey.LSST.lsst_yr1 = skysurvey.LSST.from_opsim(opsim_path)
+	    
 		       
 ``Survey`` uses healpy_ as backend to match position with observing
 history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both

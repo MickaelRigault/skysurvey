@@ -291,7 +291,7 @@ class Target( object ):
         """
         return self.get_template(index=index, **kwargs)
     
-    def get_target_flux(self, index, band, phase, zp=None, zpsys=None):
+    def get_target_flux(self, index, band, phase, zp=None, zpsys=None, restframe=True):
         """ Flux through the given bandpass(es) at the given time(s).
 
         Default return value is flux in photons / s / cm^2. If zp and zpsys
@@ -317,6 +317,9 @@ class Target( object ):
             Name of a magnitude system in the registry, specifying the system
             that ``zp`` is in.
 
+        restframe: bool
+            is phase given in restframe ?
+
         Returns
         -------
         bandflux : float or `~numpy.ndarray`
@@ -324,10 +327,48 @@ class Target( object ):
             given, in which case flux is scaled so that it corresponds
             to the requested zeropoint. Return value is `float` if all
             input parameters are scalars, `~numpy.ndarray` otherwise.
+            = sncosmo doc = 
         """
         sncosmo_model = self.get_target_template(index).sncosmo_model
-        return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase, zp=zp, zpsys=zpsys)
+        phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
+        return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase_obs, zp=zp, zpsys=zpsys)
 
+    def get_target_mag(self, index, band, phase, magsys="ab", restframe=True):
+        """ magnitude through the given bandpass(es) at the given time(s).
+
+        Default return value is flux in photons / s / cm^2. If zp and zpsys
+        are given, flux(es) are scaled to the requested zeropoints.
+
+        Parameters
+        ----------
+        index:
+            index of a target (see self.data.index) to set the 
+            template parameters to that of the target.
+
+        band : str or list_like
+            Name(s) of Bandpass(es) in registry.
+
+        phase : float or list_like
+            phase in day
+
+        magsys : str or list_like
+            Name(s) of `~sncosmo.MagSystem` in registry.
+            
+        restframe: bool
+            is phase given in restframe ?
+            
+        Returns
+        -------
+        mag : float or `~numpy.ndarray`
+            Magnitude for each item in time, band, magsys.
+            The return value is a float if all parameters are not interables.
+            The return value is an `~numpy.ndarray` if any are interable.
+            = sncosmo doc = 
+        """
+        sncosmo_model = self.get_target_template(index).sncosmo_model
+        phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
+        return sncosmo_model.bandmag(band=band, time=sncosmo_model.get('t0')+phase_obs, magsys=magsys)
+        
     def clone_target_change_entry(self, index, name, values, as_dataframe=False):
         """ get a clone of the given target at the given redshifts.
         This: 
@@ -634,7 +675,7 @@ class Target( object ):
         """ change the kwargs entry of a model. """
 
         for k, v in kwargs.items():
-            self.model.model[k]["kwargs"] = {**self.model.model[k]["kwargs"], **v}
+            self.model.model[k]["kwargs"] = {**self.model.model[k].get("kwargs",{}), **v}
             
     def update_model(self, **kwargs):
         """ Change the given entries of the model.

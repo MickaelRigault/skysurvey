@@ -20,7 +20,7 @@ class SNeIaColor( object ):
         return stats.alpha.rvs(size=size, a=a, loc=loc, scale=scale)
     
     @staticmethod
-    def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.05, sigmaint=0.05, tau=0.1):
+    def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.075, sigmaint=0.05, tau=0.14):
         """ exponential decay convolved with and intrinsic gaussian color distribution.
 
         Parameters
@@ -31,13 +31,13 @@ class SNeIaColor( object ):
             inputs np.r_[xx]
 
         cint: float
-            the mean of the intrinsic color distribution. The default is -0.05.
+            the mean of the intrinsic color distribution.
 
         sigmaint: float
-            the standard deviation of the intrinsic color distribution. The default is 0.05.
+            the standard deviation of the intrinsic color distribution.
 
         tau: float
-            the decay constant of the dust distribution. The default is 0.1.
+            the decay constant of the dust distribution.
 
         Returns
         -------
@@ -50,7 +50,7 @@ class SNeIaColor( object ):
         from scipy import stats
         from scipy.ndimage import gaussian_filter1d
         # exponential decay center on cint
-        expon = stats.expon.pdf(xx, loc=-0.05, scale=0.1)
+        expon = stats.expon.pdf(xx, loc=cint, scale=tau)
         # applying gaussian filtering
         #  - which require sigmaint in pixel.
         sigmaint_inpix = sigmaint/(xx[1]-xx[0]) # assuming constant step
@@ -261,7 +261,7 @@ class SNeIa( Transient ):
                               
                    x1 = {"func": SNeIaStretch.nicolas2021}, 
                    
-                   c = {"func": SNeIaColor.color_rvs},
+                   c = {"func": SNeIaColor.intrinsic_and_dust},
 
                    t0 = {"func": np.random.uniform, 
                          "kwargs": {"low":56_000, "high":56_200} },

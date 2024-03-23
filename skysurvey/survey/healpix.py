@@ -367,7 +367,7 @@ class HealpixSurvey( BaseSurvey ):
     # ----------- #
     #  PLOTTER    #
     # ----------- #
-    def show(self, stat='size', column=None, title=None, data=None, **kwargs):
+    def show(self, stat='size', column=None, title=None, data=None, vmin=None, vmax=None, **kwargs):
         """ shows the sky coverage using ``healpy.mollview`` 
 
         Parameters
@@ -413,7 +413,13 @@ class HealpixSurvey( BaseSurvey ):
                 
             if type(data) is pandas.Series:
                 data = data.reindex(self.fieldids).values
-                
+
+        if vmin is not None:
+            data[data<vmin] = vmin
+            
+        if vmax is not None:
+             data[data>vmax] = vmax
+             
         return hp.mollview(data, title=title, **kwargs)
         
     # ============== #

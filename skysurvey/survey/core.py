@@ -7,6 +7,23 @@ __all__ = ["BaseSurvey"] # no import when 'import *'
 class BaseSurvey( object ):
     
     REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', "gain", "zp"]
+
+    # NOTE 
+    # -----
+    # ``skynoise`` is the image background contribution to the flux measurement
+    # error (in units corresponding to the specified zeropoint and zeropoint
+    # system). To get the error on a given measurement, ``skynoise`` is added
+    # in quadrature to the photon noise from the source.
+    #
+    # It is left up to the user to calculate ``skynoise`` as they see fit as the
+    # details depend on how photometry is done and possibly how the PSF is
+    # is modeled. As a simple example, assuming a Gaussian PSF, and perfect
+    # PSF photometry, ``skynoise`` would be ``4 * pi * sigma_PSF * sigma_pixel``
+    # where ``sigma_PSF`` is the standard deviation of the PSF in pixels and
+    # ``sigma_pixel`` is the background noise in a single pixel in counts.
+    # -- note from sncosmo
+
+    
     
     def __init__(self, data):
         """ 
