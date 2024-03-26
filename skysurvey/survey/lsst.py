@@ -71,7 +71,7 @@ class LSST( Survey ):
     _FOOTPRINT = get_lsst_footprint()
 
     @classmethod
-    def from_opsim(cls, filepath, sql_where=None, zp=30, backend="polars", **kwargs):
+    def from_opsim(cls, filepath, sql_where=None, zp=30, backend="pandas", **kwargs):
         """ load a LSST survey object from an opsim db path.
 
         Parameters

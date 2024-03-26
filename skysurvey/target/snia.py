@@ -284,15 +284,3 @@ class SNeIa( Transient ):
                             "as": ["ra","dec"]
                            },
                     )
-
-
-class SNeIaHostMass( SNeIa ):
-    
-    _MODEL = {**SNeIa._MODEL,
-              **{"hostmass": {"func": get_hostmass_rvs},
-                 "magabs": {"func": SNeIaMagnitude.tripp_and_massstep,
-                            "kwargs": { "x1": "@x1",
-                                        "c": "@c",
-                                        "hostmass": "@hostmass",
-                                        "mabs":-19.3, "sigmaint":0.10, "split":10}},
-                }}

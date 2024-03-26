@@ -644,6 +644,10 @@ class DataSet( object ):
         --------
         from_targets_and_survey: laods the instance given targets and a survey
         """
+        if type(targets) in [list, tuple]:
+            from .target.collection import TargetCollection
+            targets = TargetCollection(targets) # correct format
+        
         if hasattr(targets.template, "__iter__"): # collection of single-kind
             samekind_targets = targets.as_targets()
             outs = [cls._realize_survey_kindtarget_lcs(t_, survey)
