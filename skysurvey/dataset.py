@@ -724,8 +724,10 @@ class DataSet( object ):
         template_columns = targets.get_template_columns()
 
         dfieldids_ = survey.radec_to_fieldid(targets.data[["ra","dec"]])
+        
         # merge conserves the dtypes of fieldids, not join.
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
+
         if len(targets_data) == 0: # no field containing this target
             return None, None
 
