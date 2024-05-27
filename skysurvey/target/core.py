@@ -61,7 +61,7 @@ class Target( object ):
 
 
     @classmethod
-    def from_data(cls, data, template=None):
+    def from_data(cls, data, template=None, model=None):
         """ loads the instance given existing data. 
         
         This means that the model will be ignored as 
@@ -77,6 +77,11 @@ class Target( object ):
             the template source.
             - str: any sncosmo model name
 
+        model: dict, None
+            defines how  template parameters to draw and how they are connected
+            model will update the default cls._MODEL if any
+            = leave to None if unsure, cls._MODEL used as default = 
+
         Returns
         -------
         instance
@@ -90,6 +95,9 @@ class Target( object ):
         if template is not None:
             this.set_template(template)
 
+        if model is not None:
+            this.update_model(**model) # will update any model entry.
+            
         this.set_data(data)
         return this
         
@@ -405,7 +413,7 @@ class Target( object ):
         if as_dataframe:
             return data
         
-        return self.__class__.from_data(data)
+        return self.__class__.from_data(data, model=self.model.model, template=self.template)
     
     # -------------- #
     #   Getter       #
@@ -499,7 +507,7 @@ class Target( object ):
         if as_dataframe:
             return new_data
         
-        return self.__class__.from_data(new_data)
+        return self.__class__.from_data(new_data, model=self.model.model, template=self.template)
     
     # -------------- #
     #   Converts     #
@@ -690,7 +698,7 @@ class Target( object ):
         new_model = {**self.model.model, **kwargs}
         _ = self.set_model(new_model)
 
-    def add_effect(self, effect):
+    def add_effect(self, effect, model=None, data=None):
         """ add an effect to the target affecting how spectra or lightcurve are generated
         
         This changes the template, using self.template.add_effect(), and changes the target's model
@@ -698,18 +706,53 @@ class Target( object ):
 
         Parameters
         ----------
-        effect: skysurvey.effect.Effect
+        effect: dict, skysurvey.effect.Effect
             Effect that should be used to change the target.
             e.g. mw_ebv = skysurvey.effect.Effect.from_name('mw')
+            these format are accepted:
+            - dict: {effect: sncosmo.Effect, "name": str, "frame": str, (model: optionel)}
+            - skysurvey.effect.Effect
+            
+        model: dict, None
+            defines how the data will be drawn.
+            this updates self.model
+
+        data: pandas.DataFrame, None
+            value that will be added to the data to capture the effect (if any).
+            If data and model are given, model is not used.
             
         Returns
         -------
         None
         """
+        if type(effect) is dict:
+            from .. import Effect
+            effect = Effect(**effect)
+
+        # update the model
+        if model is not None:
+            effect._model = model
+            
         if effect.model is not None:
             self.update_model(**effect.model)
 
+        # update the data
+        if data is not None:
+            if self.data is None:
+                warnings.warn("no current data. cannot merge. input effect 'data' is ignored")
+            else:
+                new_data = self.data.merge(data, **kwargs)
+                self.set_data(new_data)
+            
+        elif effect.model is not None and self.data is not None:
+            # if not self.data, this will be drawn along with the data on time.
+            keys_to_draw = list(effect.model.keys())
+            new_data = self.model.redraw_from(keys_to_draw, self.data)
+            self.set_data(new_data)
+
+        # update the template from this effect
         _ = self.template.add_effect(effect)
+        
         
         
         

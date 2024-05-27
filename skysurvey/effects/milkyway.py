@@ -29,4 +29,6 @@ def get_mwebv(ra, dec, which="planck"):
     return dustquery()(coords) # Instanciate and call.
 
 
-mwebv_model = {"mwebv": {"func": get_mwebv, "kwargs":{"ra":"@ra", "dec":"@dec"}}}
+mwebv_model = {"mwebv": {"func": get_mwebv,
+                         "kwargs":{"ra":"@ra", "dec":"@dec"}}
+              }
