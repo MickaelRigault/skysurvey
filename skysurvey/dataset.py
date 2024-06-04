@@ -282,37 +282,75 @@ class DataSet( object ):
     # -------- #
     #  GETTER  #
     # -------- #
-    def get_data(self, detected=None, detlimit=5, 
-                     phase_range=None, t0=None):
-        """ """
-        data = self.data.copy()
+    def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
+                detection=None):
+        """ tools to access the data with additional tools 
+
+        Parameters
+        ----------
+        add_phase: bool
+            should the phase information 'phase_obs' (obs-frame), 'phase' (rest-frame)
+            be added to the dataframe assuming the input target's t0 and redshift ?
+
+        phase_range: array
+            min and max phases to be returned. Applied on phase (rest-frame).
+            Setting this sets add_phase to True.
+
+        index: pandas.Index, list, None
+            select the index (targets id) you want.
+
+        redshift_key: string
+            name of the redshift column in the dset.targets.data. 
+             = ignored if add_phase is False =
+
+        detection: bool, None
+            should this be limited to (non)detected points only ? 
+            This follow the bool/None format:
+            - detection=None: no selection
+            - detection=False: only non-detected points
+            - detection=True: onlyu detected points
+
+        Returns
+        -------
+        pandas.DataFrame
+        """
         if phase_range is not None:
-            if t0 is None:
-                t0 = self.targets.data["t0"].copy()
-            
-            data["phase"] = data["time"] - t0.reindex(data.index, level=0)
+            add_phase = True
+
+        if index is not None:
+            data = self.data.loc[index].copy()
+        else:
+            data = self.data.copy()
+            index = data.index.levels[0]
+
+        if add_phase:
+            target_info = self.targets.data.loc[index][['t0', redshift_key]]
+    #        target_info.index = "index" # for merging
+            data["phase_obs"] = data["time"] - target_info["t0"]
+            data["phase"] = data["phase_obs"]/(1+target_info[redshift_key])
+
+        if phase_range is not None:
             data = data[data["phase"].between(*phase_range)]
 
-        if detected is not None:
-            data["detection"] = data["flux"]/data["fluxerr"]
-            if detected:
-                data = data[ data["detection"] ] > detlimit
+        if detection is not None:
+            flag_detection = (data["flux"]/data["fluxerr"])>=5
+            if detection:
+                data = data[flag_detection]
             else:
-                data = data[ data["detection"] ] <= detlimit
+                data = data[~flag_detection]
 
         return data
         
-    def get_ndetection(self, detlimit=5, per_band=False, data=None):
+    def get_ndetection(self, phase_range=None, per_band=False):
         """ get the number of detection for each lightcurves
 
         Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
 
         Parameters
         ----------
-        detlimit: float, int
-            detection limit below which a point is not considered
-            (cut a > not >=)
-        
+        phase_range: array
+            rest-frame phase range to be considered.
+
         per_band: bool
             should be computation be made per band ?
             if true it will then be per target *and* per band.
@@ -322,32 +360,32 @@ class DataSet( object ):
         pandas.Series
             the number of detected point per target (and per band if per_band=True)
         """
-        if data is None:
-            data = self.data.copy()
-        else:
-            data = data.copy()
-            
-        data["detected"] = (data["flux"]/data["fluxerr"])>detlimit
+        data = self.get_data(phase_range=phase_range, detection=True)
         if per_band:
             groupby = ["index","band"]
         else:
             groupby = "index"
         
-        ndetection = data.groupby(groupby)["detected"].sum()
+        ndetection = data.groupby(groupby).size()
         return ndetection
 
-    def get_target_lightcurve(self, index, detection_only=False, detlimit=5.):
+    def get_target_lightcurve(self, index, detection=None, phase_range=None):
         """ get the observation of the given target.
         
-        = short cut to self.data.xs(index) = 
+        = short cut to self.get_data(index=index) = 
 
         Parameters
         ----------
-        detection_only: bool
-            only the detected points of the lightcurves 
+        detection: bool, None
+            should this be limited to (non)detected points only ? 
+            This follow the bool/None format:
+            - detection=None: no selection
+            - detection=False: only non-detected points
+            - detection=True: onlyu detected points
 
-        detlimit: float
-            definition of a detection (flux/fluxerr>=detlimit)
+        phase_range: array
+            min and max phases to be returned. Applied on phase (rest-frame).
+            Setting this sets add_phase to True.
 
         Returns
         -------
@@ -355,12 +393,10 @@ class DataSet( object ):
             the lightcurve
 
         """
-        data = self.data.xs(index)
-        if detection_only:
-            data = data[data["flux"]/data["fluxerr"]>=detlimit]
+        return self.get_data(index=index,
+                             phase_range=phase_range,
+                             detection=detection)
 
-        return data
-    
     # -------- #
     #  FIT     #
     # -------- #
@@ -415,7 +451,6 @@ class DataSet( object ):
             should the template include the Milky Way dust extinction
             parameters ?
 
-
         Returns
         -------
         pandas.DataFrame, pandas.DataFrame
@@ -445,6 +480,8 @@ class DataSet( object ):
 
         if index is None:
             index = self.obs_index.values
+        else:
+            index = np.atleast_1d(index) # make sure is iterable
 
         if phase_fitrange is not None:
             phase_fitrange = np.asarray(phase_fitrange)
@@ -456,6 +493,7 @@ class DataSet( object ):
                 temp_ = pandas.DataFrame(index=index)
                 for k,v in paramin.items(): 
                     temp_[k] = v
+                    
                 paramin = temp_.copy()
 
             return paramin
@@ -476,6 +514,7 @@ class DataSet( object ):
                 
             # Data
             data_to_fit = self.data.xs(i)
+            
             #
             fixed_ = fixedparams.loc[i].to_dict() if fixedparams is not None else None
             guess_ = guessparams.loc[i].to_dict() if guessparams is not None else None
