@@ -325,7 +325,7 @@ class DataSet( object ):
 
         if add_phase:
             target_info = self.targets.data.loc[index][['t0', redshift_key]]
-    #        target_info.index = "index" # for merging
+    #        target_info.index = self._data_index # for merging
             data["phase_obs"] = data["time"] - target_info["t0"]
             data["phase"] = data["phase_obs"]/(1+target_info[redshift_key])
 
@@ -360,11 +360,12 @@ class DataSet( object ):
         pandas.Series
             the number of detected point per target (and per band if per_band=True)
         """
+        
         data = self.get_data(phase_range=phase_range, detection=True)
         if per_band:
-            groupby = ["index","band"]
+            groupby = [self._data_index,"band"]
         else:
-            groupby = "index"
+            groupby = self._data_index
         
         ndetection = data.groupby(groupby).size()
         return ndetection
@@ -765,13 +766,17 @@ class DataSet( object ):
         dfieldids_ = survey.radec_to_fieldid(targets.data[["ra","dec"]])
         
         # merge conserves the dtypes of fieldids, not join.
+        _data_index = targets.data.index.name
+        if _data_index is None:
+            _data_index = "index"
+            
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
 
         if len(targets_data) == 0: # no field containing this target
             return None, None
 
         # index them per fieldids names.
-        target_indexed = targets_data.reset_index().set_index(["index"]+survey.fieldids.names)
+        target_indexed = targets_data.reset_index().set_index([_data_index]+survey.fieldids.names)
         
         # best performance when passing by one groupby calls rather than indexing and xs()
         gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names
@@ -826,6 +831,13 @@ class DataSet( object ):
         """ """
         return self._data
 
+    @property
+    def _data_index(self):
+        """ name of data index """
+        if not hasattr(self, "_hdata_index"):
+            self._hdata_index = "index"
+        return self._hdata_index
+    
     @property
     def targets(self):
         """ """

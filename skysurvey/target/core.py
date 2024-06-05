@@ -699,7 +699,7 @@ class Target( object ):
         new_model = {**self.model.model, **kwargs}
         _ = self.set_model(new_model)
 
-    def add_effect(self, effect, model=None, data=None):
+    def add_effect(self, effect, model=None, data=None, overwrite=False):
         """ add an effect to the target affecting how spectra or lightcurve are generated
         
         This changes the template, using self.template.add_effect(), and changes the target's model
@@ -748,8 +748,11 @@ class Target( object ):
         elif effect.model is not None and self.data is not None:
             # if not self.data, this will be drawn along with the data on time.
             keys_to_draw = list(effect.model.keys())
-            new_data = self.model.redraw_from(keys_to_draw, self.data)
-            self.set_data(new_data)
+            if not overwrite and np.any([k in self.data for k in keys_to_draw]):
+                warnings.warn(f"some or all of {keys_to_draw} are already in self.data. Set overwrite to True to overwrite them. Data unchanged.")
+            else:
+                new_data = self.model.redraw_from(keys_to_draw, self.data)
+                self.set_data(new_data)
 
         # update the template from this effect
         _ = self.template.add_effect(effect)
