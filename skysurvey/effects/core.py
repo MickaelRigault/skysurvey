@@ -65,19 +65,19 @@ class Effect( object ):
             model = {}
             
         # SNIa color scatter
-        elif name in ["scatter","colorscatter", "cscatter"]:
-            from . import dust            
-            if which is None or which.lower() == "g10":
-                effect = dust.ColorScatter_G10.from_saltsource()
-                
-            elif which.lower() == "c11":
-                effect = dust.ColorScatter_C11()
-            else:
-                raise NotImplementedError("Only G10 and C11 color scatter implemented")
-                
+        
+        elif name.lower() in ["scatter", "scattercolor", "color_scatter", "colorscatter"]:
             name = "colorscatter"
             frame = "rest"
             model = {}
+            if which.lower() == "g10":
+                from . import scatter
+                effect = scatter.ColorScatter_G10.from_saltsource()
+            elif which.lower() == "c11":
+                from . import scatter
+                effect = scatter.ColorScatter_C11()
+            else:
+                raise ValueError(f"unknown colorscatter {which}")
             
         else:
             raise NotImplementedError(f"cannot parse the input effect: {name}")

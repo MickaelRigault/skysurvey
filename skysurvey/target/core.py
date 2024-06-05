@@ -681,9 +681,10 @@ class Target( object ):
 
     def update_model_parameter(self, **kwargs):
         """ change the kwargs entry of a model. """
-
+        # use copy to avoid classmethod issues        
         for k, v in kwargs.items():
             self.model.model[k]["kwargs"] = {**self.model.model[k].get("kwargs",{}), **v}
+
             
     def update_model(self, **kwargs):
         """ Change the given entries of the model.
@@ -1003,7 +1004,8 @@ class Target( object ):
     def model(self):
         """ modeling who the transient is generated """
         if not hasattr(self, "_model") or self._model is None:
-            self.set_model(self._MODEL if self._MODEL is not None else {})
+            from copy import deepcopy
+            self.set_model(deepcopy(self._MODEL) if self._MODEL is not None else {})
             
         return self._model
     
