@@ -363,7 +363,7 @@ class DataSet( object ):
         
         data = self.get_data(phase_range=phase_range, detection=True)
         if per_band:
-            groupby = [self._data_index,"band"]
+            groupby = [self._data_index, "band"]
         else:
             groupby = self._data_index
         
@@ -769,6 +769,7 @@ class DataSet( object ):
         _data_index = targets.data.index.name
         if _data_index is None:
             _data_index = "index"
+        dfieldids_.index.name = _data_index
             
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
 
