@@ -283,7 +283,7 @@ class DataSet( object ):
     #  GETTER  #
     # -------- #
     def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
-                detection=None):
+                detection=None, zp=None):
         """ tools to access the data with additional tools 
 
         Parameters
@@ -309,6 +309,9 @@ class DataSet( object ):
             - detection=None: no selection
             - detection=False: only non-detected points
             - detection=True: onlyu detected points
+
+        zp: float
+            get the simulated data in the given zp system
 
         Returns
         -------
@@ -339,6 +342,12 @@ class DataSet( object ):
             else:
                 data = data[~flag_detection]
 
+        if zp is not None:
+            coef = 10 ** (-(data["zp"].values - zp) / 2.5)
+            data["flux"] *= coef
+            data["fluxerr"] *= coef
+            data["zp"] = zp
+            
         return data
         
     def get_ndetection(self, phase_range=None, per_band=False):
