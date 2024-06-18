@@ -827,6 +827,7 @@ class Target( object ):
     #   Draw Methods  #
     # =============== #
     def draw(self, size=None,
+                 z=None,
                  zmax=None, zmin=0,
                  tstart=None, tstop=None, nyears=None,
                  skyarea=None,
@@ -979,6 +980,12 @@ class Target( object ):
             
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
+
+        if z is not None:
+            print(len(z), size)
+            if len(z) != size:
+                raise ValueError('Length of redshift vector must be same as size')
+            data['z'] = z
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
