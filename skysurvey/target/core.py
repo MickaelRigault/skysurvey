@@ -982,7 +982,6 @@ class Target( object ):
         data = drawn_model.draw(size=size, **kwargs)
 
         if z is not None:
-            print(len(z), size)
             if len(z) != size:
                 raise ValueError('Length of redshift vector must be same as size')
             data['z'] = z
