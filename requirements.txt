@@ -7,7 +7,6 @@ sncosmo
 healpy
 extinction
 dustmaps
-ligo.skymap
 
 modeldag
 

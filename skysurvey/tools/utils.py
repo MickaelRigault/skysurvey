@@ -1,13 +1,17 @@
 from astropy.cosmology import Planck15, z_at_value
 import healpy as hp
-from ligo.skymap.bayestar import rasterize
-from ligo.skymap.io import read_sky_map
-import ligo.skymap.distance as ligodist
 import numpy as np
 from scipy.stats import norm, rv_discrete
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline1d
 from shapely import geometry
 
+try:
+    from ligo.skymap.bayestar import rasterize 
+    from ligo.skymap.io import read_sky_map
+    import ligo.skymap.distance as ligodist
+    LIGO_SKYMAP_IMPORTED = True
+except ImportError:
+    LIGO_SKYMAP_IMPORTED = False
 
 def get_skynoise_from_maglimit(maglim, zp=30):
     """ get the noise associated to the 5sigma limit magnitude """
@@ -206,6 +210,9 @@ def random_radecz_skymap(size=None,skymap={},
                          zcmb_range=None, cosmo=Planck15, batch_size=1000):
     """
     """
+
+    if not LIGO_SKYMAP_IMPORTED:
+        raise ImportError("ligo.skymap could not be imported. Please make sure it is installed.")
 
     if filename is not None:
         if do_3d:
