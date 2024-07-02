@@ -31,12 +31,25 @@ class PolygonSurvey( BaseSurvey ):
         super().__init__(data)
         
     @classmethod
-    def from_pointings(cls, data, footprint, rakey="ra", deckey="dec"):
+    def from_pointings(cls, data, footprint=None, moc=None, rakey="ra", deckey="dec"):
         """ """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data).copy()
 
-        field_pointings = project_to_radec(footprint, ra=data[rakey], dec=data[deckey])
+        if footprint is not None:
+            field_pointings = project_to_radec(footprint, ra=data[rakey], dec=data[deckey])
+        elif moc is not None:
+            skycoords = moc.get_boundaries()
+            ra, dec = [], []
+            for skycoord in skycoords:
+                ra.append(skycoord.ra.deg)
+                dec.append(skycoord.dec.deg)
+            ra = np.concatenate(ra)
+            dec = np.concatenate(dec)
+            footprint = np.vstack((ra, dec))
+
+            pointings = project_to_radec(footprint, ra=data[rakey], dec=data[deckey])
+            field_pointings = [geometry.Polygon(p) for p in pointings]
         fields = geopandas.GeoDataFrame(geometry=field_pointings, index=data.index.copy(),)
         fields.index.name = "fieldid"
         data["fieldid"] = fields.index.copy()

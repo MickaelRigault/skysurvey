@@ -129,10 +129,12 @@ class HealpixSurvey( BaseSurvey ):
         return this
 
     @classmethod
-    def from_pointings(cls, nside, data, footprint,  rakey="ra", deckey="dec",
-                          backend="polars",
-                          use_pyarrow_extension_array=False,
-                          **kwargs):
+    def from_pointings(cls, nside, data,
+                       footprint=None,  moc=None,
+                       rakey="ra", deckey="dec",
+                       backend="polars",
+                       use_pyarrow_extension_array=False,
+                       **kwargs):
         """ loads an instance given observing poitings of a survey
         
         This loads an polygon.PolygonSurvey using from_pointing and 
@@ -148,6 +150,9 @@ class HealpixSurvey( BaseSurvey ):
 
         footprint: shapely.geometry
             footprint in the sky of the observing camera
+
+        moc: mocpy.MOC
+            MOC representation of the observing camera
 
         rakey: str
             name of the R.A. column (in deg)
@@ -176,8 +181,9 @@ class HealpixSurvey( BaseSurvey ):
         from .polygon import PolygonSurvey
         # Create a generic polygon survey
         polysurvey = PolygonSurvey.from_pointings(data, footprint=footprint,
-                                               rakey=rakey, deckey=deckey,
-                                               **kwargs)
+                                                  moc=moc,
+                                                  rakey=rakey, deckey=deckey,
+                                                  **kwargs)
         # convert it to healpix
         return polysurvey.to_healpix(nside, backend=backend,
                                          pass_data=True,
