@@ -1,6 +1,17 @@
+from astropy.cosmology import Planck15, z_at_value
+import healpy as hp
 import numpy as np
+from scipy.stats import norm, rv_discrete
+from scipy.interpolate import InterpolatedUnivariateSpline as Spline1d
 from shapely import geometry
 
+try:
+    from ligo.skymap.bayestar import rasterize 
+    from ligo.skymap.io import read_sky_map
+    import ligo.skymap.distance as ligodist
+    LIGO_SKYMAP_IMPORTED = True
+except ImportError:
+    LIGO_SKYMAP_IMPORTED = False
 
 def get_skynoise_from_maglimit(maglim, zp=30):
     """ get the noise associated to the 5sigma limit magnitude """
@@ -189,4 +200,101 @@ def parse_skyarea(skyarea):
         return None
 
     return skyarea
+   
+
+def random_radecz_skymap(size=None,skymap={},
+                         filename=None,
+                         do_3d=True,
+                         nside=512,
+                         ra_range=None,dec_range=None,
+                         zcmb_range=None, cosmo=Planck15, batch_size=1000):
+    """
+    """
+
+    if not LIGO_SKYMAP_IMPORTED:
+        raise ImportError("ligo.skymap could not be imported. Please make sure it is installed.")
+
+    if filename is not None:
+        if do_3d:
+            skymap = read_sky_map(filename, moc=True, distances=True)
     
+            if "PROBDENSITY_SAMPLES" in skymap.columns:
+                skymap.remove_columns(
+                    [
+                        f"{name}_SAMPLES"
+                        for name in [
+                            "PROBDENSITY",
+                            "DISTMU",
+                            "DISTSIGMA",
+                            "DISTNORM",
+                        ]
+                    ]
+                )
+    
+                map_struct["skymap"] = skymap
+            else:
+                skymap = read_sky_map(filename, moc=True, distances=False)
+
+    skymap_raster = rasterize(
+        skymap, order=hp.nside2order(nside)
+    )
+    if "DISTMU" in skymap_raster.columns:
+        (
+            skymap_raster["DISTMEAN"],
+            skymap_raster["DISTSTD"],
+            mom_norm,
+        ) = ligodist.parameters_to_moments(
+            skymap_raster["DISTMU"],
+            skymap_raster["DISTSIGMA"],
+        )
+
+    prob = skymap_raster["PROB"]
+    prob[~np.isfinite(skymap_raster["DISTMU"])] = 0.
+    prob[skymap_raster["DISTMU"] < 0.] = 0.
+    prob[prob < 0.] = 0.
+    npix = len(prob)
+    nside = hp.npix2nside(npix)
+
+    theta, phi = hp.pix2ang(nside, np.arange(npix))
+    ra_map = np.rad2deg(phi)
+    dec_map = np.rad2deg(0.5*np.pi - theta)
+
+    if not ra_range is None:
+        idx = np.where((ra_map < ra_range[0]) | (ra_map > ra_range[1]))[0]
+        prob[idx] = 0.0
+
+    if not dec_range is None:
+        idx = np.where((dec_map < dec_range[0]) | (dec_map > dec_range[1]))[0]
+        prob[idx] = 0.0
+
+    prob = prob / np.sum(prob)
+    idx = np.where(prob<0)[0]
+    distn = rv_discrete(values=(np.arange(npix), prob))
+    ipix = distn.rvs(size=min(size, batch_size))
+    while len(ipix) < size:
+        ipix = np.append(ipix, distn.rvs(size=min(size-len(ipix), batch_size)))
+    ra, dec = hp.pix2ang(nside, ipix, lonlat=True)
+
+    # If no zcmb_range provided set the upper limit to 1e9 Mpc (z >> 1000)
+    if zcmb_range is not None:
+        z_tmp = np.linspace(zcmb_range[0], zcmb_range[1], 1000)
+        dist_range = [cosmo.luminosity_distance(zcmb_range[0]).value,
+                      cosmo.luminosity_distance(zcmb_range[1]).value]
+    else:
+        dist_range = [0, 1e9]
+        z_tmp = np.linspace(0, 10, 1000)
+
+    z_d = Spline1d(cosmo.luminosity_distance(z_tmp).value, z_tmp)
+
+    dists = -np.ones(size)
+    dists_in_range = np.zeros(size, dtype=bool)
+    while not np.all(dists_in_range):
+        ipix_tmp = ipix[~dists_in_range]
+        dists[~dists_in_range] = (skymap_raster["DISTMEAN"][ipix_tmp] +
+                                  skymap_raster["DISTSTD"][ipix_tmp] *
+                                  np.random.normal(size=np.sum(~dists_in_range)))
+        dists_in_range = (dists > dist_range[0]) & (dists < dist_range[1])
+
+    zs = z_d(dists)
+
+    return ra, dec, zs
