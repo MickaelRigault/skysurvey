@@ -611,10 +611,10 @@ class DataSet( object ):
         colors = get_band_color(bands)
         if show_truth:
             fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
-                                           format_time=format_time, t0_format=t0_format, 
-                                           zp=zp, colors=colors,
-                                           zorder=2, 
-                                           **lc_prop)
+                                            format_time=format_time, t0_format=t0_format, 
+                                            zp=zp, colors=colors,
+                                            zorder=2, 
+                                            **lc_prop)
         elif format_time:
             from matplotlib import dates as mdates        
             locator = mdates.AutoDateLocator()
