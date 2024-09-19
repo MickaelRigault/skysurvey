@@ -1,5 +1,4 @@
 """ This library concerns the data as observed """
-#test git branch
 
 #
 import pandas
@@ -47,20 +46,30 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True)
     if "zpsys" not in observations:
         observations["zpsys"] = zpsys
         
-    sncosmo_obs = Table.from_pandas(observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
-    
-    # sn parameters
-    list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
-    
-    # realize LC
-    list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
-                                               scatter=incl_error)
-    
-    if len(list_of_observations) == 0:
-        return None
-    
-    return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
+    bands = np.unique(observations['band'])
+    observations.sort_values(by=['band'])
 
+    lcs = []
+    for band in bands:
+        masked_observations = observations[observations['band']==band]
+        z_max = sncosmo.get_bandpass(band).minwave()/template.minwave()-1
+        masked_parameters = parameters[parameters['z'] < z_max]
+        sncosmo_obs = Table.from_pandas(masked_observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
+        list_of_parameters = [p_.to_dict() for i_,p_ in masked_parameters.iterrows()]
+        list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
+                                               scatter=incl_error)
+        if len(list_of_observations) !=0:
+            lcs.append(pandas.concat([l.to_pandas().set_index(masked_observations.index) for l in list_of_observations],  keys=masked_parameters.index))
+
+    
+    if len(lcs) == 0:
+        return None
+
+    lcs_final = pandas.concat(lcs)
+    lcs_final.sort_index(inplace=True)
+    
+    return lcs_final
+    
 def _get_obsdata_(data, **kwargs):
     """ internal method to simplify get_obsdata using single input (for map)
 
