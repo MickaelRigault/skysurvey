@@ -12,7 +12,7 @@ from .template import Template
 
 __all__ = ["DataSet", "get_obsdata"]
 
-def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True):
+def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True, discard_bands=False):
     """ get observed data using ``sncosmo.realize_lcs()``
 
     Parameters
@@ -45,30 +45,44 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True)
     # observation of that field
     if "zpsys" not in observations:
         observations["zpsys"] = zpsys
-        
-    bands = np.unique(observations['band'])
-    observations.sort_values(by=['band'])
 
-    lcs = []
-    for band in bands:
-        masked_observations = observations[observations['band']==band]
-        z_max = sncosmo.get_bandpass(band).minwave()/template.minwave()-1
-        masked_parameters = parameters[parameters['z'] < z_max]
-        sncosmo_obs = Table.from_pandas(masked_observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
-        list_of_parameters = [p_.to_dict() for i_,p_ in masked_parameters.iterrows()]
+    if discard_bands == False:
+        sncosmo_obs = Table.from_pandas(observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
+    
+        # sn parameters
+        list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
+    
+        # realize LC
         list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
                                                scatter=incl_error)
-        if len(list_of_observations) !=0:
-            lcs.append(pandas.concat([l.to_pandas().set_index(masked_observations.index) for l in list_of_observations],  keys=masked_parameters.index))
-
     
-    if len(lcs) == 0:
-        return None
-
-    lcs_final = pandas.concat(lcs)
-    lcs_final.sort_index(inplace=True)
+        if len(list_of_observations) == 0:
+            return None
     
-    return lcs_final
+        return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
+
+    else:
+        # for now the output lightcurves aren't sorted 
+        bands = np.unique(observations['band'])
+        lcs = []
+        
+        for band in bands:
+            masked_observations = observations[observations['band']==band]
+            z_max = sncosmo.get_bandpass(band).minwave()/template.minwave()-1
+            masked_parameters = parameters[parameters['z'] < z_max]
+            sncosmo_obs = Table.from_pandas(masked_observations.rename({"mjd":"time"}, axis=1))
+            list_of_parameters = [p_.to_dict() for i_,p_ in masked_parameters.iterrows()]
+            list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
+                                                   scatter=incl_error)
+            if len(list_of_observations) !=0:
+                lcs.append(pandas.concat([l.to_pandas().set_index(masked_observations.index) for l in list_of_observations],  keys=masked_parameters.index))
+    
+        if len(lcs) == 0:
+            return None
+    
+        lcs_final = pandas.concat(lcs)
+        
+        return lcs_final
     
 def _get_obsdata_(data, **kwargs):
     """ internal method to simplify get_obsdata using single input (for map)
@@ -661,7 +675,7 @@ class DataSet( object ):
     def realize_survey_target_lcs(cls, targets, survey, template=None,
                                   template_prop={}, nfirst=None,
                                   incl_error=True,
-                                  client=None):
+                                  client=None, discard_bands=False):
         """ creates the lightcurve of the input targets as they 
         would be observed by the survey. 
         = These are split per survey fields. =
@@ -726,7 +740,7 @@ class DataSet( object ):
                                                           template_prop=template_prop,
                                                           nfirst=nfirst,
                                                           client=client,
-                                                          incl_error=incl_error)
+                                                          incl_error=incl_error, discard_bands=discard_bands)
         return lc_out, fieldids_indexes
 
         
@@ -734,7 +748,7 @@ class DataSet( object ):
     def _realize_survey_kindtarget_lcs( targets, survey, template=None,
                                            template_prop={}, nfirst=None,
                                            incl_error=True,
-                                           client=None):
+                                           client=None, discard_bands=False):
         """ creates the lightcurve of the input single-kind 
         targets as they would be observed by the survey. 
         = These are split per survey fields. =
@@ -838,7 +852,7 @@ class DataSet( object ):
             futures_ = client.map(_get_obsdata_, big_future, incl_error=incl_error)
             lc_out = client.gather(futures_)
         else:
-            lc_out = [_get_obsdata_(data_, incl_error=incl_error)
+            lc_out = [_get_obsdata_(data_, incl_error=incl_error, discard_bands=discard_bands)
                           for data_ in data if data_ is not None]
 
         return lc_out, fieldids_indexes
