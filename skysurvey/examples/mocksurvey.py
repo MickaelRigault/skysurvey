@@ -49,7 +49,7 @@ def get_mock_survey(size=10_000, footprint = None,
     return Survey.from_pointings(data, footprint=footprint, nside=nside)
 
 
-def get_mock_gridsurvey(size=10_000, footprint = None,
+def get_mock_gridsurvey(size=10_000, footprint = None, radec=None,
                        **kwargs):
     """ get a default Survey randomly drawn from the given parameters
 
@@ -61,11 +61,12 @@ def get_mock_gridsurvey(size=10_000, footprint = None,
         footprint = geometry.Point(0,0).buffer(2)
 
     # DES fields
-    radec = {'C1': {'dec': -27.11161, 'ra': 54.274292+180},
-             'C2': {'dec': -29.08839, 'ra': 54.274292+180},
-             'C3': {'dec': -28.10000, 'ra': 52.648417+180},
-             'E1': {'dec': -43.00961, 'ra': 7.8744167+180},
-             'E2': {'dec': -43.99800, 'ra': 9.5000000+180}}
+    if radec is None:
+        radec = {'C1': {'dec': -27.11161, 'ra': 54.274292+180},
+                 'C2': {'dec': -29.08839, 'ra': 54.274292+180},
+                 'C3': {'dec': -28.10000, 'ra': 52.648417+180},
+                 'E1': {'dec': -43.00961, 'ra': 7.8744167+180},
+                 'E2': {'dec': -43.99800, 'ra': 9.5000000+180}}
              
     data = get_mocklogs(size=size, **kwargs)
     data["fieldid"] = np.random.choice(list(radec.keys()), size=len(data))
