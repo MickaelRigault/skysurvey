@@ -33,6 +33,9 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True,
         drawn from the flux_err ?
         If False, lightcurve flux are "perfect".
 
+    discard_bands: bool    
+        If True, if the sncosmo model is not defined in a given observeing band, the observation is discarded altogether, to prevent sncosmo.realize_lcs() from crashing. This only works for bands that are too blue for now.
+
     Returns
     -------
     MultiIndex DataFrame
@@ -55,7 +58,6 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True,
         # realize LC
         list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
                                                scatter=incl_error)
-    
         if len(list_of_observations) == 0:
             return None
     
@@ -79,10 +81,8 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True,
     
         if len(lcs) == 0:
             return None
-    
-        lcs_final = pandas.concat(lcs)
         
-        return lcs_final
+        return pandas.concat(lcs)
     
 def _get_obsdata_(data, **kwargs):
     """ internal method to simplify get_obsdata using single input (for map)
@@ -175,9 +175,7 @@ class DataSet( object ):
                                                                   client=client,
                                                                   incl_error=incl_error,
                                                                   **kwargs)
-        data = pandas.concat(lightcurves, keys=fieldids # store fieldid
-                                 ).reset_index(survey.fieldids.names)
-        return cls(data, targets=targets, survey=survey)
+        return cls(pandas.concat(lightcurves, keys=fieldids).reset_index(survey.fieldids.names), targets=targets, survey=survey)
 
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
