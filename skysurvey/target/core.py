@@ -696,7 +696,7 @@ class Target( object ):
         Changing the b entry function and make it depends on "a"
         >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
-        new_model = {**self.model.model, **kwargs}
+        new_model = self.model.model | kwargs
         _ = self.set_model(new_model)
 
     def add_effect(self, effect, model=None, data=None, overwrite=False):
@@ -886,7 +886,7 @@ class Target( object ):
         else:
             from modeldag import ModelDAG
             current_model_dict = self.model.model
-            drawn_model = ModelDAG( {**current_model_dict, **model}, obj=self)
+            drawn_model = ModelDAG( current_model_dict | model, obj=self)
             
         # => tstart, tstop format
         if type(tstart) is str:
@@ -920,14 +920,14 @@ class Target( object ):
         #
         # zmax
         if zmax is not None:
-            kwargs.setdefault("redshift",{}).update({"zmax": zmax})
+            kwargs.setdefault("redshift", {}).update({"zmax": zmax})
             
         elif nyears is not None:
             zmax = self.get_model_parameter("redshift", "zmax", None, model=drawn_model)
             
         # zmin
         if zmin is not None and "redshift" in self.model.model:
-            kwargs.setdefault("redshift",{}).update({"zmin": zmin})
+            kwargs.setdefault("redshift", {}).update({"zmin": zmin})
             
         elif nyears is not None:
             zmin = self.get_model_parameter("redshift", "zmin", None, model=drawn_model)
@@ -936,7 +936,7 @@ class Target( object ):
             if type( tstop ) is str:
                 tstop = time.Time(tstop).mjd
 
-            kwargs.setdefault("t0",{}).update({"high": tstop})
+            kwargs.setdefault("t0", {}).update({"high": tstop})
 
         #
         # time range
@@ -976,7 +976,7 @@ class Target( object ):
         if nyears is not None:
             rate_min = self.get_rate(zmin, skyarea=skyarea) if (zmin is not None and zmin >0) else 0
             kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
-            size = int((self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
+            size = int( (self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
             
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
@@ -985,6 +985,8 @@ class Target( object ):
             if len(z) != size:
                 raise ValueError('Length of redshift vector must be same as size')
             data['z'] = z
+
+        # shall data be attached to the object?
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
@@ -1016,7 +1018,7 @@ class Target( object ):
         """ modeling who the transient is generated """
         if not hasattr(self, "_model") or self._model is None:
             from copy import deepcopy
-            self.set_model(deepcopy(self._MODEL) if self._MODEL is not None else {})
+            self.set_model( deepcopy(self._MODEL) if self._MODEL is not None else {} )
             
         return self._model
     
@@ -1059,40 +1061,38 @@ class Transient( Target ):
     # ============== #
     #  Methods       #
     # ============== #
+    # Rates    
     def set_rate(self, float_or_func):
         """ set the transient rate
 
         Parameters
         ----------
         float_or_func: float, func
-            
+            func: a function that takes as input an array or redshift "z"
+            float: number of targets per Gpc3, then skysurvey.target.rates.get_volumetric_rate() is used.
+
         """
         if callable(float_or_func):
             self._rate = float_or_func
         else:
             self._rate = float(float_or_func)
-    
-    # Rates
-    def getpdf_redshift(self, z, **kwargs):
-        """ 
 
-        Parameters
-        ----------
-        z: 1d-array
-            list of redshift
+    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, rate=None, **kwargs):
+        """ based on the rate (see get_rate()) """
+        from .rates import get_redshift_pdf
+        if rate is None:
+            rate = self.rate
+        
+        xx = np.arange(zmin, zmax, zstep)
+        pdf = get_redshift_pdf(xx, rate=rate, **kwargs)
+        return np.random.choice(np.mean([xx[1:],xx[:-1]], axis=0),
+                                    size=size, p=pdf/pdf.sum())    
 
-        **kwargs goes to get_rate()
-
-        Returns
-        -------
-        1d-array
-            pdf of the redshift distribution
-        """
-        rates = np.diff(self.get_rate(z, **kwargs))
-        return rates/np.nansum(rates)
-    
-    def get_rate(self, z, skyarea=None, **kwargs):
-        """ number of target (per year) up to the given redshift
+    # ------- #
+    #  GETTER #
+    # ------- #
+    def get_rate(self, z, skyarea=None, rate=None, **kwargs):
+        """number of target (per year) up to the given redshift
 
         Parameters
         ----------
@@ -1106,7 +1106,12 @@ class Transient( Target ):
             - float: area in deg**2
             - geometry: shapely.geometry.area is used (assumed in deg**2)
 
-        **wkwargs goes to the rate function (if a function, not a number)
+        rate: float, func or None
+            if None, self.rate is used.
+            if float: assumed volumetric rate (target/Gpc3)
+            if func: function as a function of rate ( rate(z, **kwargs) )
+
+        **kwargs goes to the rate function (if a function, not a number)
 
         Returns
         -------
@@ -1114,21 +1119,14 @@ class Transient( Target ):
         
         See also
         --------
-        getpdf_redshift: the redshift distribution
-        rate: float (volumetric_rate) or func (any)
+        draw_redshift: draws redshifts from rate distribution.
         """
-        if callable(self.rate):
-            return self.rate(z, **kwargs)
-        
-        volume = self.cosmology.comoving_volume(z).to("Gpc**3").value
-        skyarea = surface_of_skyarea(skyarea) # in deg**2 or None
-        if skyarea is not None:
-            full_sky = 4*np.pi * (180/np.pi)**2 # 4pi in deg**2
-            volume *= (skyarea/full_sky)
+        from .rates import get_rate
+        if rate is None:
+            rate = self.rate
             
-        z_rate = volume * self.rate
-        return z_rate
-        
+        return get_rate(z, skyarea=skyarea, rate=rate, **kwargs)
+    
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None,
                            in_mag=False, zp=25, zpsys="ab",
@@ -1204,12 +1202,6 @@ class Transient( Target ):
         m_current = template._source.peakmag(band, zpsys)
         return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
 
-    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None):
-        """ based on the rate (see get_rate()) """
-        xx = np.arange(zmin, zmax, zstep)
-        pdf = self.getpdf_redshift(xx)
-        return np.random.choice(np.mean([xx[1:],xx[:-1]], axis=0), 
-                      size=size, p=pdf/pdf.sum())
             
     # ------------ #
     #  Show LC     #

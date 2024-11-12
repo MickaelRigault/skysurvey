@@ -118,10 +118,13 @@ class TSTransient( Transient ):
             this.update_model(**model) # will update any model entry.
 
         # short cut to update the model
-        if magabs is not None:
-            this.update_model_parameter(magabs={"loc":magabs})
-            
-        if magscatter is not None:
-            this.update_model_parameter(magabs={"scale":magscatter})
-            
+        this.set_magabs([magabs, magscatter]) # 
+
         return this
+
+
+    def set_magabs(self, magabs):
+        """ update the model for the loc *and* scale of the absolute magnitude distribution """
+        if magabs is not None:
+            self.update_model_parameter(magabs={"loc":magabs[0], "scale":magabs[1] })        
+        

@@ -8,16 +8,25 @@ from .timeserie import TSTransient
 __all__ = ["TargetCollection"]
 
 
-def reshape_values(values, shape):
+def targets_from_collection(transientcollection):
+    # which targets
+
+    return targets
+    
+
+def broadcast_mapping(value, ntargets):
     """ """
-    values = np.atleast_1d(values)
-    if len(values) == 1:
-        values = np.resize(values, shape)
-    assert len(values) == shape
-    # success
-    return values
+    value = np.atleast_1d(value)
+    if np.ndim(value)>1:
+        # squeeze drop useless dimensions.
+        broadcasted_values = np.broadcast_to(value, (ntargets, value.shape[-1]) )
+    else:
+        broadcasted_values = np.broadcast_to(value, ntargets)
+        
+    return broadcasted_values
 
 
+    
 class TargetCollection( object ):
     _COLLECTION_OF = Target
     _TEMPLATES = []
@@ -39,13 +48,13 @@ class TargetCollection( object ):
     # ============= #
     #  Collection   #
     # ============= #            
-    def call_down(self, which, margs=None, **kwargs):
+    def call_down(self, which, margs=None, allow_call=True, **kwargs):
         """ """
         if margs is not None:
-            margs = reshape_values(margs, self.ntargets)
+            margs = broadcast_mapping(margs, self.ntargets)
             return [getattr(t, which)(marg_, **kwargs) for marg_, t in zip(margs, self.targets)]
             
-        return [attr if not callable(attr:=getattr(t, which)) else\
+        return [attr if not (callable(attr:=getattr(t, which)) and allow_call) else\
                 attr(**kwargs) 
                 for t in self.targets]
     
@@ -55,7 +64,7 @@ class TargetCollection( object ):
     def set_targets(self, targets):
         """ """
         self._targets = np.atleast_1d(targets) if targets is not None else []
-            
+
     def get_model_parameters(self, entry, key, default=None):
         """ """
         return self.call_down("get_model_parameter", 
@@ -76,7 +85,6 @@ class TargetCollection( object ):
             data = data.reset_index(names=[colname,"subindex"])
             
         return data
-
 
     def get_target_template(self, index):
         """ """
@@ -134,8 +142,8 @@ class TargetCollection( object ):
     
     @property
     def ntargets(self):
-        """ number of targets """
-        return len(self.targets)
+        """ number of targets (ie. different templates) """
+        return len(self.templates)
     
     @property
     def target_ids(self):
@@ -167,19 +175,10 @@ class TransientCollection( TargetCollection ):
     # ============= #
     #  Methods      #
     # ============= #
-    def set_rate(self, float_or_func):
-        """ set the transient rate
-
-        Parameters
-        ----------
-        float_or_func: float, func
-            
-        """
-        if callable(float_or_func):
-            self._rate = float_or_func
-        else:
-            self._rate = float(float_or_func)
-    
+    def set_rates(self, float_or_func):
+        """ call down set_rate for each targets. """
+        _ = self.call_down("set_rate", float_or_func)
+        
     def get_rates(self, z, relative=False, **kwargs):
         """ """
         rates = self.call_down("get_rate", margs=z, **kwargs)
@@ -191,10 +190,11 @@ class TransientCollection( TargetCollection ):
                  zmin=None, zmax=None,
                  tstart=None, tstop=None,
                  nyears=None,
-                 inplace=True, shuffle=True, **kwargs):
+                 inplace=True, shuffle=True,
+                 **kwargs):
         """ """
         if size is not None:
-            relat_rate = np.asarray(self.get_rates(0.1, relative=True))
+            relat_rate = np.asarray(self.get_rates(0.1, relative=True)).reshape(self.ntargets)
             templates = np.random.choice(np.arange( self.ntargets), size=size,
                                         p=relat_rate/relat_rate.sum())
             # using pandas to convert that into sizes.
@@ -205,7 +205,6 @@ class TransientCollection( TargetCollection ):
                                                      ).fillna(0).astype(int)
             # and simply get the values
             size = sizes.values # numpy
-            
             
         draws = self.call_down("draw", margs=size,
                               zmin=zmin, zmax=zmax,     
@@ -229,7 +228,7 @@ class TransientCollection( TargetCollection ):
     @property
     def rates(self):
         """ list of transients """
-        return self.call_down("rate")
+        return self.call_down("rate", allow_call=False)
 
 
 class CompositeTransient( TransientCollection ):
@@ -243,9 +242,11 @@ class CompositeTransient( TransientCollection ):
     #  Methods      #
     # ============= #
     @classmethod
-    def from_draw( cls, size=None, templates=None,
+    def from_draw( cls,
+                   size=None, templates=None,
                    zmax=None, tstart=None, tstop=None,
-                   nyears=None, **kwargs):
+                   nyears=None, rate=None,
+                   **kwargs):
         """ loads the instance from a random draw of targets given the model 
 
         Parameters
@@ -289,41 +290,46 @@ class CompositeTransient( TransientCollection ):
         from_setting:  loads an instance given model parameters (dict)            
         """
         this = cls()
+
+        if rate is not None:
+            this.set_rates(rate) # this uses call_down('set_rate')
+        
         if templates is not None:
             this._templates = templates
-            
+
         _ = this.draw(size=size, zmax=zmax, tstart=tstart, tstop=tstop,
                       nyears=nyears, **kwargs)
         return this
 
     # ============= #
     #  Properties   #
-    # ============= #    
+    # ============= #
     @property
     def targets(self):
         """ list of targets forming the composite transients """
         if not hasattr(self,"_targets") or self._targets is None or len(self._targets) == 0:
-            prop = {"rate": self.rate}
-            prop["magabs"], prop["magscatter"] = self.magabs
-            self._targets = [self._COLLECTION_OF.from_sncosmo(source_, **prop)
-                                 for source_ in self.templates]
+            # build targets
+            self._targets = [self._COLLECTION_OF.from_sncosmo(source_)
+                             for source_ in self.templates]
+            self.set_rates( self._RATE ) # default
+            self.call_down("set_magabs", np.atleast_2d(self._MAGABS) ) # default
         return self._targets
 
     @property
     def magabs(self):
         """ """
-        if not hasattr(self,"_magabs") or self._magabs is None:
-            self._magabs = self._MAGABS
-            
-        return self._magabs
+        return self.call_down("magabs")
         
     @property
     def rate(self):
         """ rate. (If float, assumed to be volumetric rate in Gpc-3 / yr.) """
-        if not hasattr(self,"_rate"):
-            self.set_rate( self._RATE) # default
-            
-        return self._rate
+        return self.call_down("rate", allow_call=False)
+
+
+    @property
+    def ntargets(self):
+        """ means n-templates, really"""
+        return len(self.templates)
     
     
 class TSTransientCollection( TransientCollection ):
@@ -343,23 +349,23 @@ class TSTransientCollection( TransientCollection ):
         
     @classmethod
     def from_sncosmo(cls, sources, rates=1e3, 
-                             magabs=None, magscatter=None):
+                        magabs=None, magscatter=None):
         """ loads the instance from a list of sources
         (and relative rates)
         """
         # make sure the sizes match
-        rates = reshape_values(rates, len(sources))
+        rates = broadcast_mapping(rates, len(sources))
         transients = [cls._COLLECTION_OF.from_sncosmo(source_, rate_)
                      for source_, rate_ in zip(sources, rates)]
         
         # Change the model.
         if magabs is not None:
-            magabs = reshape_values(magabs, len(sources))
+            magabs = broadcast_mapping(magabs, len(sources))
             _ = [t.change_model_parameter(magabs={"loc":magabs_}) 
                  for t, magabs_ in zip(transients, magabs)]
             
         if magscatter is not None:
-            magscatter = reshape_values(magscatter, len(sources))
+            magscatter = broadcast_mapping(magscatter, len(sources))
             _ = [t.change_model_parameter(magabs={"scale":magscatter_}) 
                  for t, magscatter_ in zip(transients, magscatter)]
             

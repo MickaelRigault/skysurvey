@@ -257,7 +257,9 @@ class SNeIa( Transient ):
     _RATE = 2.35 * 10**4 # Perley 2020
 
     # {'name': {func: ,'kwargs': {}, 'as': str_or_list }}
-    _MODEL = dict( redshift = {"kwargs": {"zmax":0.2}, "as":"z"},
+    _MODEL = dict( redshift = {"func": "draw_redshift", # implicit
+                                "kwargs": {"zmax":0.2},
+                                "as":"z"},
                               
                    x1 = {"func": SNeIaStretch.nicolas2021}, 
                    
