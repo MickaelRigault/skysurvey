@@ -18,10 +18,49 @@ class SNeIaColor( object ):
     def color_rvs(size, a=3.63, loc=-0.416, scale=1.62):
         """ rvs draw from the alpha function (scipy.stats.alpha)."""
         return stats.alpha.rvs(size=size, a=a, loc=loc, scale=scale)
-    
+
+    @staticmethod
+    def asymetric_gaussian(xx="-0.3:1:0.001", cint=-0.05, sigmalow=0.03, sigmahigh=0.1):
+        """ get an asymetric gaussian distribution
+        
+        As in Scolnic and Kessler 2016 (https://arxiv.org/pdf/1603.01559)
+
+        Parameters
+        ----------
+        xx: str
+            the x-axis of the color distribution. It should be a string with the
+            format "min:max:step". The default is "-0.3:1:0.01".
+            inputs np.r_[xx]
+
+        cint: float
+            the mean of the intrinsic color distribution.
+
+        sigmalow: float
+            the standard deviation for the bluer tails
+
+        sigmahigh: float
+            the standard deviation for the redder tails
+
+        Returns
+        -------
+        2d-array:
+           xx, pdf
+        """
+        if type(xx) == str: # assumed r_ input
+            xx = eval(f"np.r_[{xx}]")
+        
+        from scipy import stats
+        # full blue
+        pdf = stats.norm.pdf(xx, loc=cint, scale=sigmalow)
+        redder = (xx>=cint)
+        pdf[redder] = stats.norm.pdf(xx[redder], loc=cint, scale=sigmahigh)
+        return xx, pdf
+        
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.075, sigmaint=0.05, tau=0.14):
         """ exponential decay convolved with and intrinsic gaussian color distribution.
+
+        As in Ginolin et al. 2024 (https://arxiv.org/pdf/2406.02072)
 
         Parameters
         ----------

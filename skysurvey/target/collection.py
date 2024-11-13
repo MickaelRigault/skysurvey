@@ -221,15 +221,6 @@ class TransientCollection( TargetCollection ):
             self._data = data
 
         return data
-    
-    # ============= #
-    #  Properties   #
-    # ============= #
-    @property
-    def rates(self):
-        """ list of transients """
-        return self.call_down("rate", allow_call=False)
-
 
 class CompositeTransient( TransientCollection ):
     _COLLECTION_OF = Transient
@@ -313,6 +304,7 @@ class CompositeTransient( TransientCollection ):
                              for source_ in self.templates]
             self.set_rates( self._RATE ) # default
             self.call_down("set_magabs", np.atleast_2d(self._MAGABS) ) # default
+            
         return self._targets
 
     @property
@@ -324,7 +316,6 @@ class CompositeTransient( TransientCollection ):
     def rate(self):
         """ rate. (If float, assumed to be volumetric rate in Gpc-3 / yr.) """
         return self.call_down("rate", allow_call=False)
-
 
     @property
     def ntargets(self):

@@ -93,10 +93,14 @@ class Target( object ):
         this = cls()
 
         if template is not None:
-            this.set_template(template)
+            this.set_template(template, rate_update=False)
 
         if model is not None:
-            this.update_model(**model) # will update any model entry.
+            this.update_model(**model, rate_update=False) # will update any model entry.
+
+        if template is not None and model is not None:
+            self._update_rate_in_model_()
+
             
         this.set_data(data)
         return this
@@ -194,14 +198,17 @@ class Target( object ):
             this.set_template(template)
             
         if model is not None:
-            this.update_model(**model) # will update any model entry.
+            this.update_model(**model, rate_update=False) # will update any model entry.
 
         if effect is not None:
             this.add_effect(effect) # may update the model entry.
 
         if kwargs:
-            this.update_model_parameter(**kwargs)
-            
+            this.update_model_parameter(**kwargs, rate_update=False)
+
+        # cleaning rate automatic feeding in model
+        this._update_rate_in_model_()
+        
         _ = this.draw( size=size,
                        zmin=zmin, zmax=zmax,
                        tstart=tstart, tstop=tstop,
@@ -568,7 +575,7 @@ class Target( object ):
     # -------------- #
     #   Model        #
     # -------------- #
-    def set_model(self, model):
+    def set_model(self, model, rate_update=True):
         """ set the target model 
 
         what template parameters to draw and how they are connected 
@@ -579,6 +586,9 @@ class Target( object ):
         ----------
         model: dict or ModelDAG,
             model that will be used to draw the Target parameter
+
+        rate_update: bool
+            should this check for rate options and feedin rate=self.rate ?
 
         Returns
         -------
@@ -594,6 +604,9 @@ class Target( object ):
             model = ModelDAG(model, self)
             
         self._model = model
+        
+        if rate_update:
+            self._update_rate_in_model_()
 
     def set_data(self, data, incl_template=True):
         """ attach data  to this instance. 
@@ -679,14 +692,16 @@ class Target( object ):
             
         return model.model[entry]["kwargs"].get(key, default)
 
-    def update_model_parameter(self, **kwargs):
+    def update_model_parameter(self, rate_update=True, **kwargs):
         """ change the kwargs entry of a model. """
         # use copy to avoid classmethod issues        
         for k, v in kwargs.items():
-            self.model.model[k]["kwargs"] = {**self.model.model[k].get("kwargs",{}), **v}
+            self.model.model[k]["kwargs"] = self.model.model[k].get("kwargs",{}) | v
 
+        if rate_update:
+            self._update_rate_in_model_()
             
-    def update_model(self, **kwargs):
+    def update_model(self, rate_update=True, **kwargs):
         """ Change the given entries of the model.
 
         **kwargs will update any model entry (or create a new one at the end).
@@ -697,8 +712,18 @@ class Target( object ):
         >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
         new_model = self.model.model | kwargs
-        _ = self.set_model(new_model)
+        _ = self.set_model(new_model, rate_update=True)
 
+    def _update_rate_in_model_(self, warn_if_more=1):
+        """ """
+        keys = self.model.get_func_with_args("rate")
+        if len(keys)>warn_if_more:
+            warnings.warn(f"more than {warn_if_more} entries have 'rate' in their options ({keys=})")
+            
+        self.update_model_parameter(**{k: {"rate": self.rate} for k in keys},
+                                        rate_update=False)
+
+    
     def add_effect(self, effect, model=None, data=None, overwrite=False):
         """ add an effect to the target affecting how spectra or lightcurve are generated
         
@@ -735,7 +760,7 @@ class Target( object ):
             effect._model = model
             
         if effect.model is not None:
-            self.update_model(**effect.model)
+            self.update_model(**effect.model, update_rate=False)
 
         # update the data
         if data is not None:
@@ -918,19 +943,24 @@ class Target( object ):
         #
         # Redshift
         #
+        key_redshift = drawn_model.get_func_with_args("zmax")
+        
         # zmax
-        if zmax is not None:
-            kwargs.setdefault("redshift", {}).update({"zmax": zmax})
+        for zkey in key_redshift:
+            if zmax is not None:
+                kwargs.setdefault(zkey, {}).update({"zmax": zmax})
             
-        elif nyears is not None:
-            zmax = self.get_model_parameter("redshift", "zmax", None, model=drawn_model)
+            elif nyears is not None:
+                zmax = self.get_model_parameter(zkey, "zmax", None, model=drawn_model)
             
         # zmin
-        if zmin is not None and "redshift" in self.model.model:
-            kwargs.setdefault("redshift", {}).update({"zmin": zmin})
+        key_redshift = drawn_model.get_func_with_args("zmin")
+        for zkey in key_redshift:
+            if zmin is not None and "redshift" in self.model.model:
+                kwargs.setdefault(zkey, {}).update({"zmin": zmin})
             
-        elif nyears is not None:
-            zmin = self.get_model_parameter("redshift", "zmin", None, model=drawn_model)
+            elif nyears is not None:
+                zmin = self.get_model_parameter(zkey, "zmin", None, model=drawn_model)
 
         if tstop is not None:
             if type( tstop ) is str:
@@ -961,10 +991,12 @@ class Target( object ):
         #
         skyarea = parse_skyarea(skyarea) # shapely.geometry or skyarea
         if skyarea is not None:
-            param_affected = [k for k, v in drawn_model.get_func_parameters().items() if "skyarea" in v]
+            param_affected = drawn_model.get_func_with_args("skyarea")
             if "radec" in drawn_model.model.keys() and "radec" not in param_affected:
                 warnings.warn("radec in model, skyarea given, but the radec func does not accept skyarea.")
-                
+            if len(param_affected) ==0:
+                warnings.warn("skyarea given but no model have skyarea as parameters. This is ignored.")
+            
             for k in param_affected:
                 kwargs.setdefault(k,{}).update({"skyarea": skyarea})
                 
@@ -977,7 +1009,7 @@ class Target( object ):
             rate_min = self.get_rate(zmin, skyarea=skyarea) if (zmin is not None and zmin >0) else 0
             kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
             size = int( (self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
-            
+        
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
 
@@ -1079,15 +1111,12 @@ class Transient( Target ):
 
     def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, rate=None, **kwargs):
         """ based on the rate (see get_rate()) """
-        from .rates import get_redshift_pdf
+        from .rates import draw_redshift
         if rate is None:
             rate = self.rate
-        
-        xx = np.arange(zmin, zmax, zstep)
-        pdf = get_redshift_pdf(xx, rate=rate, **kwargs)
-        return np.random.choice(np.mean([xx[1:],xx[:-1]], axis=0),
-                                    size=size, p=pdf/pdf.sum())    
-
+            
+        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, **kwargs)
+    
     # ------- #
     #  GETTER #
     # ------- #
