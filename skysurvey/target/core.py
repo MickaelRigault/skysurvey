@@ -712,7 +712,7 @@ class Target( object ):
         >>> self.update_model( b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
         new_model = self.model.model | kwargs
-        _ = self.set_model(new_model, rate_update=True)
+        _ = self.set_model(new_model, rate_update=rate_update)
 
     def _update_rate_in_model_(self, warn_if_more=1):
         """ """
@@ -760,7 +760,7 @@ class Target( object ):
             effect._model = model
             
         if effect.model is not None:
-            self.update_model(**effect.model, update_rate=False)
+            self.update_model(**effect.model, rate_update=False)
 
         # update the data
         if data is not None:
