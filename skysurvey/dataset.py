@@ -507,6 +507,9 @@ class DataSet( object ):
                                                   bounds={"t0":dataset.targets.data.loc[detected]["t0"].apply(lambda x: [x-5, x+5])}
                                                  )
         """
+        warning.warns("DEPRECATED fit_lightcurve is deprecated. See from skysurvey import lcfit")
+        return
+        
         if use_dask:
             import dask
 
