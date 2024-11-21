@@ -433,7 +433,6 @@ class DataSet( object ):
     #  FIT     #
     # -------- #
     def fit_lightcurves(self, source, index=None,
-                           use_dask=True,
                            phase_fitrange=[-50,200],
                            fixedparams = None,
                            guessparams = None,
@@ -441,7 +440,9 @@ class DataSet( object ):
                            incl_dust=True, 
                            add_truth=True,
                            **kwargs):
-        """ fit the template source model to the observed data.
+        """  ** DEPRECATED: See from skysurvey import lcfit **
+        
+        fit the template source model to the observed data.
 
         Basically loops over the targets an use sncosmo.fit_lc()
 
@@ -507,89 +508,9 @@ class DataSet( object ):
                                                   bounds={"t0":dataset.targets.data.loc[detected]["t0"].apply(lambda x: [x-5, x+5])}
                                                  )
         """
-        warning.warns("DEPRECATED fit_lightcurve is deprecated. See from skysurvey import lcfit")
+        raise NotImplementedError("DEPRECATED fit_lightcurve is deprecated. See from skysurvey import lcfit")
         return
         
-        if use_dask:
-            import dask
-
-        if index is None:
-            index = self.obs_index.values
-        else:
-            index = np.atleast_1d(index) # make sure is iterable
-
-        if phase_fitrange is not None:
-            phase_fitrange = np.asarray(phase_fitrange)
-
-        def _format_paramin_(paramin):
-            """ """
-            if type(paramin) is dict:
-                # most flexible format found
-                temp_ = pandas.DataFrame(index=index)
-                for k,v in paramin.items(): 
-                    temp_[k] = v
-                    
-                paramin = temp_.copy()
-
-            return paramin
-
-        fixedparams = _format_paramin_(fixedparams)
-        guessparams = _format_paramin_(guessparams)
-        bounds = _format_paramin_(bounds)
-
-        results = []
-        metas = []
-
-        
-        for i in index:
-            if use_dask:
-                template = dask.delayed(Template)(source)
-            else:
-                template = Template(source)
-                
-            # Data
-            data_to_fit = self.data.xs(i)
-            
-            #
-            fixed_ = fixedparams.loc[i].to_dict() if fixedparams is not None else None
-            guess_ = guessparams.loc[i].to_dict() if guessparams is not None else None
-            bounds_ = bounds.loc[i].to_dict() if bounds is not None else None
-            # - t0 for datarange
-            if phase_fitrange is not None:
-                t0 = fixed_.get("t0", guess_.get("t0", None)) # from fixed or from guess or None
-                if t0 is not None:
-                    data_to_fit = data_to_fit[data_to_fit["time"].between(*(t0+phase_fitrange))]
-
-            prop = {**dict(fixedparams=fixed_, guessparams=guess_,
-                           bounds=bounds_), 
-                    **kwargs}
-
-            if use_dask:
-                # is already delayed
-                result_meta = template.fit_data(data_to_fit,  **prop) # this create a new sncosmo_model inside fit_data
-                results.append(result_meta)
-
-            else:
-                result, meta = template.fit_data(data_to_fit,  **prop)
-                results.append(result)
-                metas.append(meta)
-
-        if use_dask:
-            res = dask.delayed(list)(results).compute()
-            res_, meta_ = np.array(res, dtype="object").T
-            results = pandas.concat(res_, keys=index)
-            metas = pandas.concat(meta_, keys=index)
-        else:
-            results = pandas.concat(results, keys=index)
-            metas = pandas.concat(metas, keys=index)
-
-        if add_truth and self.targets is not None:
-            truth = self.targets.data.loc[index].stack()
-
-            truth.name = "truth"
-            results = results.merge(truth, left_index=True, right_index=True)
-            
-        return results, metas    
     # -------- #
     #  PLOTTER #
     # -------- #
