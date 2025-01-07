@@ -99,7 +99,7 @@ class Target( object ):
             this.update_model(**model, rate_update=False) # will update any model entry.
 
         if template is not None and model is not None:
-            self._update_rate_in_model_()
+            this._update_rate_in_model_()
 
             
         this.set_data(data)
@@ -221,7 +221,7 @@ class Target( object ):
     # ------------- #
     #   Template    #
     # ------------- #
-    def set_template(self, template):
+    def set_template(self, template, rate_update=False):
         """ set the template 
 
         = unlikely you want to set this directly =
@@ -245,6 +245,9 @@ class Target( object ):
             pass # assume it's a template.
             
         self._template = template
+        if rate_update:
+            warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
+
         
     def get_template(self, index=None, as_model=False, **kwargs):
         """ get a template (sncosmo.Model) 
