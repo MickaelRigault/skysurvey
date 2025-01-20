@@ -171,11 +171,14 @@ class DataSet( object ):
         --------
         read_parquet: loads a stored dataset
         """
+        from .tools.speedutils import eff_concat
         lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey, template=template,
                                                                   client=client,
                                                                   incl_error=incl_error,
                                                                   **kwargs)
-        return cls(pandas.concat(lightcurves, keys=fieldids).reset_index(survey.fieldids.names), targets=targets, survey=survey)
+        chunk_size = int(np.sqrt( len(lightcurves) )) # good guess
+        return cls( eff_concat(lightcurves, chunk_size=chunk_size, keys=fieldids).reset_index(survey.fieldids.names),
+                       targets=targets, survey=survey)
 
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):

@@ -84,7 +84,7 @@ class BaseSurvey( object ):
     # ------------ #
     def get_timerange(self, timekey="mjd"):
         """ """
-        return self.data[timekey].agg([np.min, np.max]).values
+        return self.data[timekey].agg(["min", "max"]).values
         
     def get_fieldcoverage(self, incl_zeros=False, fillna=np.NaN,
                           **kwargs):
