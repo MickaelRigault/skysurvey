@@ -284,14 +284,19 @@ class HealpixSurvey( BaseSurvey ):
         if type(radec) is pandas.DataFrame:
             ra = np.asarray(radec["ra"].values, dtype="float")
             dec = np.asarray(radec["dec"].values, dtype="float")
+            index = radec.index.copy()
+            if index.name is None:
+                index.name = "index_radec"
+            
         else:
             ra, dec = np.atleast_1d(radec)
             ra = np.atleast_1d(ra)
             dec = np.atleast_1d(dec)
+            index = pandas.Index(np.arange( len(ra) ), name="index_radec")
             
         fields = hp.ang2pix(self.nside, (90 - dec) * np.pi/180, (origin-ra) * np.pi/180)
-        df = pandas.DataFrame(fields, columns = [self.fieldids.name], index=np.arange( len(ra) ))
-        df.index.name = "index_radec"
+        df = pandas.DataFrame(fields, columns = [self.fieldids.name], index=index)
+        
         if observed_fields:
             observed_fields = self.data[self.fieldids.name].unique()
             df = df[df[self.fieldids.name].isin(observed_fields)]
