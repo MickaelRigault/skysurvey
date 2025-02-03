@@ -8,112 +8,11 @@ import sncosmo
 from astropy.table import Table
 
 from .template import Template
+from .lightcurves import get_obsdata, _get_obsdata_
 
 
-__all__ = ["DataSet", "get_obsdata"]
+__all__ = ["DataSet"]
 
-def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True, discard_bands=False):
-    """ get observed data using ``sncosmo.realize_lcs()``
-
-    Parameters
-    ----------
-    template: sncosmo.Model
-        an sncosmo model from which we can draw observations
-        
-    observations: pandas.DataFrame
-        Dataframe containing the observing infortation.
-        requested entries: TBD
-    
-    parameters: pandas.DataFrame
-        Dataframe containing the target parameters information.
-        These depend on you model. 
-
-    incl_error: bool
-        should the returned flux contain a random gaussian scatter
-        drawn from the flux_err ?
-        If False, lightcurve flux are "perfect".
-
-    discard_bands: bool    
-        If True, if the sncosmo model is not defined in a given observeing band, the observation is discarded altogether, to prevent sncosmo.realize_lcs() from crashing. This only works for bands that are too blue for now.
-
-    Returns
-    -------
-    MultiIndex DataFrame
-        all the observations for all targets
-
-    See also
-    --------
-    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
-    """
-    # observation of that field
-    if "zpsys" not in observations:
-        observations["zpsys"] = zpsys
-
-    if discard_bands == False:
-        sncosmo_obs = Table.from_pandas(observations.rename({"mjd":"time"}, axis=1)) # sncosmo format
-    
-        # sn parameters
-        list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
-    
-        # realize LC
-        list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
-                                               scatter=incl_error)
-        if len(list_of_observations) == 0:
-            return None
-    
-        return pandas.concat([l.to_pandas().set_index(observations.index) for l in list_of_observations],  keys=parameters.index)
-
-    else:
-        # for now the output lightcurves aren't sorted 
-        bands = np.unique(observations['band'])
-        lcs = []
-        
-        for band in bands:
-            masked_observations = observations[observations['band']==band]
-            z_max = sncosmo.get_bandpass(band).minwave()/template.minwave()-1
-            masked_parameters = parameters[parameters['z'] < z_max]
-            sncosmo_obs = Table.from_pandas(masked_observations.rename({"mjd":"time"}, axis=1))
-            list_of_parameters = [p_.to_dict() for i_,p_ in masked_parameters.iterrows()]
-            list_of_observations = sncosmo.realize_lcs(sncosmo_obs, template, list_of_parameters,
-                                                   scatter=incl_error)
-            if len(list_of_observations) !=0:
-                lcs.append(pandas.concat([l.to_pandas().set_index(masked_observations.index) for l in list_of_observations],  keys=masked_parameters.index))
-    
-        if len(lcs) == 0:
-            return None
-        
-        return pandas.concat(lcs)
-    
-def _get_obsdata_(data, **kwargs):
-    """ internal method to simplify get_obsdata using single input (for map)
-
-    Parameters
-    ----------
-    data: list
-        3 entries:
-        template: sncosmo.Model
-            an sncosmo model from which we can draw observations
-            
-        observations: pandas.DataFrame
-            Dataframe containing the observing infortation.
-            requested entries: TBD
-    
-        parameters: pandas.DataFrame
-            Dataframe containing the target parameters information.
-            These depend on you model. 
-
-    **kwargs goes to get_obsdata
-
-    Returns
-    -------
-    MultiIndex DataFrame
-        all the observations for all targets
-
-    See also
-    --------
-    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
-    """
-    return get_obsdata(*data, **kwargs)
 
 
 # ================== #
@@ -600,7 +499,8 @@ class DataSet( object ):
     def realize_survey_target_lcs(cls, targets, survey, template=None,
                                   template_prop={}, nfirst=None,
                                   incl_error=True,
-                                  client=None, discard_bands=False):
+                                  client=None, discard_bands=False,
+                                      trim_observations=False):
         """ creates the lightcurve of the input targets as they 
         would be observed by the survey. 
         = These are split per survey fields. =
@@ -648,8 +548,8 @@ class DataSet( object ):
         
         if hasattr(targets.template, "__iter__"): # collection of single-kind
             samekind_targets = targets.as_targets()
-            outs = [cls._realize_survey_kindtarget_lcs(t_, survey)
-                        for t_ in samekind_targets]
+            outs = [cls._realize_survey_kindtarget_lcs(t_, survey) for t_ in samekind_targets]
+            
             # lightcurves and fields
             lc_out = [l_ for l,v in outs for l_ in l if l is not None] # list of list of dataframe
             fieldids_indexes = np.vstack([np.vstack(v) for l,v in outs if v is not None]) # all fields for all cases
@@ -665,7 +565,9 @@ class DataSet( object ):
                                                           template_prop=template_prop,
                                                           nfirst=nfirst,
                                                           client=client,
-                                                          incl_error=incl_error, discard_bands=discard_bands)
+                                                          incl_error=incl_error,
+                                                          discard_bands=discard_bands,
+                                                          trim_observations=trim_observations)
         return lc_out, fieldids_indexes
 
         
@@ -673,7 +575,8 @@ class DataSet( object ):
     def _realize_survey_kindtarget_lcs( targets, survey, template=None,
                                            template_prop={}, nfirst=None,
                                            incl_error=True,
-                                           client=None, discard_bands=False):
+                                           client=None, discard_bands=False,
+                                            trim_observations=False):
         """ creates the lightcurve of the input single-kind 
         targets as they would be observed by the survey. 
         = These are split per survey fields. =
@@ -715,29 +618,43 @@ class DataSet( object ):
         --------
         from_targets_and_survey: laods the instance given targets and a survey
         """
-        
+        # which template to use to generate targets lightcurves.
         if template is None:
             template = targets.template
 
+        # ------------- #
+            
+        # name of template parameters
         template_columns = targets.get_template_columns()
 
-        dfieldids_ = survey.radec_to_fieldid(targets.data[["ra","dec"]])
+        # fields in which target fall into
+        dfieldids_ = survey.radec_to_fieldid( targets.data[["ra","dec"]] )
         
-        # merge conserves the dtypes of fieldids, not join.
+
+        # now let's join survey and target dataframes.
+        # => first let's grab the index name, 'index by default'
         _data_index = targets.data.index.name
         if _data_index is None:
             _data_index = "index"
+
+        # make sure index of dfieldids_ corresponds to the input one.
         dfieldids_.index.name = _data_index
-            
+        
+        # merge target dataframe with matching fields.
+        # note: pandas.merge conserves dtypes of fieldids, not pandas.join
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
 
-        if len(targets_data) == 0: # no field containing this target
+        # ------------- #
+        
+        # nothing observed. Nothing to do.
+        if len(targets_data) == 0: 
             return None, None
 
-        # index them per fieldids names.
+        # add fieldids (could be multi-index) into the dataframe indexing.
         target_indexed = targets_data.reset_index().set_index([_data_index]+survey.fieldids.names)
-        
-        # best performance when passing by one groupby calls rather than indexing and xs()
+
+        # group targets per fieldids as realize_lightcurve will be made per fields.
+        # note: best performance when passing by one groupby calls rather than indexing and xs()
         gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names
                                      ].groupby(survey.fieldids.names)
 
@@ -752,9 +669,10 @@ class DataSet( object ):
         if nfirst is not None:
             fieldids_indexes = fieldids_indexes[:nfirst]
             
+        # ------------- #
         
         # Build a LC for a given index
-        def get_index_lc_input(index_):
+        def _get_index_lc_input_(index_):
             """ """
             try:
                 this_survey = gsurvey_indexed.get_group(index_).copy()
@@ -771,13 +689,9 @@ class DataSet( object ):
             this_target = target_indexed.xs(index_, level=levels)[template_columns].copy()
             return sncosmo_model, this_survey, this_target
 
-        data = [get_index_lc_input(index_) for index_ in fieldids_indexes]
-        if client is not None:
-            big_future = client.scatter(data) # scatter data
-            futures_ = client.map(_get_obsdata_, big_future, incl_error=incl_error)
-            lc_out = client.gather(futures_)
-        else:
-            lc_out = [_get_obsdata_(data_, incl_error=incl_error, discard_bands=discard_bands)
+        data = [_get_index_lc_input_(index_) for index_ in fieldids_indexes]
+        lc_out = [_get_obsdata_(data_, incl_error=incl_error,
+                                    discard_bands=discard_bands, trim_observations=trim_observations)
                           for data_ in data if data_ is not None]
 
         return lc_out, fieldids_indexes
