@@ -500,7 +500,8 @@ class DataSet( object ):
                                   template_prop={}, nfirst=None,
                                   incl_error=True,
                                   client=None, discard_bands=False,
-                                      trim_observations=False):
+                                  trim_observations=False,
+                                  phase_range=None):
         """ creates the lightcurve of the input targets as they 
         would be observed by the survey. 
         = These are split per survey fields. =
@@ -567,7 +568,8 @@ class DataSet( object ):
                                                           client=client,
                                                           incl_error=incl_error,
                                                           discard_bands=discard_bands,
-                                                          trim_observations=trim_observations)
+                                                          trim_observations=trim_observations,
+                                                          phase_range=phase_range)
         return lc_out, fieldids_indexes
 
         
@@ -576,7 +578,7 @@ class DataSet( object ):
                                            template_prop={}, nfirst=None,
                                            incl_error=True,
                                            client=None, discard_bands=False,
-                                            trim_observations=False):
+                                            trim_observations=False, phase_range=None):
         """ creates the lightcurve of the input single-kind 
         targets as they would be observed by the survey. 
         = These are split per survey fields. =
@@ -623,7 +625,7 @@ class DataSet( object ):
             template = targets.template
 
         # ------------- #
-            
+        
         # name of template parameters
         template_columns = targets.get_template_columns()
 
@@ -655,8 +657,11 @@ class DataSet( object ):
 
         # group targets per fieldids as realize_lightcurve will be made per fields.
         # note: best performance when passing by one groupby calls rather than indexing and xs()
-        gsurvey_indexed = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names
-                                     ].groupby(survey.fieldids.names)
+        survey_data = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names].copy()
+        if survey_data.index.name is None:
+            survey_data.index.name = "index_obs"
+            
+        gsurvey_indexed = survey_data.groupby(survey.fieldids.names)
 
         # get list of 
         # This works for any size of fieldids
@@ -691,7 +696,9 @@ class DataSet( object ):
 
         data = [_get_index_lc_input_(index_) for index_ in fieldids_indexes]
         lc_out = [_get_obsdata_(data_, incl_error=incl_error,
-                                    discard_bands=discard_bands, trim_observations=trim_observations)
+                                    discard_bands=discard_bands,
+                                    trim_observations=trim_observations,
+                                    phase_range=phase_range)
                           for data_ in data if data_ is not None]
 
         return lc_out, fieldids_indexes

@@ -11,7 +11,7 @@ from astropy.table import Table
 
 
 def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True, discard_bands=False,
-                trim_observations=False):
+                trim_observations=False, phase_range=None):
     """ get observed data using ``sncosmo.realize_lcs()``
 
     Parameters
@@ -56,7 +56,8 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True,
         # realize lightcurve
         list_of_observations = realize_lightcurves(dataobs, template, parameters,
                                                    scatter=incl_error,
-                                                   trim_observations=trim_observations)
+                                                   trim_observations=trim_observations,
+                                                    phase_range=phase_range)
         return list_of_observations # could be None
 
     else:
@@ -71,7 +72,8 @@ def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True,
                                                        template,
                                                        masked_parameters,
                                                        scatter=incl_error,
-                                                       trim_observations=trim_observations)
+                                                       trim_observations=trim_observations,
+                                                       phase_range=phase_range)
             
             if list_of_observations is not None and len(list_of_observations) > 0:
                 lcs.append( list_of_observations )
@@ -117,7 +119,8 @@ def _get_obsdata_(data, **kwargs):
 #                        #
 # ====================== #
 def realize_lightcurves(observations, model, parameters,
-                        trim_observations=False, scatter=True):
+                        trim_observations=False, phase_range=None,
+                        scatter=True):
     """ Realize data for a set of SNe given a set of observations.
     
     note: adapted from sncosmo.realize_lcs, but:
@@ -137,17 +140,22 @@ def realize_lightcurves(observations, model, parameters,
     params : pandas.DataFrame
         List of parameters to feed to the model for realizing each light curve.
 
-    trim_observations : bool, optional
+    trim_observations : bool
         If True, only observations with times between
         ``model.mintime()`` and ``model.maxtime()`` are included in
         result table for each SN. Default is False.
 
-    scatter : bool, optional
+    phase_range: list, None
+        if given, only observations within the given rest-frame phase range
+        will be considered.
+
+    scatter : bool
         If True, the ``flux`` value of the realized data is calculated by
         adding  a random number drawn from a Normal Distribution with a
         standard deviation equal to the ``fluxerror`` of the observation to
         the bandflux value of the observation calculated from model. Default
         is True.
+        
 
     Returns
     -------
@@ -185,12 +193,14 @@ def realize_lightcurves(observations, model, parameters,
         model.set( **param.to_dict() )
 
         # Select times for output that fall within tmin amd tmax of the model
-        if trim_observations:
-            mask = ((observations['mjd'] > model.mintime()) &
-                    (observations['mjd'] < model.maxtime()))
-            snobs = observations[mask].copy()
+        if trim_observations: # {min/max}time includes redshift phase dilatation.
+            snobs = observations[ observations['mjd'].between(model.mintime(), model.maxtime()) ].copy()
         else:
             snobs = observations.copy()
+
+        if phase_range is not None: # copy made before
+            phase_range_obsframe = np.asarray( phase_range ) * (1 + model.get("z")) + model.get("t0")
+            snobs = observations[ observations['mjd'].between(*phase_range_obsframe) ]
 
         # explicitly detect no observations and add an empty table
         if len(snobs) == 0:
@@ -219,4 +229,4 @@ def realize_lightcurves(observations, model, parameters,
     if len(lcs)==0:
         return None
     
-    return pandas.concat(lcs, keys=indexes)
+    return pandas.concat(lcs, keys=pandas.Index(indexes, name=parameters.index.name) )
