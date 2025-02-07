@@ -352,7 +352,7 @@ class TSTransientCollection( TransientCollection ):
         # Change the model.
         if magabs is not None:
             magabs = broadcast_mapping(magabs, len(sources))
-            _ = [t.change_model_parameter(magabs={"loc":magabs_}) 
+            _ = [t.update_model_parameter(magabs={"loc":magabs_}) 
                  for t, magabs_ in zip(transients, magabs)]
             
         if magscatter is not None:
