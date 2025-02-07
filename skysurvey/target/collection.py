@@ -357,7 +357,7 @@ class TSTransientCollection( TransientCollection ):
             
         if magscatter is not None:
             magscatter = broadcast_mapping(magscatter, len(sources))
-            _ = [t.change_model_parameter(magabs={"scale":magscatter_}) 
+            _ = [t.update_model_parameter(magabs={"scale":magscatter_}) 
                  for t, magscatter_ in zip(transients, magscatter)]
             
         # and loads it
