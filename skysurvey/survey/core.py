@@ -116,7 +116,7 @@ class BaseSurvey( object ):
                                   fillna=fillna, **kwargs)
     
     def get_fieldstat(self, stat, columns=None,
-                        incl_zeros=False, fillna=np.NaN,
+                        incl_zeros=False, fillna=np.nan,
                         data=None):
         """ get observing statistics for the fields
 
