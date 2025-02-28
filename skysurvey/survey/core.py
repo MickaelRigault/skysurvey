@@ -86,7 +86,7 @@ class BaseSurvey( object ):
         """ """
         return self.data[timekey].agg(["min", "max"]).values
         
-    def get_fieldcoverage(self, incl_zeros=False, fillna=np.NaN,
+    def get_fieldcoverage(self, incl_zeros=False, fillna=np.nan,
                           **kwargs):
         """ short cut to get_fieldstat('size') 
 
