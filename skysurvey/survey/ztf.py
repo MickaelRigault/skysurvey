@@ -20,8 +20,12 @@ class ZTF( GridSurvey ):
     @classmethod
     def from_logs(cls, **kwargs):
         """ """
-        from ztfquery.skyvision import get_summary_logs
-        logs = get_summary_logs(**kwargs)
+        try:
+            import ztfcosmo
+        except:
+            raise ImportError("you need to install ztfcosmo => pip install ztfcosmo")
+        
+        logs = ztfcosmo.get_observing_logs()
         return cls.from_pointings(data=logs, level="quadrant")
         
     @classmethod

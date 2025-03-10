@@ -194,9 +194,9 @@ def realize_lightcurves(observations, model, parameters,
 
         # Select times for output that fall within tmin amd tmax of the model
         if trim_observations: # {min/max}time includes redshift phase dilatation.
-            snobs = observations[ observations['mjd'].between(model.mintime(), model.maxtime()) ].copy()
+            snobs = observations[ observations['mjd'].between(model.mintime(), model.maxtime()) ]
         else:
-            snobs = observations.copy()
+            snobs = observations
 
         if phase_range is not None: # copy made before
             phase_range_obsframe = np.asarray( phase_range ) * (1 + model.get("z")) + model.get("t0")
@@ -220,10 +220,11 @@ def realize_lightcurves(observations, model, parameters,
         if scatter:
             flux = np.atleast_1d( np.random.normal(flux, fluxerr) )
             
-        # output    
-        snobs["flux"] = flux
-        snobs["fluxerr"] = fluxerr
-        lcs.append( snobs )
+        # output
+        data = snobs.merge(pandas.DataFrame({"flux": flux, "fluxerr": fluxerr}, index=snobs.index),
+                                 left_index=True, right_index=True)
+                            
+        lcs.append( data )
         indexes.append( target_index )
 
     if len(lcs)==0:

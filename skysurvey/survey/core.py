@@ -273,7 +273,6 @@ class BaseSurvey( object ):
         ax.set_ylabel("exposures per day", color="0.7", fontsize="small")
 
         ax.set_ylim(ymin=0, ymax=np.round(max_obs*1.05,decimals=-1) )
-        print(nobs.max())
         if legend:
             ax.legend(loc=[0,1], ncol=nbands, frameon=False, fontsize="small")
             

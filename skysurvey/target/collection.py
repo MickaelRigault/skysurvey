@@ -52,7 +52,8 @@ class TargetCollection( object ):
         """ """
         if margs is not None:
             margs = broadcast_mapping(margs, self.ntargets)
-            return [getattr(t, which)(marg_, **kwargs) for marg_, t in zip(margs, self.targets)]
+            return [getattr(t, which)(marg_, **kwargs)
+                        for marg_, t in zip(margs, self.targets)]
             
         return [attr if not (callable(attr:=getattr(t, which)) and allow_call) else\
                 attr(**kwargs) 
@@ -178,6 +179,11 @@ class TransientCollection( TargetCollection ):
     def set_rates(self, float_or_func):
         """ call down set_rate for each targets. """
         _ = self.call_down("set_rate", float_or_func)
+
+    def update_model(self, rate_update=True, **kwargs):
+        """ 
+        """
+        _ = self.call_down("update_model", rate_update=True, **kwargs)
         
     def get_rates(self, z, relative=False, **kwargs):
         """ """
@@ -194,18 +200,20 @@ class TransientCollection( TargetCollection ):
                  **kwargs):
         """ """
         if size is not None:
-            relat_rate = np.asarray(self.get_rates(0.1, relative=True)).reshape(self.ntargets)
-            templates = np.random.choice(np.arange( self.ntargets), size=size,
-                                        p=relat_rate/relat_rate.sum())
+            relat_rate = np.asarray( self.get_rates(0.1, relative=True) ).reshape(self.ntargets)
+            templates = np.random.choice( np.arange( self.ntargets ), size=size,
+                                          p=relat_rate/relat_rate.sum() )
+            
             # using pandas to convert that into sizes.
-            # Most likely, there is a nuympy way, but it's fast enough?
+            # Most likely, there is a nuympy way, but it's fast enough.
             templates = pandas.Series(templates)
+            
             # count entries and force 0 and none exist.
             sizes = templates.value_counts().reindex( np.arange(self.ntargets)
                                                      ).fillna(0).astype(int)
             # and simply get the values
             size = sizes.values # numpy
-            
+
         draws = self.call_down("draw", margs=size,
                               zmin=zmin, zmax=zmax,     
                               tstart=tstart, tstop=tstop,
@@ -227,33 +235,35 @@ class CompositeTransient( TransientCollection ):
 
     _KIND = "unknown"    
     _RATE = 1e5
-
-    _MAGABS = (-18, 1) # 
+    _MAGABS = (-18, 1) #
+    
     # ============= #
     #  Methods      #
     # ============= #
     @classmethod
     def from_draw( cls,
-                   size=None, templates=None,
+                   size=None, model=None, templates=None,
                    zmax=None, tstart=None, tstop=None,
-                   nyears=None, rate=None,
+                   zmin=0, nyears=None,
+                   skyarea=None,
+                   rate=None, effect=None,
                    **kwargs):
         """ loads the instance from a random draw of targets given the model 
-
+    
         Parameters
         ----------
         size: int, None
             number of target you want to sample
             size=None as in numpy. Usually means 1.
             = ignored if nyears given =
-
+    
         templates: str, None
             list of template names (sncosmo.Model(source)). 
             = leave to None if unsure, cls._TEMPLATES used as default =
-
+    
         zmax: float
             maximum redshift to be simulated.
-
+    
         tstart: float
             starting time of the simulation
             
@@ -261,35 +271,51 @@ class CompositeTransient( TransientCollection ):
             ending time of the simulation
             (if tstart and nyears are both given, tstop will be
             overwritten by ``tstart+365.25*nyears``
-
+    
         nyears: float
             if given, nyears will set:
             - size: it will be the number of target expected up to zmax 
             in the given  number of years. 
             This uses get_rate(zmax).
             - tstop: tstart+365.25*nyears
-
+    
         **kwargs goes to self.draw()
-
+    
         Returns
         -------
         class instance
             self.data, self.model and self.template will be loaded.
-
+    
         See also
         --------
         from_setting:  loads an instance given model parameters (dict)            
         """
         this = cls()
-
+    
         if rate is not None:
             this.set_rates(rate) # this uses call_down('set_rate')
         
         if templates is not None:
             this._templates = templates
-
-        _ = this.draw(size=size, zmax=zmax, tstart=tstart, tstop=tstop,
-                      nyears=nyears, **kwargs)
+    
+        if model is not None:
+            this.call_down("update_model", **model, rate_update=False) # will update any model entry.
+        
+        if effect is not None:
+            this.call_down("add_effect", effect) # will update any model entry.
+    
+        if kwargs:
+            this.update_model_parameter(**kwargs, rate_update=False)
+            
+        # cleaning rate automatic feeding in model
+        #this._update_rate_in_model_()
+        _ = this.draw( size=size,
+                       zmin=zmin, zmax=zmax,
+                       tstart=tstart, tstop=tstop,
+                       nyears=nyears,
+                       skyarea=skyarea,
+                       inplace=True, # creates self.data
+                       )
         return this
 
     # ============= #

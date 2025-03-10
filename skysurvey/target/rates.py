@@ -3,7 +3,8 @@ from astropy.cosmology import Planck18
 
 from ..tools.utils import surface_of_skyarea
 
-def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None, **kwargs):
+def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None,
+                      flatten_ndim=True, **kwargs):
     """ random redshift draw following the given rate
 
     Parameters
@@ -38,7 +39,22 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None, **kwar
     xx = np.arange(zmin, zmax, zstep)
     pdf = get_redshift_pdf(xx, rate=rate, keepsize=False, **kwargs)
     xx_eff = np.mean([xx[1:],xx[:-1]], axis=0)
-    return np.random.choice(xx_eff, size=size, p=pdf/pdf.sum())
+    
+    # normal pdf
+    if np.ndim(pdf) == 1:
+        return np.random.choice(xx_eff, size=size, p=pdf/pdf.sum())
+
+    # 2D rates
+    if np.ndim(pdf) == 2:
+        if not flatten_ndim:
+            return [np.random.choice(xx_eff, size=size, p=pdf_/pdf_.sum())
+                        for pdf_ in pdf]
+        
+        xx_eff_flat = np.full_like(pdf, xx_eff).reshape(-1)
+        pdf_flat = pdf.reshape(-1)
+        return np.random.choice(xx_eff_flat, size=size, p=pdf_flat/pdf_flat.sum())
+        
+    raise ValueError(f"ndim of pdf should be 1 or 2, not {np.ndim(pdf)=}")
 
 def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3, 
                             kind="cubic", bounds_error=None, fill_value=np.nan,  

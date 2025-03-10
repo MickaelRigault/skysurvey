@@ -5,12 +5,11 @@ import numpy as np
 import pandas
 import sncosmo
 
-
 from astropy.utils.decorators import classproperty
 
 __all__ = ["get_sncosmo_model", "Template"]
 
-def get_sncosmo_model(source="salt2",
+def get_sncosmo_model(source="salt2", zero_before=True,
                       **params):
     """ get the template (sncosmo.Model)
 
@@ -31,6 +30,9 @@ def get_sncosmo_model(source="salt2",
     modelprop = dict(source=source)
     model = sncosmo.Model(**modelprop)
     model.set(**params)
+    if zero_before: # strange sncosmo feature. Hard to change afterward.
+        model.source._zero_before = True
+    
     return model
 
 def sncosmoresult_to_pandas(result):
@@ -59,6 +61,28 @@ def sncosmoresult_to_pandas(result):
     fit_meta["chi2dof"] = fit_meta["chisq"]/fit_meta["ndof"]
     return fit_res, fit_meta
 
+def parse_template(template):
+    """ read template or source """
+    template = np.atleast_1d(template)
+    if len(template)>1:
+        return [parse_template(template_) for template_ in template]
+
+    # ok, let's go then.
+    template = template[0]
+    import sncosmo
+    # you provided a sncosmo.model.
+    if type(template) is sncosmo.models.Model: 
+        template = Template.from_sncosmo(template) # let's build a skysurvey.Template
+
+     # you provided a source | do the same
+    elif sncosmo.Source in template.__class__.__mro__ or type(template) in [str, np.str_]:
+        template = Template.from_sncosmo(template) # let's build a skysurvey.Template
+
+    # you provided a skysurvey.Template
+    else:
+        pass
+    
+    return template
 # =============== #
 #                 #
 #  Template       #
@@ -90,8 +114,7 @@ class Template( object ):
         instance
         """
         if type(source) != sncosmo.Model:
-            sncosmo_model = get_sncosmo_model(source,
-                                              **kwargs)
+            sncosmo_model = get_sncosmo_model(source, **kwargs)
         else:
             sncosmo_model = source
 
@@ -239,7 +262,7 @@ class Template( object ):
 
     def show_lightcurve(self, band, params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=[-20,50], npoints=500,
+                            time_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
@@ -256,6 +279,11 @@ class Template( object ):
         # ------- #
         # time range
         t0 = sncosmo_model.get("t0")
+        if time_range is not None:
+            time_range = np.asarray(time_range)+t0
+        else:
+            time_range = sncosmo_model.mintime(), sncosmo_model.maxtime()
+            
         times = np.linspace(*np.asarray(time_range)+t0, npoints)
 
         # ------- #
@@ -467,7 +495,7 @@ class GridTemplate( Template ):
     def show_lightcurve(self, band, grid_element,
                             params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=[-20,50], npoints=500,
+                            time_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
@@ -517,3 +545,132 @@ class GridTemplate( Template ):
         if not hasattr(cls,"_grid_of"):
             return cls._GRID_OF
         return cls._grid_of
+
+    
+class TemplateCollection( object ):
+    def __init__(self, templates):
+        """ """
+        self._templates = templates
+
+    def __iter__(self):
+        """ """
+        return self.templates
+        
+    @classmethod
+    def from_sncosmo(cls, templates):
+        """ """
+        templates = [Template.from_sncosmo(template) for template in np.atleast_1d(templates)]
+        return cls(templates)
+
+    @classmethod
+    def from_list(cls, templates):
+        """ """
+        templates = parse_template(templates)
+        return cls(templates)
+        
+    def call_down(self, which, margs=None, allow_call=True, **kwargs):
+        """ """
+        if margs is not None:
+            from .target.collection import broadcast_mapping
+            margs = broadcast_mapping(margs, self.templates)
+            return [getattr(t, which)(marg_, **kwargs)
+                        for marg_, t in zip(margs, self.templates)]
+            
+        return [attr if not (callable(attr:=getattr(t, which)) and allow_call) else\
+                attr(**kwargs) 
+                for t in self.templates]
+
+    def call_down_source(self, which, margs=None, allow_call=True, **kwargs):
+        """ """
+        if margs is not None:
+            from .target.collection import broadcast_mapping
+            margs = broadcast_mapping(margs, self.templates)
+            return [getattr(t.source, which)(marg_, **kwargs)
+                        for marg_, t in zip(margs, self.templates)]
+            
+        return [attr if not (callable(attr:=getattr(t.source, which)) and allow_call) else\
+                attr(**kwargs) 
+                for t in self.templates]
+
+    def add_effect(self, effects):
+        """ """
+        return self.call_down("add_effect", effects=effects)
+
+    def nameorindex_to_index(self, name_or_index):
+        """ """
+        if type(name_or_index) in [str, np.str_]: # is name
+            name_or_index = np.argwhere( np.asarray(self.names) == name_or_index).squeeze()
+        
+        return name_or_index
+
+    # ---------- #
+    #  GETTER    #
+    # ---------- #
+    def get(self, ref_index=0, **kwargs):
+        """ """
+        if self.is_uniquetype:
+            return self.templates[ref_index].get(**kwargs)
+            
+        raise NotImplementedError("get() is not implemented for non uniquetyep templates")        
+
+    def get_lightcurve(self, band, times, 
+                       index=None, sncosmo_model=None, 
+                       in_mag=False, zp=25, zpsys="ab",
+                        **kwargs):
+        """ """
+        if index is None and sncosmo_model is None:
+            raise ValueError("index or sncosmo_model must be given.")
+            
+        if sncosmo_model is None:
+            sncosmo_model = self.get(ref_index=index, as_model=True)
+        elif index is not None:
+            warnings.warn(f"{index=} is ignored as sncosmo_model is given.")
+
+        return self.templates[0].get_lightcurve(band, times, 
+                                                   sncosmo_model=sncosmo_model, 
+                                                   in_mag=in_mag, zp=zp, zpsys=zpsys,
+                                                    **kwargs)
+            
+    # ============ #
+    #  Properties  #
+    # ============ #
+    @property
+    def templates(self):
+        """ """
+        return self._templates
+
+    @property
+    def ntemplates(self):
+        """ """
+        return len(self.templates)
+
+    @property
+    def names(self):
+        """ """
+        return self.call_down_source("name")
+
+    @property
+    def is_uniquetype(self):
+        """ """
+        ntypes = len(np.unique([str(c) for c in self.call_down_source("__class__", allow_call=False)]))
+        return ntypes == 1
+
+    # = unique of not
+    @property
+    def effect_parameters(self):
+        """ """
+        if self.is_uniquetype:
+            return self.templates[0].effect_parameters
+        return self.call_down("effect_parameters")
+
+    @property
+    def template_parameters(self):
+        """ """
+        return self.parameters
+
+    @property
+    def parameters(self):
+        """ """
+        if self.is_uniquetype:
+            return self.templates[0].parameters
+        return self.call_down("parameters")

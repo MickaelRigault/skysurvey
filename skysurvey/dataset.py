@@ -3,6 +3,8 @@
 #
 import pandas
 import numpy as np
+from copy import copy
+
 #
 import sncosmo
 from astropy.table import Table
@@ -35,7 +37,7 @@ class DataSet( object ):
         self.set_survey(survey)
         
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, template=None, client=None,
+    def from_targets_and_survey(cls, targets, survey, client=None,
                                     incl_error=True, **kwargs):
         """ loads a dataset (observed data) given targets and a survey
 
@@ -71,7 +73,7 @@ class DataSet( object ):
         read_parquet: loads a stored dataset
         """
         from .tools.speedutils import eff_concat
-        lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey, template=template,
+        lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey,
                                                                   client=client,
                                                                   incl_error=incl_error,
                                                                   **kwargs)
@@ -253,7 +255,7 @@ class DataSet( object ):
         if add_phase:
             target_info = self.targets.data.loc[index][['t0', redshift_key]]
     #        target_info.index = self._data_index # for merging
-            data["phase_obs"] = data["time"] - target_info["t0"]
+            data["phase_obs"] = data["mjd"] - target_info["t0"]
             data["phase"] = data["phase_obs"]/(1+target_info[redshift_key])
 
         if phase_range is not None:
@@ -436,7 +438,7 @@ class DataSet( object ):
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
             phase_window = np.asarray(phase_window)+t0
-            obs_ = obs_[obs_["time"].between(*phase_window)]
+            obs_ = obs_[obs_["mjd"].between(*phase_window)]
 
         coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
         obs_["flux_zp"] = obs_["flux"] * coef
@@ -481,7 +483,7 @@ class DataSet( object ):
                 ecolor = to_rgba(color_, 0.2)
                 
             obs_band = obs_[obs_["band"] == band_]
-            times = obs_band["time"] if not format_time else Time(obs_band["time"], format=t0_format).datetime
+            times = obs_band["mjd"] if not format_time else Time(obs_band["mjd"], format=t0_format).datetime
             ax.scatter(times, obs_band["flux_zp"],
                        color=color_, zorder=4, **kwargs)
             ax.errorbar(times, obs_band["flux_zp"],
@@ -496,7 +498,7 @@ class DataSet( object ):
     #    Statics     #
     # -------------- #
     @classmethod
-    def realize_survey_target_lcs(cls, targets, survey, template=None,
+    def realize_survey_target_lcs(cls, targets, survey, 
                                   template_prop={}, nfirst=None,
                                   incl_error=True,
                                   client=None, discard_bands=False,
@@ -543,11 +545,12 @@ class DataSet( object ):
         --------
         from_targets_and_survey: laods the instance given targets and a survey
         """
+        from .template import TemplateCollection
         if type(targets) in [list, tuple]:
             from .target.collection import TargetCollection
             targets = TargetCollection(targets) # correct format
         
-        if hasattr(targets.template, "__iter__"): # collection of single-kind
+        if hasattr(targets.template, "__iter__") or type(targets.template) is TemplateCollection : # collection of single-kind
             samekind_targets = targets.as_targets()
             outs = [cls._realize_survey_kindtarget_lcs(t_, survey) for t_ in samekind_targets]
             
@@ -562,7 +565,6 @@ class DataSet( object ):
                 
         else: # input is a single-kind target
             lc_out, fieldids_indexes = cls._realize_survey_kindtarget_lcs(targets, survey,
-                                                          template=template,
                                                           template_prop=template_prop,
                                                           nfirst=nfirst,
                                                           client=client,
@@ -574,7 +576,7 @@ class DataSet( object ):
 
         
     @staticmethod
-    def _realize_survey_kindtarget_lcs( targets, survey, template=None,
+    def _realize_survey_kindtarget_lcs( targets, survey,
                                            template_prop={}, nfirst=None,
                                            incl_error=True,
                                            client=None, discard_bands=False,
@@ -620,12 +622,6 @@ class DataSet( object ):
         --------
         from_targets_and_survey: laods the instance given targets and a survey
         """
-        # which template to use to generate targets lightcurves.
-        if template is None:
-            template = targets.template
-
-        # ------------- #
-        
         # name of template parameters
         template_columns = targets.get_template_columns()
 
@@ -677,6 +673,7 @@ class DataSet( object ):
         # ------------- #
         
         # Build a LC for a given index
+        sncosmo_model_base = targets.get_template(as_model=True, **template_prop)            
         def _get_index_lc_input_(index_):
             """ """
             try:
@@ -687,7 +684,7 @@ class DataSet( object ):
                 return None
 
             # get() returns copy
-            sncosmo_model = template.get(**template_prop)
+            sncosmo_model = copy( sncosmo_model_base )
             # survey matching the input fieldids row
 
             # Taking the data we need

@@ -190,12 +190,12 @@ class Target( object ):
                 
             if "source_or_template" in kwargs:
                 template = kwargs.pop("source_or_template")
-        
-        if rate is not None:
-            this.set_rate(rate)
-            
+                    
         if template is not None:
             this.set_template(template)
+            
+        if rate is not None:
+            this.set_rate(rate)
             
         if model is not None:
             this.update_model(**model, rate_update=False) # will update any model entry.
@@ -236,15 +236,8 @@ class Target( object ):
         from_draw: load the instance by a random draw generation.
         from_setting: loads an instance given model parameters
         """
-        import sncosmo
-        if type(template) is sncosmo.models.Model: # you provided a sncosmo.model.
-            template = Template.from_sncosmo(template) # let's build a skysurvey.Template
-        elif sncosmo.Source in template.__class__.__mro__ or type(template) is str: # you provided a source
-            template = Template.from_sncosmo(template) # let's build a skysurvey.Template
-        else:
-            pass # assume it's a template.
-            
-        self._template = template
+        from ..template import parse_template
+        self._template = parse_template(template)
         if rate_update:
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
@@ -273,7 +266,7 @@ class Target( object ):
         """
         if index is not None:
             prop = self.get_template_parameters(index).to_dict()
-            kwargs = {**prop, **kwargs}
+            kwargs = prop | kwargs
 
         sncosmo_model = self.template.get(**kwargs)
         if not as_model:
@@ -726,7 +719,6 @@ class Target( object ):
         self.update_model_parameter(**{k: {"rate": self.rate} for k in keys},
                                         rate_update=False)
 
-    
     def add_effect(self, effect, model=None, data=None, overwrite=False):
         """ add an effect to the target affecting how spectra or lightcurve are generated
         
@@ -784,9 +776,6 @@ class Target( object ):
 
         # update the template from this effect
         _ = self.template.add_effect(effect)
-        
-        
-        
         
     # -------------- #
     #   Plotter      #
@@ -1180,9 +1169,12 @@ class Transient( Target ):
         """
         # get the template            
         if index is not None:
-            prop = self.get_template_parameters(index).to_dict()
-            kwargs = {**prop, **kwargs}
-
+            if sncosmo_model is None:
+                sncosmo_model = self.get_template(index=index, as_model=True)
+            else:
+                prop = self.get_template_parameters(index).to_dict()
+                kwargs = prop | kwargs
+            
         return self.template.get_lightcurve(band, times,
                                             sncosmo_model=sncosmo_model,
                                             in_mag=in_mag, zp=zp, zpsys=zpsys,
@@ -1217,9 +1209,13 @@ class Transient( Target ):
         """
         # get the template            
         if index is not None:
-            prop = self.get_template_parameters(index).to_dict()
-            kwargs = {**prop, **kwargs}
+            if sncosmo_model is None:
+                sncosmo_model = self.get_template(index=index, as_model=True)
+                prop = {}
+            else:
+                prop = self.get_template_parameters(index).to_dict()
 
+        kwargs = prop | kwargs                
         return self.template.get_spectrum(time, lbdas,
                                           sncosmo_model=sncosmo_model,
                                           as_phase=as_phase,
@@ -1240,7 +1236,7 @@ class Transient( Target ):
     # ------------ #
     def show_lightcurve(self, band, index, params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=[-20,50], npoints=500,
+                            time_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd", 
                             in_mag=False, invert_mag=True, **kwargs):
