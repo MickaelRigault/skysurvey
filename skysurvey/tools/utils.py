@@ -161,7 +161,7 @@ def random_radec(size=None, skyarea=None,
     
     # => Polygon or no skyarea
     if skyarea is not None: # change the ra_range
-        size_to_draw = size*2
+        size_to_draw = size*4
         ramin, decmin, ramax, decmax = skyarea.bounds
         ra_range = [ramin, ramax]
         dec_range = [decmin, decmax]

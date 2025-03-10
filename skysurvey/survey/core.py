@@ -86,7 +86,7 @@ class BaseSurvey( object ):
         """ """
         return self.data[timekey].agg(["min", "max"]).values
         
-    def get_fieldcoverage(self, incl_zeros=False, fillna=np.NaN,
+    def get_fieldcoverage(self, incl_zeros=False, fillna=np.nan,
                           **kwargs):
         """ short cut to get_fieldstat('size') 
 
@@ -116,7 +116,7 @@ class BaseSurvey( object ):
                                   fillna=fillna, **kwargs)
     
     def get_fieldstat(self, stat, columns=None,
-                        incl_zeros=False, fillna=np.NaN,
+                        incl_zeros=False, fillna=np.nan,
                         data=None):
         """ get observing statistics for the fields
 
