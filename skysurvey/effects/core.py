@@ -1,5 +1,6 @@
 import sncosmo
 from . import milkyway
+from . import hostdust
 
 # ============== #
 #  Effect Class  #
@@ -59,10 +60,10 @@ class Effect( object ):
             else: 
                 raise NotImplementedError("only ccm89 dust law implemented")
                 
-            effect = sncosmo.CCM89Dust()
-            name = "hostdust"
+        #    effect = sncosmo.CCM89Dust()
+            name = "host"
             frame = "rest"
-            model = {}
+            model = hostdust.dust_model
             
         # SNIa color scatter
         
