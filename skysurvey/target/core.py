@@ -1207,11 +1207,11 @@ class Transient( Target ):
         --------
         get_lightcurve: get the transient lightcurve 
         """
+        prop = {}
         # get the template            
         if index is not None:
             if sncosmo_model is None:
                 sncosmo_model = self.get_template(index=index, as_model=True)
-                prop = {}
             else:
                 prop = self.get_template_parameters(index).to_dict()
 
