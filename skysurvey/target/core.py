@@ -1236,7 +1236,7 @@ class Transient( Target ):
     # ------------ #
     def show_lightcurve(self, band, index, params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=None, npoints=500,
+                            phase_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd", 
                             in_mag=False, invert_mag=True, **kwargs):
@@ -1250,7 +1250,7 @@ class Transient( Target ):
         template = self.get_target_template(index, **params)
         return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
-                                             time_range=time_range, npoints=npoints,
+                                             phase_range=phase_range, npoints=npoints,
                                              zp=zp, zpsys=zpsys,
                                              format_time=format_time,
                                              t0_format=t0_format, 

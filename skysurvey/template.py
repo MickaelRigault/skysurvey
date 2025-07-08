@@ -262,7 +262,7 @@ class Template( object ):
 
     def show_lightcurve(self, band, params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=None, npoints=500,
+                            phase_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
@@ -279,12 +279,12 @@ class Template( object ):
         # ------- #
         # time range
         t0 = sncosmo_model.get("t0")
-        if time_range is not None:
-            time_range = np.asarray(time_range)+t0
+        if phase_range is not None:
+            phase_range = np.asarray(phase_range)
         else:
-            time_range = sncosmo_model.mintime(), sncosmo_model.maxtime()
-            
-        times = np.linspace(*np.asarray(time_range)+t0, npoints)
+            phase_range = sncosmo_model.mintime()-t0, np.min([sncosmo_model.maxtime()-t0, 200])
+
+        times = np.linspace(*np.asarray(phase_range)+t0, npoints)
 
         # ------- #
         #  y-data #
@@ -495,7 +495,7 @@ class GridTemplate( Template ):
     def show_lightcurve(self, band, grid_element,
                             params=None,
                             ax=None, fig=None, colors=None,
-                            time_range=None, npoints=500,
+                            phase_range=None, npoints=500,
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):

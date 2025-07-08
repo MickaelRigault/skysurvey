@@ -22,11 +22,97 @@ __all__ = ["DataSet"]
 #    DataSet         #
 #                    #
 # ================== #
-class DataSet( object ):
+
+class DataSet(object):
+    """ A class for managing and realistic transient light curves given true data and survey observing logs.
+
+    This class provides methods to load, manipulate, and visualize light curve data
+    based on target and survey information.
+
+    Parameters
+    ----------
+    data : pandas.DataFrame
+        Multi-index dataframe corresponding to the concatenation of all targets observations.
+
+    targets : skysurvey.Target or child of, optional
+        Target data corresponding to the true target parameters (as given by nature).
+
+    survey : skysurvey.Survey or child of, optional
+        Survey that has been used to generate the dataset (if known).
+
+    Attributes
+    ----------
+    data : pandas.DataFrame
+        Light curve data as observed by the survey.
+
+    targets : skysurvey.Target or child of
+        Target data corresponding to the true target parameters.
+
+    survey : skysurvey.Survey or child of
+        Survey used to generate the dataset.
+
+    obs_index : pandas.Index
+        Index of the observed targets.
+
+    See Also
+    --------
+    from_targets_and_survey : Loads a dataset (observed data) given targets and survey.
+    read_parquet : Loads a stored dataset.
+
+    Methods
+    -------
+    from_targets_and_survey(targets, survey, client=None, incl_error=True, **kwargs)
+        Loads a dataset given targets and a survey.
+
+    read_parquet(parquetfile, survey=None, targets=None, **kwargs)
+        Loads a stored dataset from a parquet file.
+
+    read_from_directory(dirname, **kwargs)
+        Loads a directory containing the dataset, the survey, and the targets.
+
+    set_data(data)
+        Sets the light curve data.
+
+    set_targets(targets)
+        Sets the targets.
+
+    set_survey(survey)
+        Sets the survey.
+
+    get_data(add_phase=False, phase_range=None, index=None, redshift_key="z", detection=None, zp=None)
+        Accesses the data with additional tools.
+
+    get_ndetection(phase_range=None, per_band=False)
+        Gets the number of detections for each light curve.
+
+    get_target_lightcurve(index, detection=None, phase_range=None)
+        Gets the observation of the given target.
+
+    show_target_lightcurve(ax=None, fig=None, index=None, zp=25, lc_prop={}, bands=None, show_truth=True, format_time=True, t0_format="mjd", phase_window=None, **kwargs)
+        Plots the light curve of a target.
+
+    realize_survey_target_lcs(targets, survey, template_prop={}, nfirst=None, incl_error=True, client=None, discard_bands=False, trim_observations=False, phase_range=None)
+        Creates the light curve of the input targets as they would be observed by the survey.
+
+    _realize_survey_kindtarget_lcs(targets, survey, template_prop={}, nfirst=None, incl_error=True, client=None, discard_bands=False, trim_observations=False, phase_range=None)
+        Creates the light curve of the input single-kind targets as they would be observed by the survey.
+    """
     
     def __init__(self, data, targets=None, survey=None):
-        """ 
-
+        """ Initialize the DataSet class.
+        
+        The classmethod Dataset.from_targets_and_survey() should be favored 
+        for loading the dataset.
+        
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Multi-index dataframe corresponding to the concatenation of all targets observations.
+        targets : skysurvey.Target or child of, optional
+            Target data corresponding to the true target parameters (as given by nature).
+        survey : skysurvey.Survey or child of, optional
+            Survey that has been used to generate the dataset (if known).
+       
         See also
         --------
         from_targets_and_survey: loads a dataset (observed data) given targets and survey
@@ -332,88 +418,6 @@ class DataSet( object ):
         return self.get_data(index=index,
                              phase_range=phase_range,
                              detection=detection)
-
-    # -------- #
-    #  FIT     #
-    # -------- #
-    def fit_lightcurves(self, source, index=None,
-                           phase_fitrange=[-50,200],
-                           fixedparams = None,
-                           guessparams = None,
-                           bounds = None,
-                           incl_dust=True, 
-                           add_truth=True,
-                           **kwargs):
-        """  ** DEPRECATED: See from skysurvey import lcfit **
-        
-        fit the template source model to the observed data.
-
-        Basically loops over the targets an use sncosmo.fit_lc()
-
-        Parameters
-        ----------
-        source: str
-            name of the template ( will use ``sncosmo.Model(source)``)
-            
-        index: list
-            select the target to be fitted using their index
-
-        use_dask: bool
-            shall this use dask to distribute the computation ?
-
-        phase_fitrange: 2d-array, None
-            if not None, only the given phase_range will be considered
-            for the fit.  t0 is taken from fixedparams or from guessparams, 
-            whichever comes first.
-            
-        fixedparams: dict
-            fix parameters to this value for the fit.
-            a parameter could be fixed at a given value: e.g. {"mw_ebv":0}
-            or it must be one per fitted target: e.g. {"z":dataset.targets.data["z"]}
-            
-        fixedparams: dict
-            guess parameters to this value for the fit.
-            a parameter could be fixed at a given value: e.g. {"mw_ebv":0}
-            or it must be one per fitted target: e.g. {"z":dataset.targets.data["z"]}
-            
-        bounds: dict
-            boundaries for the parameters.
-            (see example)
-
-        add_truth: bool
-            = ignored if self.targets is not set =
-            should the true parameters be added to the results ("thruth" columns)
-
-        incl_dust: bool
-            should the template include the Milky Way dust extinction
-            parameters ?
-
-        Returns
-        -------
-        pandas.DataFrame, pandas.DataFrame
-            multi-index dataframe of the fits results, errors and covariances
-            and the pandas.DataFrame fit meta data.
-
-        
-        Examples
-        --------
-        fit the lightcurves of targets having at least 5 detection, fixing the redshift and the mw parameters
-        the t0 is only a guess (but actually guessed at the truth here)
-
-        >>> detstat = dataset.get_ndetection()
-        >>> detected = detstat[detstat>5].index
-        >>> results, meta = dataset.fit_lightcurve("salt2", 
-                                                  use_dask=True, index=detected
-                                                  phase_fitrange=[-30,60],
-                                                  add_truth=True,
-                                                  fixedparams={"z":dataset.targets.data.loc[detected]["z"],
-                                                               "mwr_v":3.1, "mwebv":0},
-                                                  guessparams={"t0":dataset.targets.data.loc[detected]["t0"]},
-                                                  bounds={"t0":dataset.targets.data.loc[detected]["t0"].apply(lambda x: [x-5, x+5])}
-                                                 )
-        """
-        raise NotImplementedError("DEPRECATED fit_lightcurve is deprecated. See from skysurvey import lcfit")
-        return
         
     # -------- #
     #  PLOTTER #
@@ -422,14 +426,57 @@ class DataSet( object ):
                                 lc_prop={}, bands=None, show_truth=True,
                                 format_time=True, t0_format="mjd", 
                                 phase_window=None, **kwargs):
-        """ if index is None, a random index will be used. 
-        if bands is None, the target's observed band will be used.
+        """ Plot the light curve of a target.
+    
+        If `index` is None, a random index will be used. If `bands` is None,
+        the target's observed band will be used.
+    
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            The axes on which to plot the light curve. If None, a new figure and axes will be created.
+
+        fig : matplotlib.figure.Figure, optional
+            The figure on which to plot the light curve. If None, a new figure will be created.
+
+        index : int, optional
+            The index of the target whose light curve is to be plotted. If None, a random index is chosen.
+
+        zp : float, optional
+            Zero point magnitude for flux conversion. Default is 25.
+
+        lc_prop : dict, optional
+            Additional properties to pass to the light curve plotting function (kwargs).
+
+        bands : list of str, optional
+            The bands to plot. If None, all observed bands for the target will be used.
+
+        show_truth : bool, optional
+            Whether to show the true light curve. Default is True.
+
+        format_time : bool, optional
+            Whether to format the time axis as dates. Default is True.
+
+        t0_format : str, optional
+            The format of the reference time. Default is "mjd".
+
+        phase_window : array-like, optional
+            The phase window to plot. If None, the entire light curve will be plotted.
+
+        **kwargs : dict
+            Additional keyword arguments to pass to the plotting functions.
+    
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The figure object containing the light curve plot.
         """
         from matplotlib.colors import to_rgba
         from .config import get_band_color
         
         if format_time:
             from astropy.time import Time
+            
         if index is None:
             index = np.random.choice(self.obs_index)
 
@@ -438,7 +485,7 @@ class DataSet( object ):
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
             phase_window = np.asarray(phase_window)+t0
-            obs_ = obs_[obs_["mjd"].between(*phase_window)]
+            obs_ = obs_[obs_["mjd"].astype("float").between(*phase_window)]
 
         coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
         obs_["flux_zp"] = obs_["flux"] * coef
@@ -457,7 +504,6 @@ class DataSet( object ):
         else:
             fig = ax.figure
         
-        
         colors = get_band_color(bands)
         if show_truth:
             fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
@@ -475,7 +521,7 @@ class DataSet( object ):
             ax.set_xlabel("time [in day]", fontsize="large")
 
 
-
+        # loop over bands
         for band_, color_ in zip(bands, colors):
             if color_ is None:
                 ecolor = to_rgba("0.4", 0.2)

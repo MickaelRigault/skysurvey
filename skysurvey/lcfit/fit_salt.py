@@ -92,15 +92,20 @@ def fit_salt_single(dataset, index,
 #
 # - Internal shortcut
 #
-def _dataset_to_model_and_data_(dataset, index, phase_range=None):
+def _dataset_to_model_and_data_(dataset, index, phase_range=None, time_key=None):
     """ """
+    salt_keys = ['z', 't0', 'x0', 'x1', 'c']
+    
     # get the sncosmo_model from this source
     this_model_ = dataset.targets.get_target_template(index).sncosmo_model
     this_model = sncosmo.Model(this_model_.source)
-    this_model.add_effect(this_model_.effects[0], name="mw", frame="obs")
+    if hasattr(this_model_, "effects") and this_model_.effects is not None and len(this_model_.effects)>0:
+        # assuming it is dust for now.
+        this_model.add_effect(this_model_.effects[0], name="mw", frame="obs")
+        salt_keys.append("mwebv")
     
     # set values for current parameters
-    this_model.set(**{k:this_model_.get(k) for k in ['z', 't0', 'x0', 'x1', 'c', "mwebv"]} )
+    this_model.set(**{k:this_model_.get(k) for k in salt_keys} )
 
     # get the simulated t0 as initial guess
     this_t0 = this_model.get("t0")
@@ -109,7 +114,19 @@ def _dataset_to_model_and_data_(dataset, index, phase_range=None):
     #  - phrase_range is cut made here to explicitly
     #    get them in rest-frame phase.
     #    phase_range is also an sncosmo.fit_lc option.
-    this_data = dataset.data.xs(index)
+    this_data = dataset.data.xs(index).copy()
+    if time_key is None:
+        if "time" in this_data.columns:
+            pass # ok
+        elif "mjd" in this_data.columns:
+            this_data = this_data.rename({"mjd": "time"}, axis=1)
+        elif "jd" in this_data.columns:
+            this_data = this_data.rename({"jd": "time"}, axis=1)
+        else:
+            raise ValueError("cannot parse time entry from input dataset, provide time_key.")
+
+    # now time is "time", not "mjd" or something else
+    
     if phase_range is not None:
         this_redshift = this_model.get("z")
         this_data = this_data[(this_data["time"]-this_t0
