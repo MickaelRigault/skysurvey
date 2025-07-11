@@ -1,0 +1,21 @@
+numpy
+pandas
+scipy
+healpy
+shapely
+geopandas
+astropy
+sncosmo
+extinction
+modeldag>=0.9.3
+ztffields>=0.4.3
+
+[:python_version < "3.10"]
+importlib_resources
+
+[docs]
+nbsphinx
+
+[tests]
+pytest
+coverage
