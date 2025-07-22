@@ -4,61 +4,129 @@ import pandas
 
 __all__ = ["read_simlib"]
 
-def read_simlib(filepath):
-    """ reads a simlib file and returns the 'block' elements
+def parse_simlib(simlib):
+    """ """
+    file_ = open(simlib, "r").read().splitlines()
+    i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
+    i_end = [ i for i, f_ in enumerate(file_) if f_.startswith("END_LIBID") ]
+    if len(i_start) != 1:
+        raise ValueError("Exactly 1 'BEGIN LIBGEN' is expected, {len(i_start)} found.")
 
-    Parameters
-    ----------
-    filepath: str or path
-        file path to be opened with open(filepath,"r").
+    dfs = []
+    metas = []
+    blocks = i_start+i_end
+    for block_range in zip(blocks[:-1], blocks[1:]):
+        block = file_[block_range[0]:block_range[1]]
+        df, meta = parse_simlib_block(block)
+        dfs.append(df)
+        metas.append(meta)
 
-    Returns
-    -------
-    list
-       meta, list_of_dataframe
-       - meta: dataframe containing the metadata of all blocks
-       - list_of_dataframe: list of all the block data.
-    """
-    file_ = open(filepath,"r").read().splitlines()
-    blocks = []
-    singleblock = []
-    for f_ in file_:
-        if f_.startswith("BEGIN LIBGEN"):
-            singleblock = []
-        elif f_.startswith("END_LIBID"):
-            blocks.append(_parse_simlib_block(singleblock))
-            singleblock = []
-            continue
+    data = pandas.concat(dfs, keys=np.arange(len(dfs)))
+    metadata = pandas.concat(metas, keys=np.arange(len(dfs)), axis=1).T
+    return data, metadata
 
-        singleblock.append(f_)
+def parse_simlib_block(block):
+    """ """
+    read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
+    if len(read_start) == 0:
+        raise ValueError("cannot parse input block. No 'READ' line found")
+    if len(read_start) > 1:
+        raise ValueError(f"cannot parse input block. multiple 'READ' lines found {read_start}")
 
+    # ok this is the line with READ on it.
+    read_start = read_start[0]
+    # columns
+    columns = [l_strip.lower() for l in block[read_start+1].replace("#", "").split()
+              if len(l_strip:=l.strip())>1]
 
-    dtypes = {**{k:"float32" for k in ["RA","DEC", "MWEBV","PIXSIZE",]},
-              **{k:"int16" for k in ["NOBS","CCDNUM","LIBID"]}}
-    metas = pandas.concat([b[1] for b in blocks], axis=1).T.astype(dtypes)
-    dfs = [b[0] for b in blocks]
-    return metas, dfs
-
-def _parse_simlib_block(singleblock):
-    """ internal function of read_simlib that parses a 'block' """
-    # meta data
-    meta_single = {l.split(":")[0]:l.split(":")[1].strip() 
-                   for l in singleblock if not l.startswith("S:") and l.count(":")==1}
-    meta_multi = {ls_.split(":")[0]:ls_.split(":")[1].strip() 
-                  for l in singleblock if not l.startswith("S:") and l.count(":")>1 
-                  for l_ in l.split('  ') if len(ls_:=l_.strip())>0}
-    meta = {**meta_multi, **meta_single}
-    meta
+    # data
+    data_block = block[read_start+2:]
+    data = []
+    for block_line in data_block:
+        try:
+            data_, comments = block_line.split("#")
+        except:
+            print(block_line)
+            return
+        case, data_ = data_.split(":")
+        data_ = data_.split()
+        data.append([case]+data_+[comments.strip()])
     
-    # DataBlock
-    columns = ["mjd","expid","filter", "gain","ccdnoise", "skysig", "psf1","psf2","psf21","zp","zp_err","mag"]
-    dtypes = {k:"float32" for k in columns}
-    dtypes["expid"] = "int16"
-    dtypes["filter"] = "string"
-    df = pandas.DataFrame([[ss.strip() for ss in s.replace("S:","").split()] for s in singleblock if s.startswith("S:")],
-                         columns=columns).astype(dtypes)
+    dataframe = pandas.DataFrame(data, columns=["case"]+columns+["comments"])
 
-    # NEA * skysig | see Section 6 of Kessler et al. 2019
-    # and sigma_psf = np.sqrt( NEA/(4pi) ) -> NEA = sigma_psf**2 * 4pi
-    df["skynoise"] = (df["psf1"]**2 * np.pi*4) * df["skysig"]
-    return df, pandas.Series(meta)
+    # metadata
+    try:
+        meta_block = block[:read_start]
+        meta = " ".join([l.split("#")[0] for l in meta_block if not l.startswith("#") and len(l)>0 
+                         and not "LIBGEN" in l]
+               ).replace(": ", ":").split()
+        meta = pandas.Series({k.lower():v for k,v in [l.split(":") for l in meta]})
+    except:
+        print(f"failed meta for {meta_block}")
+        meta= None
+    return dataframe, meta
+
+
+### DES ####
+def parse_simlib(simlib):
+    """ """
+    file_ = open(simlib, "r").read().splitlines()
+    i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
+    i_end = [ i for i, f_ in enumerate(file_) if f_.startswith("END_LIBID") ]
+    if len(i_start) != 1:
+        raise ValueError("Exactly 1 'BEGIN LIBGEN' is expected, {len(i_start)} found.")
+
+    dfs = []
+    metas = []
+    blocks = i_start+i_end
+    for block_range in zip(blocks[:-1], blocks[1:]):
+        block = file_[block_range[0]:block_range[1]]
+        df, meta = parse_simlib_block(block)
+        dfs.append(df)
+        metas.append(meta)
+
+    data = pandas.concat(dfs, keys=np.arange(len(dfs)))
+    metadata = pandas.concat(metas, keys=np.arange(len(dfs)), axis=1).T
+    return data, metadata
+
+def parse_simlib_block(block):
+    """ """
+    read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
+    if len(read_start) == 0:
+        raise ValueError("cannot parse input block. No 'READ' line found")
+    if len(read_start) > 1:
+        raise ValueError(f"cannot parse input block. multiple 'READ' lines found {read_start}")
+
+    # ok this is the line with READ on it.
+    read_start = read_start[0]
+    # columns
+    columns = [l_strip.lower() for l in block[read_start+1].replace("#", "").split()
+              if len(l_strip:=l.strip())>1]
+
+    # data
+    data_block = block[read_start+2:]
+    data = []
+    for block_line in data_block:
+        try:
+            data_, comments = block_line.split("#")
+        except:
+            print(block_line)
+            return
+        case, data_ = data_.split(":")
+        data_ = data_.split()
+        data.append([case]+data_+[comments.strip()])
+    
+    dataframe = pandas.DataFrame(data, columns=["case"]+columns+["comments"])
+
+    # metadata
+    try:
+        meta_block = block[:read_start]
+        meta = " ".join([l.split("#")[0] for l in meta_block if not l.startswith("#") and len(l)>0 
+                         and not "LIBGEN" in l]
+               ).replace(": ", ":").split()
+        meta = pandas.Series({k.lower():v for k,v in [l.split(":") for l in meta]})
+    except:
+        print(f"failed meta for {meta_block}")
+        meta= None
+    return dataframe, meta
+            

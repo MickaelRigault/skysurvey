@@ -97,8 +97,8 @@ Step 1: transients
 
 	  import skysurvey
 	  snia = skysurvey.SNeIa()
-	  data = snia.draw(size=50_000)
-	  data.head(5) # see also self.data
+	  data = snia.draw(size=50_000, inplace=True) # inplace sets snia.data
+	  data.head(5) # see also snia.data
 
 
     .. tab-item:: SNeII
@@ -211,7 +211,8 @@ Step 2: survey
             survey = skysurvey.LSST.from_opsim(opsim_path)
 	    
 		       
-``Survey`` uses healpy_ as backend to match position with observing
+`
+`Survey`` uses healpy_ as backend to match position with observing
 history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both
 can be used equally in any skysurvey_ input ;
 especially for DataSet.
