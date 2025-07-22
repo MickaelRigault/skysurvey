@@ -107,7 +107,7 @@ Step 1: transients
 
 	  import skysurvey
 	  snii = skysurvey.SNII()
-	  data = snii.draw(size=50_000)
+	  data = snii.draw(size=50_000, inplace=True) # inplace sets snia.data
 	  data.head(5) # see also self.data
 
     .. tab-item:: Any TimeSerie
@@ -117,7 +117,7 @@ Step 1: transients
 	  import skysurvey
 	  snib = skysurvey.TSTransient("v19-2005bf-corr")
 	  # see https://sncosmo.readthedocs.io/en/stable/source-list.html
-	  snib.draw(50_000)
+	  snib.draw(50_000, inplace=True) # inplace sets snia.data
 	  snib.data.head(5) # also self.data
 
 
