@@ -3,7 +3,12 @@ from .basesurvey import Survey
 import pandas
 
 def get_lsst_footprint():
-    """ A (3 5 5 5 3) ccd structure centered on 0 with a 9.6 deg2 area """
+    """ A (3 5 5 5 3) ccd structure centered on 0 with a 9.6 deg2 area
+
+    Returns
+    -------
+    shapely.geometry.Polygon
+    """
     from shapely import geometry
     lowleft = 0
     upright = 5
@@ -48,7 +53,7 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
 
     Returns
     -------
-    DataFrame
+    pandas.DataFrame
     """
     import sqlite3
     connect = sqlite3.connect(filepath)
@@ -95,8 +100,7 @@ class LSST( Survey ):
 
         Returns
         -------
-        Instance
-            instance of the LSST survey (uses cls.from_pointings())
+        LSST
         """
         from ..tools.utils import get_skynoise_from_maglimit
         

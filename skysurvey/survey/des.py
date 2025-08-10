@@ -15,10 +15,22 @@ __all__ = ["DES"]
 #  Top Level    #
 # ============= #
 def get_des_footprint(incl_focus=False, coef=(6.53,6.12)):
-    """ DECam footprint (with or without the 'F' ccds. 
+    """ DECam footprint (with or without the 'F' ccds).
     (see https://noirlab.edu/science/programs/ctio/instruments/Dark-Energy-Camera/characteristics)
 
     Footprint is north up ; east right.
+
+    Parameters
+    ----------
+    incl_focus: bool
+        if True, include the focus ccds.
+
+    coef: tuple
+        coefficient to convert from pixel to degree.
+
+    Returns
+    -------
+    shapely.geometry.MultiPolygon
     """
     from shapely import geometry
     from shapely.ops import unary_union
@@ -52,7 +64,17 @@ def get_des_footprint(incl_focus=False, coef=(6.53,6.12)):
 
 
 def get_des_field_coordinates(fieldid_name="fieldid"):
-    """ get the radec location of the DES shallow (8) and deep (2) fields """
+    """ get the radec location of the DES shallow (8) and deep (2) fields
+
+    Parameters
+    ----------
+    fieldid_name: str
+        name of the fieldid column.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
     if fieldid_name is None:
         fieldid_name = "fieldid"
     
@@ -72,7 +94,23 @@ def get_des_field_coordinates(fieldid_name="fieldid"):
     return data
 
 def get_des_fields(origin=180, incl_focus=False, fieldid_name=None):
-    """ """
+    """ get the DES fields as a geopandas.GeoDataFrame
+
+    Parameters
+    ----------
+    origin: float
+        origin of the ra coordinates.
+
+    incl_focus: bool
+        if True, include the focus ccds.
+
+    fieldid_name: str
+        name of the fieldid column.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+    """
     footprint = get_des_footprint(incl_focus=incl_focus)
     radec = get_des_field_coordinates(fieldid_name=fieldid_name)    
     fields = geopandas.GeoDataFrame( geometry=project_to_radec(footprint, radec["ra"]+origin, radec["dec"]),

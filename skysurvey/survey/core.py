@@ -27,14 +27,17 @@ class BaseSurvey( object ):
     
     def __init__(self, data):
         """ 
-        See also
-        --------
-        
+        Initialize the BaseSurvey class.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            observing data.
         """
         self.set_data(data)
     
     def __array__(self):
-        """ """
+        """ numpy array representation of the data """
         return self.data.__array__()
     
     # ============== #
@@ -83,7 +86,17 @@ class BaseSurvey( object ):
     #   GETTER     #
     # ------------ #
     def get_timerange(self, timekey="mjd"):
-        """ """
+        """ returns the min and max of the given timekey column.
+
+        Parameters
+        ----------
+        timekey: str
+            column name of the time column.
+
+        Returns
+        -------
+        numpy.array
+        """
         return self.data[timekey].agg(["min", "max"]).values
         
     def get_fieldcoverage(self, incl_zeros=False, fillna=np.nan,
@@ -173,7 +186,17 @@ class BaseSurvey( object ):
         
         
     def radec_to_fieldid(self, radec):
-        """ get the fieldid of the given (list of) coordinates """
+        """ get the fieldid of the given (list of) coordinates
+
+        Parameters
+        ----------
+        radec: pandas.DataFrame or 2d array
+            coordinates in degree
+
+        Returns
+        -------
+        pandas.Series
+        """
         raise NotImplementedError("you have not implemented radec_to_fieldid for your survey")
 
     def get_observations_from_coords(self, radec):
@@ -200,7 +223,13 @@ class BaseSurvey( object ):
     #  PLOTTER    #
     # ----------- #        
     def show(self):
-        """ shows the sky coverage """
+        """ shows the sky coverage.
+
+        Raises
+        ------
+        NotImplementedError
+            This method is not implemented for this survey.
+        """
         raise NotImplementedError("you have not implemented show for your survey")
 
 
@@ -208,7 +237,40 @@ class BaseSurvey( object ):
                             bands=None,perband=True, band_key="band", band_colors=None,
                             fieldid=None,
                             legend=True, **kwargs):
-        """ """
+        """ show the number of exposures per day.
+
+        Parameters
+        ----------
+        ax: matplotlib.axes
+            axes to plot on.
+
+        exposure_key: str
+            column name of the exposure id.
+
+        bands: list
+            list of bands to plot.
+
+        perband: bool
+            if True, plot the number of exposures per band.
+
+        band_key: str
+            column name of the band.
+
+        band_colors: dict
+            dictionary of colors for each band.
+
+        fieldid: int or list
+            field id to plot.
+
+        legend: bool
+            if True, show the legend.
+
+        **kwargs goes to ax.bar
+
+        Returns
+        -------
+        matplotlib.figure
+        """
         from astropy.time import Time
         
         day = self.data["mjd"].astype(int)

@@ -7,7 +7,19 @@ class ZTF( GridSurvey ):
 
     
     def __init__(self, data=None, level="quadrant", **kwargs):
-        """ """
+        """ 
+        Initialize the ZTF class.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            observing data.
+
+        level: str
+            level of the ZTF fields (quadrant, ccd, field).
+
+        **kwargs goes to GridSurvey.__init__
+        """
         
         footprint = Fields.get_contours(level=level,
                                         as_polygon=True,
@@ -19,7 +31,15 @@ class ZTF( GridSurvey ):
         
     @classmethod
     def from_logs(cls, **kwargs):
-        """ """
+        """ 
+        Load the ZTF survey from the logs.
+
+        **kwargs goes to from_pointings
+
+        Returns
+        -------
+        ZTF
+        """
         try:
             import ztfcosmo
         except:
@@ -30,7 +50,21 @@ class ZTF( GridSurvey ):
         
     @classmethod
     def from_pointings(cls, data, level="quadrant"):
-        """ """
+        """ 
+        Load the ZTF survey from pointings.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame or dict
+            observing data, must contain the rakey and deckey columns.
+
+        level: str
+            level of the ZTF fields (quadrant, ccd, field).
+
+        Returns
+        -------
+        ZTF
+        """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data)
             
@@ -39,6 +73,8 @@ class ZTF( GridSurvey ):
     def show_ztf(self, data=None, fieldstat=None, **kwargs):
         """ shows the sky coverage 
 
+        Parameters
+        ----------
         data: pandas.DataFrame
             data to be consider to get the field statistics.
             fieldstat will be derived from that (main grid only) groupby(fieldid).size()
@@ -48,6 +84,10 @@ class ZTF( GridSurvey ):
             field statistics.
 
         **kwargs goes to ztffields.skyplot_fields
+
+        Returns
+        -------
+        matplotlib.figure
         """
         import ztffields
         if fieldstat is None:

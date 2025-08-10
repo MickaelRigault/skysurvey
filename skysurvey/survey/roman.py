@@ -3,7 +3,14 @@ from shapely import geometry
 import numpy as np
 
 def get_roman_footprint():
-    """ quick and dirty that have a 1011arcmin FoV """
+    """ 
+    Get the Roman footprint.
+    quick and dirty that have a 1011arcmin FoV
+
+    Returns
+    -------
+    shapely.geometry.Polygon
+    """
     roman_footprint = geometry.Polygon(
                     np.asarray([[0, 1.], [0.15, 1.],
                                   [0.15, 0.8],[0.3, 0.8],

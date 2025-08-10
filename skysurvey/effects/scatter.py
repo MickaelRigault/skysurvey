@@ -8,7 +8,25 @@ import sncosmo
 #                    #
 # ================== #
 def sine_interp(x_new, fun_x, fun_y):
-    """ Sinus interpolation for intrinsic scattering models. """
+    """ 
+    Sinus interpolation for intrinsic scattering models.
+
+    Parameters
+    ----------
+    x_new: array
+        new x values.
+
+    fun_x: array
+        x values of the function to interpolate.
+
+    fun_y: array
+        y values of the function to interpolate.
+
+    Returns
+    -------
+    array
+        interpolated values.
+    """
     
     if len(fun_x) != len(fun_y):
         raise ValueError('x and y must have the same len')
@@ -40,7 +58,14 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
     param_names_latex = [r'\lambda_0', 'F_0', 'F_1', 'd_L']
 
     def __init__(self, saltsource):
-        """Initialize G10 class."""
+        """
+        Initialize G10 class.
+
+        Parameters
+        ----------
+        saltsource: sncosmo.Source
+            salt source to use.
+        """
         self._parameters = np.array([2157.3, 0.0, 1.08e-4, 800])
         self._colordisp = saltsource._colordisp
         self._minwave = saltsource.minwave()
@@ -48,13 +73,34 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
 
     @classmethod
     def from_saltsource(cls, name="salt2", version=None):
-        """ shortcut to directly load the color scatter from the salt2 source"""
+        """ 
+        Shortcut to directly load the color scatter from the salt2 source
+
+        Parameters
+        ----------
+        name: str
+            name of the salt source.
+
+        version: str
+            version of the salt source.
+
+        Returns
+        -------
+        ColorScatter_G10
+        """
         saltource = sncosmo.get_source(name, version=version)
         return cls(saltource)
         
 
     def compute_sigma_nodes(self):
-        """Computes the sigma nodes."""
+        """
+        Computes the sigma nodes.
+
+        Returns
+        -------
+        (array, array)
+            lambda nodes, sigma values
+        """
         L0, F0, F1, dL = self._parameters
         
         lam_nodes = np.arange(self._minwave, self._maxwave, dL)
@@ -70,7 +116,22 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
         return lam_nodes, siglam_values
 
     def propagate(self, wave, flux):
-        """Propagate the effect to the flux."""
+        """
+        Propagate the effect to the flux.
+
+        Parameters
+        ----------
+        wave: array
+            wavelengths.
+
+        flux: array
+            fluxes.
+
+        Returns
+        -------
+        array
+            propagated fluxes.
+        """
         lam_nodes, siglam_values = self.compute_sigma_nodes()
         magscat = sine_interp(wave, lam_nodes, siglam_values)
         return flux * 10**(-0.4 * magscat)
@@ -90,7 +151,9 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
     _maxwave = 11000
 
     def __init__(self):
-        """Initialise C11 class."""
+        """
+        Initialise C11 class.
+        """
         self._parameters = np.array([0., 1.3])
 
         # vUBVRI lambda eff

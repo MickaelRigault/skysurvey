@@ -10,6 +10,8 @@ def get_mwebv(ra, dec, which="planck"):
     If this is the first time you use it, you may have to download the maps 
     first (instruction will be given)
     
+    Parameters
+    ----------
     ra, dec: float, array
         coordinates
 
@@ -17,6 +19,11 @@ def get_mwebv(ra, dec, which="planck"):
         name of the dustmap to use.
         - planck: Planck 2013
         - SFD: 
+
+    Returns
+    -------
+    array
+        E(B-V) values.
     """
     if which.lower() == "planck":
         from dustmaps.planck import PlanckQuery as dustquery

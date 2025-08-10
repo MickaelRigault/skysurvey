@@ -10,7 +10,20 @@ from .lsst import *
 
 
 def get_footprint(which, **kwargs):
-    """ """
+    """ 
+    Get the footprint of a given survey.
+
+    Parameters
+    ----------
+    which: str
+        name of the survey (e.g. ztf, des, lsst).
+
+    **kwargs goes to the get_{which}_footprint function.
+
+    Returns
+    -------
+    shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+    """
     which = which.lower()
     
     try:

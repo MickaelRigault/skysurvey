@@ -14,14 +14,29 @@ FIELDID = {'D1': {'ra': 36.450190, 'dec': -4.45065},
            'D4': {'ra': 333.89903, 'dec': -17.71961}}
 
 def get_snls_field_coordinates(fieldid_name="fieldid"):
-    """ get the radec location of the 4 SNLS fields """
+    """ get the radec location of the 4 SNLS fields
+
+    Parameters
+    ----------
+    fieldid_name: str
+        name of the fieldid column.
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
     
     data = pandas.DataFrame(FIELDID).T
     data.index.name = fieldid_name
     return data
 
 def get_snls_footprint():
-    """ returns a 1-degree side square footprint """
+    """ returns a 1-degree side square footprint
+
+    Returns
+    -------
+    shapely.geometry.Polygon
+    """
     from shapely import geometry
     footprint = geometry.box(-0.5, -0.5, 0.5, 0.5)
     return footprint
@@ -31,8 +46,12 @@ def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
     
     Parameters
     ----------
-    data
-        pandas.DataFrame
+    url: str
+        url to the data.
+
+    Returns
+    -------
+    pandas.DataFrame
     """
     data_snls = pandas.read_csv(url)
     # merge RA, Dec as one of the four fields
@@ -81,7 +100,16 @@ def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacamp
 class SNLS( GridSurvey ):
     
     def __init__(self, data=None, **kwargs):
-        """ """
+        """ 
+        Initialize the SNLS class.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            observing data.
+
+        **kwargs goes to GridSurvey.__init__
+        """
         footprint = get_snls_footprint()
         fields = self._parse_fields(get_snls_field_coordinates(), footprint)
         

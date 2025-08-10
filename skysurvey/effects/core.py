@@ -12,7 +12,25 @@ class Effect( object ):
                  name=None,
                  frame=None,
                  model={}):
-        """ """
+        """ 
+        Initialize the Effect class.
+
+        Parameters
+        ----------
+        effect: `~sncosmo.PropagationEffect`
+            Propagation effect.
+
+        name: str
+            Name of the effect.
+
+        frame: str
+            'rest': rest-frame
+            'obs': observator-frame
+            'free':
+
+        model: dict
+            model parameters.
+        """
         self._effect = effect
         self._name = name
         self._frame = frame
@@ -21,6 +39,10 @@ class Effect( object ):
     @classmethod
     def from_sncosmo(cls, effect, name, frame, model={}):
         """ 
+        Load an effect from a sncosmo effect.
+
+        Parameters
+        ----------
         effect : `~sncosmo.PropagationEffect`
             Propagation effect.
             
@@ -31,13 +53,37 @@ class Effect( object ):
             'rest': rest-frame 
             'obs': observator-frame
             'free':
+
+        model: dict
+            model parameters.
             
+        Returns
+        -------
+        Effect
         """
         return cls(effect, name, frame, model=model)
     
     @classmethod
     def from_name(cls, name, which=None):
-        """ shortcut to usual effects """
+        """ 
+        Load an effect from its name.
+
+        Parameters
+        ----------
+        name: str
+            Name of the effect.
+            Could be: mw, hostdust, scatter.
+
+        which: str
+            which model to use for the effect.
+            - for mw: ccm89 (default)
+            - for hostdust: ccm89 (default)
+            - for scatter: g10, c11
+
+        Returns
+        -------
+        Effect
+        """
 
         
         name = name.lower().replace("_","") # case insensitive, no "_"
@@ -89,11 +135,11 @@ class Effect( object ):
     #  Internal     #
     # ============= #    
     def __repr__(self):
-        """ """        
+        """ string representation of the effect """        
         return self.__str__()
     
     def __str__(self):
-        """ """
+        """ string representation of the effect """
         import pprint
         out = { "effect": self.effect,
                 "name":self.name,
@@ -115,10 +161,10 @@ class Effect( object ):
     
     @property
     def frame(self):
-        """ """
+        """ frame of the effect """
         return self._frame
 
     @property
     def model(self):
-        """ """
+        """ model of the effect """
         return self._model

@@ -62,6 +62,16 @@ class HealpixSurvey( BaseSurvey ):
     
     def __init__(self, nside, data=None):
         """ 
+        Initialize the HealpixSurvey class.
+
+        Parameters
+        ----------
+        nside : int
+            healpix nside parameter
+
+        data: pandas.DataFrame
+            observing data.
+
         See also
         --------
         from_data: loads the instance given observing data.
@@ -99,6 +109,7 @@ class HealpixSurvey( BaseSurvey ):
                     mjd_range, skynoise_range,
                     ra_range=None, dec_range=None, **kwargs):
         """ 
+        Load an instance with random observing data.
 
         Parameters
         ----------
@@ -111,6 +122,12 @@ class HealpixSurvey( BaseSurvey ):
         bands: list of str
             list of bands that should be drawn.
 
+        mjd_range: list or array
+            min and max mjd for the random drawing.
+
+        skynoise_range: list or array
+            min and max skynoise for the random drawing.
+
         ra_range, dec_range: 2d-array, None
             min and max to define a coordinate range to be considered.
             None means no limit.
@@ -119,7 +136,7 @@ class HealpixSurvey( BaseSurvey ):
 
         Returns
         -------
-        instance
+        HealpixSurvey
         """
         this = cls(nside=nside)
         this.draw_random(size,  bands,  
@@ -200,7 +217,16 @@ class HealpixSurvey( BaseSurvey ):
     
     def get_observed_area(self, min_obs=1):
         """ get the observed area (in deg**2).
-        A healpix is consider observed if present more tha
+        A healpix is consider observed if present more than min_obs time.
+
+        Parameters
+        ----------
+        min_obs: int
+            minimum number of observations to consider a field as observed.
+
+        Returns
+        -------
+        float
         """
         if min_obs <=1: # 0 or 1 the same
             nfields = self.data["fieldid"].nunique()
@@ -250,7 +276,18 @@ class HealpixSurvey( BaseSurvey ):
         return polygons
 
     def get_skyarea(self, as_multipolygon=True):
-        """ multipolygon (or list) of field geometries  """
+        """ multipolygon (or list) of field geometries
+
+        Parameters
+        ----------
+        as_multipolygon: bool
+            if True, returns a multipolygon.
+            Otherwise, returns a list of polygons.
+
+        Returns
+        -------
+        shapely.geometry.MultiPolygon or list
+        """
         from shapely import ops, geometry
         
         ps = self.get_polygons(observed_fields=True, as_vertices=False)
@@ -304,7 +341,18 @@ class HealpixSurvey( BaseSurvey ):
         return df
 
     def get_field_centroid(self, origin=180):
-        """ """
+        """ get the centroid of the fields.
+
+        Parameters
+        ----------
+        origin: float
+            origin of the ra coordinates.
+
+        Returns
+        -------
+        (array, array)
+            ra, dec
+        """
         dec, ra = np.asarray(hp.pix2ang(self.nside, self.fieldids))*180/np.pi
         dec = 90-dec
         ra = (origin-ra)%360
@@ -535,7 +583,7 @@ class HealpixSurvey( BaseSurvey ):
         return pandas.Index(fieldids, name="fieldid")
    
     def metadata(self):
-        """ pandas Series containing meta data i formation """
+        """ pandas Series containing meta data information """
         meta = super().metadata
         meta["nside"] = self.nside
         return meta

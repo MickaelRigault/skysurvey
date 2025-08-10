@@ -12,10 +12,7 @@ from astropy.table import Table
 from .template import Template
 from .lightcurves import get_obsdata, _get_obsdata_
 
-
 __all__ = ["DataSet"]
-
-
 
 # ================== #
 #                    #
@@ -413,7 +410,6 @@ class DataSet(object):
         -------
         pandas.DataFrame
             the lightcurve
-
         """
         return self.get_data(index=index,
                              phase_range=phase_range,

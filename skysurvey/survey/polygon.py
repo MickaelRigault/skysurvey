@@ -21,7 +21,17 @@ class PolygonSurvey( BaseSurvey ):
     _DEFAULT_FIELDS = None
     
     def __init__(self, data=None, fields=None):
-        """ """
+        """ 
+        Initialize the PolygonSurvey class.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            observing data.
+
+        fields: geopandas.GeoDataFrame
+            field definitions.
+        """
         if fields is None:
             if self._DEFAULT_FIELDS is None:
                 raise NotImplementedError("No default fields known for this class. No fields given")
@@ -32,7 +42,30 @@ class PolygonSurvey( BaseSurvey ):
         
     @classmethod
     def from_pointings(cls, data, footprint=None, moc=None, rakey="ra", deckey="dec"):
-        """ """
+        """ 
+        Load an instance from pointings.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame or dict
+            observing data, must contain the rakey and deckey columns.
+
+        footprint: shapely.geometry
+            footprint in the sky of the observing camera
+
+        moc: mocpy.MOC
+            MOC representation of the observing camera
+
+        rakey: str
+            name of the R.A. column (in deg)
+
+        deckey: str
+            name of the Declination column (in deg)
+
+        Returns
+        -------
+        PolygonSurvey
+        """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data).copy()
 
@@ -60,7 +93,30 @@ class PolygonSurvey( BaseSurvey ):
                     bands, mjd_range, skynoise_range,
                     fields=None, **kwargs):
         """ 
-        fields
+        Load an instance with random observing data.
+
+        Parameters
+        ----------
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        mjd_range: list or array
+            min and max mjd for the random drawing.
+
+        skynoise_range: list or array
+            min and max skynoise for the random drawing.
+
+        fields: geopandas.GeoDataFrame
+            field definitions.
+
+        **kwargs goes to the draw_random() method
+
+        Returns
+        -------
+        PolygonSurvey
         """
         this = cls(fields=fields)
         this.draw_random(size,  bands,  
@@ -72,7 +128,18 @@ class PolygonSurvey( BaseSurvey ):
     #   Methods      #
     # ============== #
     def get_fields(self, observed=True):
-        """ """
+        """ 
+        Get the fields.
+
+        Parameters
+        ----------
+        observed: bool
+            if True, return only the observed fields.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
         if observed:
             if len(self.fieldids.names)==1: # Index
                 observed_fields = self.data[ self.fieldids.name ].unique()
@@ -255,7 +322,42 @@ class PolygonSurvey( BaseSurvey ):
                     gain_range=1, zp_range=25,
                     inplace=False, fieldids=None,
                     **kwargs):
-        """ """
+        """ 
+        Draw random observations.
+
+        Parameters
+        ----------
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        mjd_range: list or array
+            min and max mjd for the random drawing.
+
+        skynoise_range: list or array
+            min and max skynoise for the random drawing.
+
+        gain_range: list or array
+            min and max gain for the random drawing.
+
+        zp_range: list or array
+            min and max zp for the random drawing.
+
+        inplace: bool
+            if True, the data are stored in the instance.
+            Otherwise, a new instance is returned.
+
+        fieldids: list
+            list of fieldids to draw from.
+
+        **kwargs goes to _draw_random
+
+        Returns
+        -------
+        PolygonSurvey or None
+        """
         if fieldids is None:
             fieldids = self.fieldids
             
@@ -275,7 +377,44 @@ class PolygonSurvey( BaseSurvey ):
              vmin=None, vmax=None, cmap="tab10",
              autoscale=False,
             grid=True, **kwargs):
-        """ shows the sky coverage """
+        """ 
+        Show the sky coverage.
+
+        Parameters
+        ----------
+        stat: str
+            statistic to plot.
+
+        column: str
+            column to use for the statistic.
+
+        title: str
+            title of the plot.
+
+        data: pandas.DataFrame
+            data to plot.
+
+        origin: float
+            origin of the ra coordinates.
+
+        vmin, vmax: float
+            min and max values for the colorbar.
+
+        cmap: str
+            colormap to use.
+
+        autoscale: bool
+            if True, autoscale the plot.
+
+        grid: bool
+            if True, show the grid.
+
+        **kwargs goes to matplotlib.collections.PolyCollection
+
+        Returns
+        -------
+        matplotlib.figure
+        """
         import matplotlib.pyplot as plt
         from matplotlib.collections import PolyCollection
         from matplotlib.colors import to_rgba
@@ -325,7 +464,18 @@ class PolygonSurvey( BaseSurvey ):
     # ============== #
     @staticmethod
     def _parse_fields(fields):
-        """ """
+        """ 
+        Parse the fields.
+
+        Parameters
+        ----------
+        fields: geopandas.GeoDataFrame
+            field definitions.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
         return parse_fields(fields)
     
     @staticmethod
@@ -335,7 +485,34 @@ class PolygonSurvey( BaseSurvey ):
                      gain_range=1,
                      zp_range=[27,30]):
         """ 
-        *_range can be 2d-array [min, max] or single values. 
+        Draw random observations.
+
+        Parameters
+        ----------
+        fieldids: list
+            list of fieldids to draw from.
+
+        size: int
+            number of observations to draw
+
+        bands: list of str
+            list of bands that should be drawn.
+
+        mjd_range: list or array
+            min and max mjd for the random drawing.
+
+        skynoise_range: list or array
+            min and max skynoise for the random drawing.
+
+        gain_range: list or array
+            min and max gain for the random drawing.
+
+        zp_range: list or array
+            min and max zp for the random drawing.
+
+        Returns
+        -------
+        pandas.DataFrame
         """
         # np.resize(1, 2) -> [1,1]
         mjd = np.random.uniform(*np.resize(mjd_range,2), size=size)
