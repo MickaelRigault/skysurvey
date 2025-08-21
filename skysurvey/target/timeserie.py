@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 from .core import Transient
 from ..tools.utils import random_radec
 __all__ = ["TSTransient"]
@@ -18,6 +19,10 @@ class TSTransient( Transient ):
     >>> _ = snii.show_lightcurve(["ztfg","ztfr"], index=10, in_mag=True)
     """
     _RATE = 0.001
+    _MAGABS = None # None to be ignored.
+    # Format:
+    # - Gaussian: (loc, scatter)
+    # - skewed Gaussian: (loc, scatter_low, scatter_high)
     _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05}, 
                                "as": "z"},
                    t0 = {"func": np.random.uniform,
@@ -25,7 +30,7 @@ class TSTransient( Transient ):
                         },
                          
                    magabs = {"func": np.random.normal,
-                             "kwargs": {"loc": -18, "scale": 1}
+                             "kwargs": {"loc": np.nan, "scale": 1} # forcing loc to be given
                             },
                              
                    magobs = {"func": "magabs_to_magobs",
@@ -59,6 +64,8 @@ class TSTransient( Transient ):
             self.set_template(source_or_template)
 
         super().__init__(*args, **kwargs)
+        if self._MAGABS is not None: #
+            self.set_magabs(self._MAGABS)
     
     @classmethod
     def from_sncosmo(cls, source_or_template,
@@ -88,14 +95,15 @@ class TSTransient( Transient ):
             parameters are drawn. 
 
         magabs: float
-            Absolute magnitude. See cls._MODEL for default value (e.g. -18)
-            (the absolute magnitude will randomly draw from magabs and magscatter
-            see _MODEL or input model)
+            Absolute magnitude central value.
+            This bypasses cls._MAGABS.
             
-        magscatter: float
-            abslute magnitude scatter. See cls._MODEL for default value (e.g. 1)
-            (the absolute magnitude will randomly draw from magabs and magscatter
-            see _MODEL or input model)
+        magscatter: float, list
+            = ignored if magabs is None =
+            absolute magnitude scatter. 
+            If float a gaussian scale is assumed. If list, an assymetric gaussian
+            is assumed such that  scatter_low, scatter_high = magscatter.
+            This bypasses cls._MAGABS.
 
         Returns
         -------
@@ -118,20 +126,37 @@ class TSTransient( Transient ):
             this.update_model(**model) # will update any model entry.
 
         # short cut to update the model
-        this.set_magabs([magabs, magscatter]) # 
+        if magabs is not None: # This overwrites with is inside _MAGABS.
+            if np.ndim(magscatter) == 0: #float
+                magabs_ = magabs, magscatter
+            else:
+                magabs_ = [magabs] + list(magscatter)
+                
+            this.set_magabs(magabs_) #
 
         return this
 
     def set_magabs(self, magabs):
         """ update the model for the loc *and* scale of the absolute magnitude distribution """
         if magabs is not None:
-            self.update_model_parameter(magabs={"loc":magabs[0], "scale":magabs[1] })        
+            loc, *scale = magabs
+            if len(scale) == 1: # gaussian
+                model_magabs = {"func": np.random.normal, "kwargs": {"loc": loc, "scale": scale[0]}}
+
+            elif len(scale) == 2: # skewed gaussian
+                from ..tools.stats import skewed_gaussian_pdf
+                model_magabs = {"func": skewed_gaussian_pdf,
+                                "kwargs": {"xx": f"{loc-scale[0]*10}:{loc+scale[1]*10}:10000j",
+                                           "loc": loc, "scale_low": scale[0], "scale_high": scale[1]}
+                                }
+                
+                
+            self.update_model(magabs=model_magabs)
         
 
 
 class MultiTemplateTSTransient( TSTransient ):
-
-
+            
     def as_targets(self):
         """ convert the collection in a list of same-template targets """
         if "template" not in self.data:

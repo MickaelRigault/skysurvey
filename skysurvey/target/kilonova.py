@@ -11,25 +11,28 @@ __all__ = ["Kilonova"]
 
 
 def read_possis_file(filename):
-    """Read in a spectral model created by POSSIS (1906.04205), as appropriate
-       for injestion as a skysurvey.source.angular.AngularTimeSeriesSource.
-       Model grids can be found here: https://github.com/mbulla/kilonova_models.
+    """Read in a spectral model created by POSSIS (1906.04205).
+
+    This is as appropriate for injestion as a
+    `skysurvey.source.angular.AngularTimeSeriesSource`. Model grids can be
+    found here: https://github.com/mbulla/kilonova_models.
 
     Parameters
     ----------
     filename : str
-        Path to the POSSIS file
+        Path to the POSSIS file.
+
     Returns
     -------
     phase : `~numpy.ndarray`
         Phases in days.
     wave : `~numpy.ndarray`
         Wavelengths in Angstroms.
-    flux : `~numpy.ndarray`
-        Model spectral flux density in arbitrary units.
-        Must have shape `(num_phases)`.
     cos_theta : `~numpy.ndarray`
-        cosine of viewing angle
+        Cosine of viewing angle.
+    flux : `~numpy.ndarray`
+        Model spectral flux density in arbitrary units. Must have shape
+        `(num_phases)`.
     """
 
     f = open(filename)
@@ -58,7 +61,7 @@ def read_possis_file(filename):
     return phase, wave, cos_theta, flux
 
 def get_kilonova_model(filename=None):
-    """ """
+    """Get a kilonova model from a POSSIS file."""
     from ..source.angular import AngularTimeSeriesSource
     if filename is None:
         import os
@@ -79,6 +82,29 @@ def get_kilonova_model(filename=None):
 
 _KILONOVA_MODEL = get_kilonova_model()
 class Kilonova( Transient ):
+    """A class to model kilonovae.
+
+    Parameters
+    ----------
+    _KIND : str, optional
+        The kind of transient. The default is "kilonova".
+    _TEMPLATE : sncosmo.Model, optional
+        The template to use. The default is a `sncosmo.Model` with a
+        `skysurvey.source.angular.AngularTimeSeriesSource` source.
+    _RATE : float, optional
+        The rate of kilonovae. The default is 1e3.
+    _MODEL : dict, optional
+        The model to use. The default is a dictionary with the following
+        keys:
+
+        - `t0`: The time of maximum of the kilonova.
+        - `redshift`: The redshift of the kilonova.
+        - `magabs`: The absolute magnitude of the kilonova.
+        - `magobs`: The observed magnitude of the kilonova.
+        - `amplitude`: The amplitude of the kilonova.
+        - `theta`: The viewing angle of the kilonova.
+        - `radec`: The ra and dec of the kilonova.
+    """
 
     _KIND = "kilonova"
     _TEMPLATE = _KILONOVA_MODEL

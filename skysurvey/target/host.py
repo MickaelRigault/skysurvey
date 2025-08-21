@@ -8,13 +8,29 @@ import numpy as np
 #                 #
 # =============== #
 def get_sfr_as_function_of_mass_and_redshift(mass, redshift):
-    """ equation A.7 from Childress et al. 2014, used in Wiseman et al. 2021"""
+    """Get the star formation rate as a function of mass and redshift.
+
+    This is based on equation A.7 from Childress et al. 2014, used in
+    Wiseman et al. 2021.
+
+    Parameters
+    ----------
+    mass : float or array
+        The mass of the host galaxy.
+    redshift : float or array
+        The redshift of the host galaxy.
+
+    Returns
+    -------
+    float or array
+        The star formation rate.
+    """
     ampl = (10**(mass)/10**10)**0.7
     fraction = np.exp(1.9*redshift)/ (np.exp(1.7* (redshift-2)) + np.exp(0.2* (redshift-2)))
     return  ampl * fraction
 
 def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
-    """ """
+    """Get the Schechter probability density function."""
     delta_logmass = mass-mstar
     # single schechter
     if alpha2 is None or phi2 is None: 
@@ -23,7 +39,23 @@ def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
     return np.log(10)* np.exp(-10**(delta_logmass)) * 10**(delta_logmass) * (phi*10**(delta_logmass*alpha) + 
                                                                     phi2*10**(delta_logmass*alpha2))
 def get_stellarmassfunction(redshift, which="all", xx="6:13:100j"):
-    """ """
+    """Get the stellar mass function.
+
+    Parameters
+    ----------
+    redshift : float or array
+        The redshift of the host galaxy.
+    which : str, optional
+        Which stellar mass function to use. Can be "all", "blue", or "red".
+        The default is "all".
+    xx : str, optional
+        The mass range to use. The default is "6:13:100j".
+
+    Returns
+    -------
+    tuple
+        A tuple containing the mass array and the pdf.
+    """
     if type(xx) == str: # assumed r_ input
         xx = eval(f"np.r_[{xx}]")
                 

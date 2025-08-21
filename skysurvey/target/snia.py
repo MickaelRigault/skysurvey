@@ -13,38 +13,55 @@ __all__ = ["SNeIa"]
 #                    #
 # ================== #
 class SNeIaColor( object ):
+    """A class to model the color of SNe Ia."""
 
     @staticmethod
     def color_rvs(size, a=3.63, loc=-0.416, scale=1.62):
-        """ rvs draw from the alpha function (scipy.stats.alpha)."""
+        """Draw random variates from an alpha function.
+
+        This is used to model the color of SNe Ia.
+
+        Parameters
+        ----------
+        size : int
+            The number of random variates to draw.
+        a : float, optional
+            The alpha parameter of the alpha function. The default is 3.63.
+        loc : float, optional
+            The location parameter of the alpha function. The default is -0.416.
+        scale : float, optional
+            The scale parameter of the alpha function. The default is 1.62.
+
+        Returns
+        -------
+        ndarray
+            The drawn random variates.
+        """
         return stats.alpha.rvs(size=size, a=a, loc=loc, scale=scale)
 
     @staticmethod
     def asymetric_gaussian(xx="-0.3:1:0.001", cint=-0.05, sigmalow=0.03, sigmahigh=0.1):
-        """ get an asymetric gaussian distribution
-        
-        As in Scolnic and Kessler 2016 (https://arxiv.org/pdf/1603.01559)
+        """Get an asymetric gaussian distribution.
+
+        As in Scolnic and Kessler 2016 (https://arxiv.org/pdf/1603.01559).
 
         Parameters
         ----------
-        xx: str
-            the x-axis of the color distribution. It should be a string with the
-            format "min:max:step". The default is "-0.3:1:0.01".
-            inputs np.r_[xx]
-
-        cint: float
-            the mean of the intrinsic color distribution.
-
-        sigmalow: float
-            the standard deviation for the bluer tails
-
-        sigmahigh: float
-            the standard deviation for the redder tails
+        xx : str, optional
+            The x-axis of the color distribution. It should be a string with
+            the format "min:max:step". The default is "-0.3:1:0.01".
+            This is evaluated as `np.r_[xx]`.
+        cint : float, optional
+            The mean of the intrinsic color distribution. The default is -0.05.
+        sigmalow : float, optional
+            The standard deviation for the bluer tails. The default is 0.03.
+        sigmahigh : float, optional
+            The standard deviation for the redder tails. The default is 0.1.
 
         Returns
         -------
-        2d-array:
-           xx, pdf
+        tuple
+            A tuple containing the x-axis and the pdf.
         """
         if type(xx) == str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
@@ -58,30 +75,28 @@ class SNeIaColor( object ):
         
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.075, sigmaint=0.05, tau=0.14):
-        """ exponential decay convolved with and intrinsic gaussian color distribution.
+        """Get an exponential decay convolved with and intrinsic gaussian color distribution.
 
-        As in Ginolin et al. 2024 (https://arxiv.org/pdf/2406.02072)
+        As in Ginolin et al. 2024 (https://arxiv.org/pdf/2406.02072).
 
         Parameters
         ----------
-        xx: str
-            the x-axis of the color distribution. It should be a string with the
-            format "min:max:step". The default is "-0.3:1:0.01".
-            inputs np.r_[xx]
-
-        cint: float
-            the mean of the intrinsic color distribution.
-
-        sigmaint: float
-            the standard deviation of the intrinsic color distribution.
-
-        tau: float
-            the decay constant of the dust distribution.
+        xx : str, optional
+            The x-axis of the color distribution. It should be a string with
+            the format "min:max:step". The default is "-0.3:1:0.01".
+            This is evaluated as `np.r_[xx]`.
+        cint : float, optional
+            The mean of the intrinsic color distribution. The default is -0.075.
+        sigmaint : float, optional
+            The standard deviation of the intrinsic color distribution.
+            The default is 0.05.
+        tau : float, optional
+            The decay constant of the dust distribution. The default is 0.14.
 
         Returns
         -------
-        2d-array:
-           xx, pdf
+        tuple
+            A tuple containing the x-axis and the pdf.
         """
         if type(xx) == str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
@@ -99,47 +114,44 @@ class SNeIaColor( object ):
 
 
 class SNeIaStretch( object ):
+    """A class to model the stretch of SNe Ia."""
 
     @staticmethod
     def nicolas2021( xx="-4:4:0.005", 
                      mu1=0.33, sigma1=0.64, 
                      mu2=-1.50, sigma2=0.58, a=0.45,
                      fprompt=0.5, redshift=None):
-        
-        """ pdf of the Nicolas (2021) model
-        
+        """Get the pdf of the Nicolas (2021) model.
+
         Parameters
         ----------
-        xx: str or array
-            definition range for the parameters.
-            draws will be done from this array given the 
-            pdf that will be estimated for it.
-            If string this inputs np.r_[xx]
-
-        mu1, mu2: float
-            gaussian centroid (loc)
-
-        sigma1, sigma2: float
-            scale of the gaussian distribution.
-
-        a: float
-            relative influence of both modes (1 or 2) 
-            in the delayed environment. 
-            a>0.5 means more mode 1.
-
-        fprompt: float
-            fraction of prompt SNeIa.
-            = ignored if redshift given = 
-
-        redshift: 
-            target's redshift. This defined fprompt.
+        xx : str or array, optional
+            Definition range for the parameters. Draws will be done from this
+            array given the pdf that will be estimated for it. If a string is
+            given, it is evaluated as `np.r_[xx]`. The default is
+            "-4:4:0.005".
+        mu1 : float, optional
+            The mean of the first gaussian. The default is 0.33.
+        sigma1 : float, optional
+            The standard deviation of the first gaussian. The default is 0.64.
+        mu2 : float, optional
+            The mean of the second gaussian. The default is -1.50.
+        sigma2 : float, optional
+            The standard deviation of the second gaussian. The default is 0.58.
+        a : float, optional
+            The relative influence of both modes (1 or 2) in the delayed
+            environment. `a>0.5` means more mode 1. The default is 0.45.
+        fprompt : float, optional
+            The fraction of prompt SNe Ia. This is ignored if `redshift` is
+            given. The default is 0.5.
+        redshift : array, optional
+            The redshift of the target. This defines `fprompt`. The default is
+            None.
 
         Returns
         -------
-        array, array
-            - xx (M)
-            - pdf (M,) or (N, M) see redshift and fprompt.
-
+        tuple
+            A tuple containing the x-axis and the pdf.
         """
         from scipy.stats import norm
         if type(xx) == str: # assumed r_ input
@@ -158,37 +170,35 @@ class SNeIaStretch( object ):
     
 
 class SNeIaMagnitude( object ):
+    """A class to model the magnitude of SNe Ia."""
 
     @staticmethod
     def tripp1998( x1, c,
                    mabs=-19.3, sigmaint=0.10,
                    alpha=-0.14, beta=3.15):
-        """ 2-parameter absolute (natural) SNeIa magnitude
-        
+        """Get the 2-parameter absolute (natural) SNe Ia magnitude.
+
         Parameters
         ----------
-        x1: array
-            lightcurve stretch (x1 and c must have the same size)
-
-        c: array
-            lightcurve color (x1 and c must have the same size)
-
-        mabs: float
-            average absolute magnitude at c=0 and x1=0
-
-        sigmaint: float
-            scale of the normal grey scatter (on mabs) 
-
-        alpha: float
-            stretch linear law coefficient
-
-        beta: float
-            color linear law coeeficient
+        x1 : array
+            The lightcurve stretch. `x1` and `c` must have the same size.
+        c : array
+            The lightcurve color. `x1` and `c` must have the same size.
+        mabs : float, optional
+            The average absolute magnitude at `c=0` and `x1=0`. The default is
+            -19.3.
+        sigmaint : float, optional
+            The scale of the normal grey scatter (on `mabs`). The default is
+            0.10.
+        alpha : float, optional
+            The stretch linear law coefficient. The default is -0.14.
+        beta : float, optional
+            The color linear law coeeficient. The default is 3.15.
 
         Returns
         -------
         array
-           absolute magnitude same format as x1 and c.
+           The absolute magnitude, with the same format as `x1` and `c`.
         """
         mabs = np.random.normal(loc=mabs, scale=sigmaint, size=len(x1))
         mabs_notstandard = mabs + (x1*alpha + c*beta)
@@ -199,38 +209,34 @@ class SNeIaMagnitude( object ):
     def tripp_and_step( cls, x1, c, isup,
                         mabs=-19.3, sigmaint=0.10,
                         alpha=-0.14, beta=3.15, gamma=0.1):
-        """ 2-parameter and step absolute (natural) SNeIa magnitude
-        
+        """Get the 2-parameter and step absolute (natural) SNe Ia magnitude.
+
         Parameters
         ----------
-        x1: array
-            lightcurve stretch (x1 and c must have the same size)
-
-        c: array
-            lightcurve color (x1 and c must have the same size)
-
-        isup: array of 0 or 1
-            flag saying which target has +gamma/2 (1) or -gamma/2 (0)
-
-        mabs: float
-            average absolute magnitude at c=0 and x1=0
-
-        sigmaint: float
-            scale of the normal grey scatter (on mabs) 
-
-        alpha: float
-            stretch linear law coefficient
-
-        beta: float
-            color linear law coeeficient
-
-        gamma: float
-            the step's amplitude.
+        x1 : array
+            The lightcurve stretch. `x1` and `c` must have the same size.
+        c : array
+            The lightcurve color. `x1` and `c` must have the same size.
+        isup : array
+            An array of 0 or 1, flagging which target has `+gamma/2` (1) or
+            `-gamma/2` (0).
+        mabs : float, optional
+            The average absolute magnitude at `c=0` and `x1=0`. The default is
+            -19.3.
+        sigmaint : float, optional
+            The scale of the normal grey scatter (on `mabs`). The default is
+            0.10.
+        alpha : float, optional
+            The stretch linear law coefficient. The default is -0.14.
+        beta : float, optional
+            The color linear law coeeficient. The default is 3.15.
+        gamma : float, optional
+            The step's amplitude. The default is 0.1.
 
         Returns
         -------
         array
-           absolute magnitude same format as x1,c and isup
+           The absolute magnitude, with the same format as `x1`, `c` and `isup`.
         """
         tripp_mabs = cls.tripp1998( x1, c,
                                     mabs=mabs, sigmaint=sigmaint,
@@ -242,41 +248,36 @@ class SNeIaMagnitude( object ):
                             mabs=-19.3, sigmaint=0.10,
                             alpha=-0.14, beta=3.15,
                             gamma=0.1, split=10):
-        """ 2-parameter and mass step absolute (natural) SNeIa magnitude
-        
+        """Get the 2-parameter and mass step absolute (natural) SNe Ia magnitude.
+
         Parameters
         ----------
-        x1: array
-            lightcurve stretch (x1 and c must have the same size)
-
-        c: array
-            lightcurve color (x1 and c must have the same size)
-
-        hostmass: array
-            host stellar mass
-
-        mabs: float
-            average absolute magnitude at c=0 and x1=0
-
-        sigmaint: float
-            scale of the normal grey scatter (on mabs) 
-
-        alpha: float
-            stretch linear law coefficient
-
-        beta: float
-            color linear law coeeficient
-
-        gamma: float
-            the step's amplitude.
-
-        split: float
-            host mass boundary between low-mass and high-mass hosts.
+        x1 : array
+            The lightcurve stretch. `x1` and `c` must have the same size.
+        c : array
+            The lightcurve color. `x1` and `c` must have the same size.
+        hostmass : array
+            The host stellar mass.
+        mabs : float, optional
+            The average absolute magnitude at `c=0` and `x1=0`. The default is
+            -19.3.
+        sigmaint : float, optional
+            The scale of the normal grey scatter (on `mabs`). The default is
+            0.10.
+        alpha : float, optional
+            The stretch linear law coefficient. The default is -0.14.
+        beta : float, optional
+            The color linear law coeeficient. The default is 3.15.
+        gamma : float, optional
+            The step's amplitude. The default is 0.1.
+        split : float, optional
+            The host mass boundary between low-mass and high-mass hosts.
+            The default is 10.
 
         Returns
         -------
         array
-           absolute magnitude same format as x1,c and isup
+           The absolute magnitude, with the same format as `x1`, `c` and `isup`.
         """
         isup = np.asarray( hostmass>split, dtype=float)
         return cls.tripp_and_step( x1, c, isup,
@@ -290,6 +291,29 @@ class SNeIaMagnitude( object ):
 
 
 class SNeIa( Transient ):
+    """A class to model SNe Ia.
+
+    Parameters
+    ----------
+    _KIND : str, optional
+        The kind of transient. The default is "SNIa".
+    _TEMPLATE : str, optional
+        The template to use. The default is "salt2".
+    _RATE : float, optional
+        The rate of SNe Ia. The default is 2.35 * 10**4.
+    _MODEL : dict, optional
+        The model to use. The default is a dictionary with the following
+        keys:
+
+        - `redshift`: The redshift of the SNe Ia.
+        - `x1`: The stretch of the SNe Ia.
+        - `c`: The color of the SNe Ia.
+        - `t0`: The time of maximum of the SNe Ia.
+        - `magabs`: The absolute magnitude of the SNe Ia.
+        - `magobs`: The observed magnitude of the SNe Ia.
+        - `x0`: The amplitude of the SNe Ia.
+        - `radec`: The ra and dec of the SNe Ia.
+    """
 
     _KIND = "SNIa"
     _TEMPLATE = "salt2"

@@ -10,22 +10,23 @@ __all__ = ["HealpixSurvey"]
 
 
 def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
-    """ get the healpix pixel index (ipix) that are with a given ra and dec range
+    """Get the healpix pixel index (ipix) that are with a given ra and dec range.
 
     Parameters
     ----------
-    ra_range, dec_range: 2d-array, None
-        min and max to define a coordinate range to be considered.
+    nside : int
+        Healpix nside.
+    ra_range, dec_range: 2d-array, None, optional
+        Min and max to define a coordinate range to be considered.
         None means no limit.
-
-    in_rad: bool
-        are the ra and dec coordinates in radian (True)
-        or degree (False)
+    in_rad: bool, optional
+        Are the ra and dec coordinates in radian (True)
+        or degree (False).
 
     Returns
     -------
     list
-        list of healpix pixel index ipix
+        List of healpix pixel index ipix.
     """
     npix = hp.nside2npix(nside)
     pixs = np.arange(npix) # list of all healpix pixels
@@ -237,19 +238,17 @@ class HealpixSurvey( BaseSurvey ):
         return self.get_field_area() * nfields
 
     def get_polygons(self, observed_fields=False, as_vertices=False, origin=180):
-        """ returns a list of polygon 
+        """Get a list of polygons.
 
         Parameters
         ----------
-        observed_fields: bool
-            should this be limited to observed fields ?
-
-        as_vertices: bool
-            should this returns a list of shapely.geometry.Polygon (False)
+        observed_fields: bool, optional
+            Should this be limited to observed fields?
+        as_vertices: bool, optional
+            Should this returns a list of shapely.geometry.Polygon (False)
             or its vertices (shape N [fields], 2 [ra, dec], 4[corners]).
-
-        origin: float
-            origin of the R.A. coordinate (center of image)
+        origin: float, optional
+            Origin of the R.A. coordinate (center of image).
 
         Returns
         -------
@@ -276,12 +275,12 @@ class HealpixSurvey( BaseSurvey ):
         return polygons
 
     def get_skyarea(self, as_multipolygon=True):
-        """ multipolygon (or list) of field geometries
+        """Get multipolygon (or list) of field geometries.
 
         Parameters
         ----------
-        as_multipolygon: bool
-            if True, returns a multipolygon.
+        as_multipolygon: bool, optional
+            If True, returns a multipolygon.
             Otherwise, returns a list of polygons.
 
         Returns
@@ -300,18 +299,16 @@ class HealpixSurvey( BaseSurvey ):
     # ------- #
 
     def radec_to_fieldid(self, radec, origin=180, observed_fields=False):
-        """ get the fieldid associated to the given coordinates 
+        """Get the fieldid associated to the given coordinates.
 
         Parameters
         ----------
         radec: pandas.DataFrame or 2d array
-            coordinates in degree
-
-        origin: float
-            value of the central R.A.
-            
-        observed_fields: bool
-            should this be limited to fields actually observed ?
+            Coordinates in degree.
+        origin: float, optional
+            Value of the central R.A.
+        observed_fields: bool, optional
+            Should this be limited to fields actually observed?
             This is ignored is self.data is None.
 
         Returns
@@ -341,12 +338,12 @@ class HealpixSurvey( BaseSurvey ):
         return df
 
     def get_field_centroid(self, origin=180):
-        """ get the centroid of the fields.
+        """Get the centroid of the fields.
 
         Parameters
         ----------
-        origin: float
-            origin of the ra coordinates.
+        origin: float, optional
+            Origin of the ra coordinates.
 
         Returns
         -------
@@ -491,46 +488,32 @@ class HealpixSurvey( BaseSurvey ):
                      gain_range=1,
                      zp_range=[27,30],
                      ra_range=None, dec_range=None):
-        """ draw observations | internal.
+        """Draw observations | internal.
 
         Parameters
         ----------
         nside : int
-            healpix nside parameter
-
+            Healpix nside parameter.
         size: int
-            number of observations to draw
-
+            Number of observations to draw.
         bands: list of str
-            list of bands that should be drawn.
-
-        ra_range, dec_range: 2d-array, None
-            min and max to define a coordinate range to be considered.
+            List of bands that should be drawn.
+        mjd_range: list or array
+            Min and max mjd for the random drawing.
+        skynoise_range: list or array
+            Min and max skynoise for the random drawing.
+        gain_range: list or array, optional
+            Min and max gain for the random drawing.
+        zp_range: list or array, optional
+            Min and max zp for the random drawing.
+        ra_range, dec_range: 2d-array, None, optional
+            Min and max to define a coordinate range to be considered.
             None means no limit.
-
-        skynoise_range, gain_range, zp_range: 2d-array, float, int
-            range to be considered.
-            If float or int, this value will always be used.
-            otherwise, uniform distribution between the range assumed.
-
-        inplace: bool
-            shall this method replace the current self.data or
-            return a new instance of the class with the 
-            generated observing data.
-            
-        nside: int
-            = ignore if inplace is set to True =
-            provide a new healpix nside parameters.
 
         Returns
         -------
-        class instance or None
-            see the inplace option.
-
-        See also
-        --------
-        from_random: generate random observing data and loads the instance.
-        draw_random: main function calling _draw_random
+        pandas.DataFrame
+            A DataFrame with the drawn observations.
         """
         # np.resize(1, 2) -> [1,1]
         mjd = np.random.uniform(*np.resize(mjd_range,2), size=size)
@@ -583,7 +566,12 @@ class HealpixSurvey( BaseSurvey ):
         return pandas.Index(fieldids, name="fieldid")
    
     def metadata(self):
-        """ pandas Series containing meta data information """
+        """Pandas Series containing meta data information.
+
+        Returns
+        -------
+        pandas.Series
+        """
         meta = super().metadata
         meta["nside"] = self.nside
         return meta

@@ -26,7 +26,6 @@ class Effect( object ):
         frame: str
             'rest': rest-frame
             'obs': observator-frame
-            'free':
 
         model: dict
             model parameters.
@@ -52,7 +51,6 @@ class Effect( object ):
         frame : str
             'rest': rest-frame 
             'obs': observator-frame
-            'free':
 
         model: dict
             model parameters.
@@ -106,13 +104,11 @@ class Effect( object ):
             else: 
                 raise NotImplementedError("only ccm89 dust law implemented")
                 
-        #    effect = sncosmo.CCM89Dust()
             name = "host"
             frame = "rest"
             model = hostdust.dust_model
-            
+
         # SNIa color scatter
-        
         elif name.lower() in ["scatter", "scattercolor", "color_scatter", "colorscatter"]:
             name = "colorscatter"
             frame = "rest"
@@ -153,10 +149,12 @@ class Effect( object ):
     # ============= #
     @property
     def effect(self):
+        """ Access the effect """
         return self._effect
     
     @property
     def name(self):
+        """ the name of the effect """
         return self._name
     
     @property

@@ -153,19 +153,19 @@ class PolygonSurvey( BaseSurvey ):
         return fields
     
     def get_observed_area(self, nside=200):
-        """ measures the observed area 
-        
+        """Measure the observed area.
+
         This uses healpy for accuracy.
 
         Parameters
         ----------
-        hpsize: int
-            healpix nside
+        nside: int, optional
+            Healpix nside.
         
         Returns
         -------
         float
-            area is deg2
+            Area in deg2.
         """
         hsurvey = self.to_healpix(nside=nside, pass_data=False)
         return hsurvey.get_observed_area()# min_obs=min_obs) # not correct with pass_data=False yet.
@@ -173,30 +173,26 @@ class PolygonSurvey( BaseSurvey ):
     def to_healpix(self, nside, pass_data=True, backend="polars",
                        polars_to_pandas=True,
                        use_pyarrow_extension_array=False):
-        """ convert the current polygon survey into a healpix survey.
+        """Convert the current polygon survey into a healpix survey.
         
         Parameters
         ----------
         nside: int
-            healpix nside
-        
-        pass_data: bool
-            should the returned survey have the full data of just the fieldid matching ?
-
-        backend: str
-            which backend to use to merge the data (speed issue):
+            Healpix nside.
+        pass_data: bool, optional
+            Should the returned survey have the full data of just the fieldid matching?
+        backend: str, optional
+            Which backend to use to merge the data (speed issue):
             - polars (fastest): requires polars installed -> converted to pandas at the end
             - pandas (classic): the normal way
             - dask (lazy): as persisted dask.dataframe is returned
-
-        polars_to_pandas: bool
+        polars_to_pandas: bool, optional
             = ignored if backend != 'polars' =
-            should the dataframe be converted into a pandas.DataFrame or say a polars.DataFrame
-            (using the to_pandas() option)
-
-        use_pyarrow_extension_array: bool
+            Should the dataframe be converted into a pandas.DataFrame or say a polars.DataFrame
+            (using the to_pandas() option).
+        use_pyarrow_extension_array: bool, optional
             = ignored in backend != 'polars' or polars_to_pandas is not True = 
-            should the pandas dataframe be based on numpy array (slow to load but faster then)
+            Should the pandas dataframe be based on numpy array (slow to load but faster then)
             or based on pyarrow array (like in polars) ; faster but numpy.asarray will be 
             used by pandas when need (which will then slow things down).
             
@@ -283,15 +279,14 @@ class PolygonSurvey( BaseSurvey ):
     #  core   #
     # ------- #
     def radec_to_fieldid(self, radec, observed_fields=False):
-        """ get the fieldid associated to the given coordinates 
+        """Get the fieldid associated to the given coordinates.
 
         Parameters
         ----------
         radec: pandas.DataFrame or 2d array
-            coordinates in degree
-            
-        observed_fields: bool
-            should this be limited to fields actually observed ?
+            Coordinates in degree.
+        observed_fields: bool, optional
+            Should this be limited to fields actually observed?
             This is ignored is self.data is None.
 
         Returns
@@ -377,39 +372,30 @@ class PolygonSurvey( BaseSurvey ):
              vmin=None, vmax=None, cmap="tab10",
              autoscale=False,
             grid=True, **kwargs):
-        """ 
-        Show the sky coverage.
+        """Show the sky coverage.
 
         Parameters
         ----------
-        stat: str
-            statistic to plot.
-
-        column: str
-            column to use for the statistic.
-
-        title: str
-            title of the plot.
-
-        data: pandas.DataFrame
-            data to plot.
-
-        origin: float
-            origin of the ra coordinates.
-
-        vmin, vmax: float
-            min and max values for the colorbar.
-
-        cmap: str
-            colormap to use.
-
-        autoscale: bool
-            if True, autoscale the plot.
-
-        grid: bool
-            if True, show the grid.
-
-        **kwargs goes to matplotlib.collections.PolyCollection
+        stat: str, optional
+            Statistic to plot.
+        column: str, optional
+            Column to use for the statistic.
+        title: str, optional
+            Title of the plot.
+        data: pandas.DataFrame, optional
+            Data to plot.
+        origin: float, optional
+            Origin of the ra coordinates.
+        vmin, vmax: float, optional
+            Min and max values for the colorbar.
+        cmap: str, optional
+            Colormap to use.
+        autoscale: bool, optional
+            If True, autoscale the plot.
+        grid: bool, optional
+            If True, show the grid.
+        **kwargs
+            Goes to matplotlib.collections.PolyCollection.
 
         Returns
         -------
@@ -534,14 +520,14 @@ class PolygonSurvey( BaseSurvey ):
     # ============== #
     @property
     def fieldids(self):
-        """ list of fields id """
+        """List of fields id."""
         if self.fields is None:
             return None
         return self.fields.index
     
     @property
     def nfields(self):
-        """ shortcut to npix """
+        """Number of fields."""
         if self.fields is None:
             return None
         return len(self.fields)

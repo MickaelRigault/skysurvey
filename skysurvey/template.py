@@ -91,7 +91,13 @@ def parse_template(template):
 class Template( object ):
 
     def __init__(self, sncosmo_model):
-        """ """
+        """Initialize the Template class.
+
+        Parameters
+        ----------
+        sncosmo_model: sncosmo.Model
+            The sncosmo model.
+        """
         self._sncosmo_model = sncosmo_model
 
     @classmethod
@@ -164,9 +170,29 @@ class Template( object ):
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, in_mag=False, zp=25, zpsys="ab",
                            **kwargs):
-        """ get the lightcurves (flux or mag)
+        """Get the lightcurves (flux or mag).
 
+        Parameters
+        ----------
+        band: str or list
+            Band or list of bands.
+        times: array
+            Array of times.
+        sncosmo_model: sncosmo.Model, optional
+            The sncosmo model to use. If None, the instance's model is used.
+        in_mag: bool, optional
+            If True, return the lightcurve in magnitude.
+        zp: float, optional
+            Zero point for the flux.
+        zpsys: str, optional
+            Zero point system.
+        **kwargs
+            Goes to self.get() to set the model parameters.
 
+        Returns
+        -------
+        array
+            The lightcurve values.
         """
 
         if sncosmo_model is None:
@@ -244,7 +270,27 @@ class Template( object ):
     # -------- #
     def show_spectum(self, time, lbdas, params={},
                          ax=None, fig=None, **kwargs):
-        """ """
+        """Show the spectrum at a given time.
+
+        Parameters
+        ----------
+        time: float
+            Time (in phase).
+        lbdas: array
+            Wavelengths.
+        params: dict, optional
+            Parameters for the model.
+        ax: matplotlib.axes, optional
+            The axes to plot on.
+        fig: matplotlib.figure, optional
+            The figure to plot on.
+        **kwargs
+            Goes to ax.plot().
+
+        Returns
+        -------
+        matplotlib.figure
+        """
         spec = self.get_spectrum(time, lbdas, **params)
 
         # ------- #
@@ -266,7 +312,43 @@ class Template( object ):
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
-        """ """
+        """Show the lightcurve.
+
+        Parameters
+        ----------
+        band: str or list
+            Band or list of bands.
+        params: dict, optional
+            Parameters for the model.
+        ax: matplotlib.axes, optional
+            The axes to plot on.
+        fig: matplotlib.figure, optional
+            The figure to plot on.
+        colors: list, optional
+            List of colors for the bands.
+        phase_range: list, optional
+            Phase range to plot.
+        npoints: int, optional
+            Number of points to plot.
+        zp: float, optional
+            Zero point for the flux.
+        zpsys: str, optional
+            Zero point system.
+        format_time: bool, optional
+            If True, format the time axis.
+        t0_format: str, optional
+            Format of the t0.
+        in_mag: bool, optional
+            If True, plot in magnitude.
+        invert_mag: bool, optional
+            If True, invert the magnitude axis.
+        **kwargs
+            Goes to ax.plot().
+
+        Returns
+        -------
+        matplotlib.figure
+        """
         from .config import get_band_color
         # get the sncosmo_model
         if params is None:
@@ -356,7 +438,28 @@ class Template( object ):
                      vparam_names=None,
                      bounds=None,
                      **kwargs):
-        """ """
+        """Fit the data with the template.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The data to fit.
+        guessparams: dict, optional
+            Guess parameters for the fit.
+        fixedparams: dict, optional
+            Fixed parameters for the fit.
+        vparam_names: list, optional
+            List of parameters to vary.
+        bounds: dict, optional
+            Bounds for the parameters.
+        **kwargs
+            Goes to sncosmo.fit_lc().
+
+        Returns
+        -------
+        pandas.DataFrame, pandas.Series
+            The results of the fit.
+        """
 
         if vparam_names is None:
             vparam_names = self.parameters.copy()
@@ -379,7 +482,24 @@ class Template( object ):
 
     @staticmethod
     def _fit_data(data, sncosmo_model, *args, **kwargs):
-        """ """
+        """Fit the data with the template.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame or astropy.table.Table
+            The data to fit.
+        sncosmo_model: sncosmo.Model
+            The model to use for the fit.
+        *args
+            Goes to sncosmo.fit_lc().
+        **kwargs
+            Goes to sncosmo.fit_lc().
+
+        Returns
+        -------
+        pandas.DataFrame, pandas.Series
+            The results of the fit.
+        """
         if type(data) is pandas.DataFrame: # sncosmo format
             from astropy.table import Table
             data = Table.from_pandas(data)
@@ -394,7 +514,7 @@ class Template( object ):
     # sncosmo_model
     @property
     def source(self):
-        """ """
+        """The sncosmo source."""
         return self.sncosmo_model.source
 
     @property
@@ -405,17 +525,17 @@ class Template( object ):
 
     @property
     def parameters(self):
-        """ """
+        """The model parameters."""
         return self.sncosmo_model.param_names
 
     @property
     def effect_parameters(self):
-        """ """
+        """The model effect parameters."""
         return self.sncosmo_model.effect_names
 
     @property
     def core_parameters(self):
-        """ """
+        """The model core parameters."""
         return self.sncosmo_model.source.param_names
 
 
@@ -431,7 +551,21 @@ class GridTemplate( Template ):
 
     @classmethod
     def from_filenames(cls, filenames, refindex=0, grid_of=None):
-        """ """
+        """Load the instance from a list of filenames.
+
+        Parameters
+        ----------
+        filenames: list
+            List of filenames.
+        refindex: int, optional
+            Reference index for the grid.
+        grid_of: sncosmo.Source, optional
+            The source to use for the grid.
+
+        Returns
+        -------
+        GridTemplate
+        """
         if grid_of is None:
             grid_of = cls.grid_of
 
@@ -448,12 +582,24 @@ class GridTemplate( Template ):
     #   Methods      #
     # ============== #
     def set_grid_datafile(self, datafile):
-        """ """
+        """Set the grid datafile.
+
+        Parameters
+        ----------
+        datafile: pandas.DataFrame
+            The grid datafile.
+        """
         self._grid_datafile = datafile
         self._grid = None
 
     def set_grid_data(self, data):
-        """ """
+        """Set the grid data.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The grid data.
+        """
         self._grid_data = data
         self._grid
 
@@ -461,13 +607,50 @@ class GridTemplate( Template ):
     #  handle Elements  #
     # ================= #
     def get(self, grid_element,  **kwargs):
-        """ return a sncosmo model for the template's source name (self.source) """
+        """Return a sncosmo model for the template's source name (self.source).
+
+        Parameters
+        ----------
+        grid_element: tuple
+            The grid element to get.
+        **kwargs
+            Goes to Template.get().
+
+        Returns
+        -------
+        sncosmo.Model
+        """
         return self.grid.loc[grid_element]["template"].get(**kwargs)
 
     def get_lightcurve(self, grid_element, band, times,
                            sncosmo_model=None, params=None,
                            in_mag=False, zp=25, zpsys="ab"):
-        """ """
+        """Get the lightcurve for a given grid element.
+
+        Parameters
+        ----------
+        grid_element: tuple
+            The grid element to get.
+        band: str or list
+            Band or list of bands.
+        times: array
+            Array of times.
+        sncosmo_model: sncosmo.Model, optional
+            The sncosmo model to use. If None, the instance's model is used.
+        params: dict, optional
+            Parameters for the model.
+        in_mag: bool, optional
+            If True, return the lightcurve in magnitude.
+        zp: float, optional
+            Zero point for the flux.
+        zpsys: str, optional
+            Zero point system.
+
+        Returns
+        -------
+        array
+            The lightcurve values.
+        """
         if params is None:
             params = {}
 
@@ -483,7 +666,30 @@ class GridTemplate( Template ):
                      vparam_names=None,
                      bounds=None,
                      **kwargs):
-        """ """
+        """Fit the data with the template for a given grid element.
+
+        Parameters
+        ----------
+        data: pandas.DataFrame
+            The data to fit.
+        grid_element: tuple
+            The grid element to use.
+        guessparams: dict, optional
+            Guess parameters for the fit.
+        fixedparams: dict, optional
+            Fixed parameters for the fit.
+        vparam_names: list, optional
+            List of parameters to vary.
+        bounds: dict, optional
+            Bounds for the parameters.
+        **kwargs
+            Goes to sncosmo.fit_lc().
+
+        Returns
+        -------
+        pandas.DataFrame, pandas.Series
+            The results of the fit.
+        """
         # let's put it inside guesses to goes to self.get()
         guessparams["grid_element"]= grid_element
         props = locals()
@@ -499,7 +705,45 @@ class GridTemplate( Template ):
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
-        """ """
+        """Show the lightcurve for a given grid element.
+
+        Parameters
+        ----------
+        band: str or list
+            Band or list of bands.
+        grid_element: tuple
+            The grid element to use.
+        params: dict, optional
+            Parameters for the model.
+        ax: matplotlib.axes, optional
+            The axes to plot on.
+        fig: matplotlib.figure, optional
+            The figure to plot on.
+        colors: list, optional
+            List of colors for the bands.
+        phase_range: list, optional
+            Phase range to plot.
+        npoints: int, optional
+            Number of points to plot.
+        zp: float, optional
+            Zero point for the flux.
+        zpsys: str, optional
+            Zero point system.
+        format_time: bool, optional
+            If True, format the time axis.
+        t0_format: str, optional
+            Format of the t0.
+        in_mag: bool, optional
+            If True, plot in magnitude.
+        invert_mag: bool, optional
+            If True, invert the magnitude axis.
+        **kwargs
+            Goes to ax.plot().
+
+        Returns
+        -------
+        matplotlib.figure
+        """
         params["grid_element"]= grid_element
         props = locals()
         _ = props.pop("self")
@@ -513,7 +757,7 @@ class GridTemplate( Template ):
     # grid
     @property
     def grid(self):
-        """ """
+        """The grid of templates."""
         if self._grid is None:
             self._grid = self.grid_datafile.join(self.grid_data).set_index(self.grid_parameters)
 
@@ -521,22 +765,22 @@ class GridTemplate( Template ):
 
     @property
     def grid_datafile(self):
-        """ """
+        """The grid datafile."""
         return self._grid_datafile
 
     @property
     def grid_data(self):
-        """ """
+        """The grid data."""
         return self._grid_data
 
     @property
     def grid_parameters(self):
-        """ """
+        """The grid parameters."""
         return list(self._grid_data.columns)
 
     @property
     def full_parameters(self):
-        """ template parameters plus grid parameters """
+        """Template parameters plus grid parameters."""
         return self.parameters + self.grid_parameters
 
 
@@ -549,27 +793,70 @@ class GridTemplate( Template ):
     
 class TemplateCollection( object ):
     def __init__(self, templates):
-        """ """
+        """Initialize the TemplateCollection class.
+
+        Parameters
+        ----------
+        templates: list
+            List of templates.
+        """
         self._templates = templates
 
     def __iter__(self):
-        """ """
+        """Iterate over the templates."""
         return self.templates
         
     @classmethod
     def from_sncosmo(cls, templates):
-        """ """
+        """Load the instance from a list of sncosmo sources.
+
+        Parameters
+        ----------
+        templates: list
+            List of sncosmo sources.
+
+        Returns
+        -------
+        TemplateCollection
+        """
         templates = [Template.from_sncosmo(template) for template in np.atleast_1d(templates)]
         return cls(templates)
 
     @classmethod
     def from_list(cls, templates):
-        """ """
+        """Load the instance from a list of templates.
+
+        Parameters
+        ----------
+        templates: list
+            List of templates.
+
+        Returns
+        -------
+        TemplateCollection
+        """
         templates = parse_template(templates)
         return cls(templates)
         
     def call_down(self, which, margs=None, allow_call=True, **kwargs):
-        """ """
+        """Call a method on all templates.
+
+        Parameters
+        ----------
+        which: str
+            The method to call.
+        margs: list, optional
+            List of arguments for the method.
+        allow_call: bool, optional
+            If True, call the method.
+        **kwargs
+            Goes to the method.
+
+        Returns
+        -------
+        list
+            List of results.
+        """
         if margs is not None:
             from .target.collection import broadcast_mapping
             margs = broadcast_mapping(margs, self.templates)
@@ -581,7 +868,24 @@ class TemplateCollection( object ):
                 for t in self.templates]
 
     def call_down_source(self, which, margs=None, allow_call=True, **kwargs):
-        """ """
+        """Call a method on all templates sources.
+
+        Parameters
+        ----------
+        which: str
+            The method to call.
+        margs: list, optional
+            List of arguments for the method.
+        allow_call: bool, optional
+            If True, call the method.
+        **kwargs
+            Goes to the method.
+
+        Returns
+        -------
+        list
+            List of results.
+        """
         if margs is not None:
             from .target.collection import broadcast_mapping
             margs = broadcast_mapping(margs, self.templates)
@@ -593,11 +897,28 @@ class TemplateCollection( object ):
                 for t in self.templates]
 
     def add_effect(self, effects):
-        """ """
+        """Add an effect to all templates.
+
+        Parameters
+        ----------
+        effects: list
+            List of effects.
+        """
         return self.call_down("add_effect", effects=effects)
 
     def nameorindex_to_index(self, name_or_index):
-        """ """
+        """Convert a name or index to an index.
+
+        Parameters
+        ----------
+        name_or_index: str or int
+            The name or index to convert.
+
+        Returns
+        -------
+        int
+            The index.
+        """
         if type(name_or_index) in [str, np.str_]: # is name
             name_or_index = np.argwhere( np.asarray(self.names) == name_or_index).squeeze()
         
@@ -607,7 +928,19 @@ class TemplateCollection( object ):
     #  GETTER    #
     # ---------- #
     def get(self, ref_index=0, **kwargs):
-        """ """
+        """Get a template.
+
+        Parameters
+        ----------
+        ref_index: int, optional
+            The index of the template to get.
+        **kwargs
+            Goes to the template's get method.
+
+        Returns
+        -------
+        Template
+        """
         if self.is_uniquetype:
             return self.templates[ref_index].get(**kwargs)
             
@@ -617,7 +950,32 @@ class TemplateCollection( object ):
                        index=None, sncosmo_model=None, 
                        in_mag=False, zp=25, zpsys="ab",
                         **kwargs):
-        """ """
+        """Get the lightcurve for a given template.
+
+        Parameters
+        ----------
+        band: str or list
+            Band or list of bands.
+        times: array
+            Array of times.
+        index: int, optional
+            The index of the template to use.
+        sncosmo_model: sncosmo.Model, optional
+            The sncosmo model to use. If None, the instance's model is used.
+        in_mag: bool, optional
+            If True, return the lightcurve in magnitude.
+        zp: float, optional
+            Zero point for the flux.
+        zpsys: str, optional
+            Zero point system.
+        **kwargs
+            Goes to the template's get_lightcurve method.
+
+        Returns
+        -------
+        array
+            The lightcurve values.
+        """
         if index is None and sncosmo_model is None:
             raise ValueError("index or sncosmo_model must be given.")
             
@@ -636,41 +994,35 @@ class TemplateCollection( object ):
     # ============ #
     @property
     def templates(self):
-        """ """
+        """The list of templates."""
         return self._templates
 
     @property
     def ntemplates(self):
-        """ """
+        """The number of templates."""
         return len(self.templates)
 
     @property
     def names(self):
-        """ """
+        """The names of the templates."""
         return self.call_down_source("name")
 
     @property
     def is_uniquetype(self):
-        """ """
+        """Whether the templates are of a unique type."""
         ntypes = len(np.unique([str(c) for c in self.call_down_source("__class__", allow_call=False)]))
         return ntypes == 1
 
     # = unique of not
     @property
     def effect_parameters(self):
-        """ """
-        if self.is_uniquetype:
-            return self.templates[0].effect_parameters
-        return self.call_down("effect_parameters")
+        """The effect parameters of the templates."""
 
     @property
     def template_parameters(self):
-        """ """
+        """The template parameters of the templates."""
         return self.parameters
 
     @property
     def parameters(self):
-        """ """
-        if self.is_uniquetype:
-            return self.templates[0].parameters
-        return self.call_down("parameters")
+        """The parameters of the templates."""

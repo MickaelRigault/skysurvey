@@ -71,19 +71,18 @@ class ZTF( GridSurvey ):
         return cls(data=data, level=level)
 
     def show_ztf(self, data=None, fieldstat=None, **kwargs):
-        """ shows the sky coverage 
+        """Show the sky coverage.
 
         Parameters
         ----------
-        data: pandas.DataFrame
-            data to be consider to get the field statistics.
-            fieldstat will be derived from that (main grid only) groupby(fieldid).size()
-            = ignored is fieldstat is given = 
-            
-        fieldstat: pandas.Series
-            field statistics.
-
-        **kwargs goes to ztffields.skyplot_fields
+        data: pandas.DataFrame, optional
+            Data to be considered to get the field statistics.
+            fieldstat will be derived from that (main grid only) groupby(fieldid).size().
+            Ignored is fieldstat is given.
+        fieldstat: pandas.Series, optional
+            Field statistics.
+        **kwargs
+            Goes to ztffields.skyplot_fields.
 
         Returns
         -------

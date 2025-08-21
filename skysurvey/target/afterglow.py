@@ -49,6 +49,24 @@ for phase in phases:
 template = sncosmo.Model(sncosmo.TimeSeriesSource(phases, wave, np.array(flux)))
 
 class Afterglow( Transient ):
+    """A class to model afterglows.
+
+    Parameters
+    ----------
+    _KIND : str, optional
+        The kind of transient. The default is "afterglow".
+    _TEMPLATE : sncosmo.Model, optional
+        The template to use. The default is a `sncosmo.Model` with a
+        `sncosmo.TimeSeriesSource` source.
+    _RATE : int, optional
+        The rate of afterglows. The default is 20.
+    _MODEL : dict, optional
+        The model to use. The default is a dictionary with the following
+        keys:
+
+        - `redshift`: The redshift of the afterglow.
+        - `t0`: The time of maximum of the afterglow.
+    """
 
     _KIND = "afterglow"
     _TEMPLATE = template

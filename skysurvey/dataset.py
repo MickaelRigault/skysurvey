@@ -546,36 +546,33 @@ class DataSet(object):
                                   client=None, discard_bands=False,
                                   trim_observations=False,
                                   phase_range=None):
-        """ creates the lightcurve of the input targets as they 
-        would be observed by the survey. 
-        = These are split per survey fields. =
-        
+        """Create the lightcurve of the input targets as they would be observed by the survey.
+
+        These are split per survey fields.
         
         Parameters
         ----------
         targets: skysurvey.Target, skysurvey.TargetCollection
-            target data corresponding to the true target parameters  
-            (as given by nature)
-            
+            Target data corresponding to the true target parameters
+            (as given by nature).
         survey: skysurvey.Survey (or child of)
-            sky observation (what was observed when with which situation)
-
-        template: Template
-            template to use to generate the lightcurve.
-            If None given, the target's template is used.
-
-        template_prop: dict
-            kwargs for template.get(), setting the template parameters
-            
-        nfirst: int
-            if given, only the first nfrist entries will be considered.
+            Sky observation (what was observed when with which situation).
+        template_prop: dict, optional
+            kwargs for template.get(), setting the template parameters.
+        nfirst: int, optional
+            If given, only the first nfirst entries will be considered.
             This is a debug / test tool.
-        
-        client: dask.distributed.Client()
-            dask client to use if any. This is used for 
+        incl_error: bool, optional
+            Include error in the lightcurve.
+        client: dask.distributed.Client(), optional
+            Dask client to use if any. This is used for
             parallelization of the lc generation per field.
-        
-        incl_error: bool
+        discard_bands: bool, optional
+            If True, discard bands that are not in the survey.
+        trim_observations: bool, optional
+            If True, trim observations to the phase range.
+        phase_range: list, optional
+            Phase range to consider.
             
         Returns
         -------
@@ -585,7 +582,7 @@ class DataSet(object):
             
         See also
         --------
-        from_targets_and_survey: laods the instance given targets and a survey
+        from_targets_and_survey: loads the instance given targets and a survey
         """
         from .template import TemplateCollection
         if type(targets) in [list, tuple]:
@@ -623,37 +620,34 @@ class DataSet(object):
                                            incl_error=True,
                                            client=None, discard_bands=False,
                                             trim_observations=False, phase_range=None):
-        """ creates the lightcurve of the input single-kind 
-        targets as they would be observed by the survey. 
-        = These are split per survey fields. =
-        
+        """Create the lightcurve of the input single-kind targets as they would be observed by the survey.
+
+        These are split per survey fields.
         
         Parameters
         ----------
         targets: skysurvey.Target, skysurvey.TargetCollection
-            target data corresponding to the true target parameters  
-            (as given by nature)
-            
+            Target data corresponding to the true target parameters
+            (as given by nature).
         survey: skysurvey.Survey (or child of)
-            sky observation (what was observed when with which situation)
-
-        template: Template
-            template to use to generate the lightcurve.
-            If None given, the target's template is used.
-
-        template_prop: dict
-            kwargs for template.get(), setting the template parameters
-            
-        nfirst: int
-            if given, only the first nfrist entries will be considered.
+            Sky observation (what was observed when with which situation).
+        template_prop: dict, optional
+            kwargs for template.get(), setting the template parameters.
+        nfirst: int, optional
+            If given, only the first nfirst entries will be considered.
             This is a debug / test tool.
-        
-        client: dask.distributed.Client()
-            dask client to use if any. This is used for 
+        incl_error: bool, optional
+            Include error in the lightcurve.
+        client: dask.distributed.Client(), optional
+            Dask client to use if any. This is used for
             parallelization of the lc generation per field.
-        
-        incl_error: bool
-        
+        discard_bands: bool, optional
+            If True, discard bands that are not in the survey.
+        trim_observations: bool, optional
+            If True, trim observations to the phase range.
+        phase_range: list, optional
+            Phase range to consider.
+            
         Returns
         -------
         list, list
@@ -662,7 +656,7 @@ class DataSet(object):
             
         See also
         --------
-        from_targets_and_survey: laods the instance given targets and a survey
+        from_targets_and_survey: loads the instance given targets and a survey
         """
         # name of template parameters
         template_columns = targets.get_template_columns()
@@ -717,7 +711,7 @@ class DataSet(object):
         # Build a LC for a given index
         sncosmo_model_base = targets.get_template(as_model=True, **template_prop)            
         def _get_index_lc_input_(index_):
-            """ """
+            """Get the lightcurve input for a given index."""
             try:
                 this_survey = gsurvey_indexed.get_group(index_).copy()
                 #survey_indexed.xs(index_)[["mjd","band","skynoise","gain", "zp"]]
@@ -747,29 +741,29 @@ class DataSet(object):
     # ============== #
     @property
     def data(self):
-        """ """
+        """Lightcurve data as observed by the survey."""
         return self._data
 
     @property
     def _data_index(self):
-        """ name of data index """
+        """Name of data index."""
         if not hasattr(self, "_hdata_index"):
             self._hdata_index = "index"
         return self._hdata_index
     
     @property
     def targets(self):
-        """ """
+        """Target data corresponding to the true target parameters."""
         return self._targets
 
     @property
     def survey(self):
-        """ """
+        """Survey that has been used to generate the dataset."""
         return self._survey
 
     @property
     def obs_index(self):
-        """ index of the observed target """
+        """Index of the observed target."""
         if not hasattr(self,"_obs_index") or self._obs_index is None:
             self._obs_index = self.data.index.get_level_values(0).unique().sort_values()
             

@@ -9,13 +9,14 @@ __all__ = ["TargetCollection"]
 
 
 def targets_from_collection(transientcollection):
+    """Get targets from a transient collection."""
     # which targets
 
     return targets
     
 
 def broadcast_mapping(value, ntargets):
-    """ """
+    """Broadcast a value to a given number of targets."""
     value = np.atleast_1d(value)
     if np.ndim(value)>1:
         # squeeze drop useless dimensions.
@@ -28,15 +29,30 @@ def broadcast_mapping(value, ntargets):
 
     
 class TargetCollection( object ):
+    """A collection of targets.
+
+    Parameters
+    ----------
+    _COLLECTION_OF : type, optional
+        The type of target in the collection. The default is `Target`.
+    _TEMPLATES : list, optional
+        A list of templates. The default is [].
+    """
     _COLLECTION_OF = Target
     _TEMPLATES = []
     
     def __init__(self, targets=None):
-        """ """
+        """Initialize the TargetCollection.
+
+        Parameters
+        ----------
+        targets : list, optional
+            A list of targets. The default is None.
+        """
         self.set_targets(targets)
 
     def as_targets(self):
-        """ convert the collection in a list of same-template targets """
+        """Convert the collection into a list of same-template targets."""
         if "template" not in self.data:
             raise AttributeError("self.data has no 'template' column")
         
@@ -49,7 +65,7 @@ class TargetCollection( object ):
     #  Collection   #
     # ============= #            
     def call_down(self, which, margs=None, allow_call=True, **kwargs):
-        """ """
+        """Call a method on each target in the collection."""
         if margs is not None:
             margs = broadcast_mapping(margs, self.ntargets)
             return [getattr(t, which)(marg_, **kwargs)
@@ -63,18 +79,16 @@ class TargetCollection( object ):
     #  Methods      #
     # ============= #    
     def set_targets(self, targets):
-        """ """
+        """Set the targets in the collection."""
         self._targets = np.atleast_1d(targets) if targets is not None else []
 
     def get_model_parameters(self, entry, key, default=None):
-        """ """
+        """Get the model parameters for each target in the collection."""
         return self.call_down("get_model_parameter", 
                               entry=entry, key=key, default=default)
 
     def get_data(self, keys="_KIND", colname="kind"):
-        """ get a concat 
-        
-        """
+        """Get a concatenated dataframe of the data from each target."""
         if keys is not None and type(keys) is str: 
             keys = self.call_down(keys)
 
@@ -88,7 +102,7 @@ class TargetCollection( object ):
         return data
 
     def get_target_template(self, index):
-        """ """
+        """Get the template for a given target."""
         from ..template import Template
         data_index = self.data.loc[index]
         this_template = Template.from_sncosmo( data_index["template"] )
@@ -103,8 +117,45 @@ class TargetCollection( object ):
                             zp=25, zpsys="ab",
                             format_time=True, t0_format="mjd", 
                             in_mag=False, invert_mag=True, **kwargs):
-        """ 
-        params: None or dict
+        """Show the lightcurve of a given target.
+
+        Parameters
+        ----------
+        band : str
+            The band to show.
+        index : int
+            The index of the target.
+        params : dict, optional
+            Parameters to pass to `get_target_template`. The default is {}.
+        ax : matplotlib.axes.Axes, optional
+            The axes to plot on. The default is None.
+        fig : matplotlib.figure.Figure, optional
+            The figure to plot on. The default is None.
+        colors : list, optional
+            A list of colors to use. The default is None.
+        time_range : list, optional
+            The time range to plot. The default is [-20, 50].
+        npoints : int, optional
+            The number of points to plot. The default is 500.
+        zp : float, optional
+            The zero point to use. The default is 25.
+        zpsys : str, optional
+            The zero point system to use. The default is "ab".
+        format_time : bool, optional
+            Whether to format the time axis. The default is True.
+        t0_format : str, optional
+            The format of the time axis. The default is "mjd".
+        in_mag : bool, optional
+            Whether to plot in magnitudes. The default is False.
+        invert_mag : bool, optional
+            Whether to invert the magnitude axis. The default is True.
+        **kwargs
+            Additional keyword arguments to pass to `template.show_lightcurve`.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The figure containing the plot.
         """
 
         if params is None:
@@ -122,7 +173,7 @@ class TargetCollection( object ):
 
     
     def to_transient(self, keys=None, **kwargs):
-        """ """
+        """Convert the collection to a `Transient` object."""
         data = self.get_data(keys=keys)
         return Transient.from_data(data, **kwargs)
         
@@ -131,40 +182,40 @@ class TargetCollection( object ):
     # ============= #
     @property
     def targets(self):
-        """ list of transients """
+        """The list of targets in the collection."""
         return self._targets
 
     @property
     def data(self):
-        """ """
+        """The data of the collection."""
         if not hasattr(self,"_data"):
             self._data = self.get_data()
         return self._data
     
     @property
     def ntargets(self):
-        """ number of targets (ie. different templates) """
+        """The number of targets in the collection."""
         return len(self.templates)
     
     @property
     def target_ids(self):
-        """ targets id """
+        """The IDs of the targets in the collection."""
         return np.arange(self.ntargets)
     
     @property
     def models(self):
-        """ list of the target models """
+        """The models of the targets in the collection."""
         return self.call_down("model")
 
 
     @property
     def template(self):
-        """ shortcut to self.templates for self-consistency """
+        """A shortcut to `self.templates` for self-consistency."""
         return self.templates
     
     @property
     def templates(self):
-        """ """
+        """The templates of the targets in the collection."""
         if not hasattr(self,"_templates") or self._templates is None:
             self._templates = self._TEMPLATES
             
@@ -172,21 +223,27 @@ class TargetCollection( object ):
 
     
 class TransientCollection( TargetCollection ):
+    """A collection of transients.
+
+    Parameters
+    ----------
+    _COLLECTION_OF : type, optional
+        The type of transient in the collection. The default is `Transient`.
+    """
     _COLLECTION_OF = Transient    
     # ============= #
     #  Methods      #
     # ============= #
     def set_rates(self, float_or_func):
-        """ call down set_rate for each targets. """
+        """Call `set_rate` for each target in the collection."""
         _ = self.call_down("set_rate", float_or_func)
 
     def update_model(self, rate_update=True, **kwargs):
-        """ 
-        """
+        """Call `update_model` for each target in the collection."""
         _ = self.call_down("update_model", rate_update=True, **kwargs)
         
     def get_rates(self, z, relative=False, **kwargs):
-        """ """
+        """Get the rates for each target in the collection."""
         rates = self.call_down("get_rate", margs=z, **kwargs)
         if relative:
             rates /= np.nansum(rates)
@@ -198,7 +255,7 @@ class TransientCollection( TargetCollection ):
                  nyears=None,
                  inplace=True, shuffle=True,
                  **kwargs):
-        """ """
+        """Draw the transients in the collection."""
         if size is not None:
             relat_rate = np.asarray( self.get_rates(0.1, relative=True) ).reshape(self.ntargets)
             templates = np.random.choice( np.arange( self.ntargets ), size=size,
@@ -231,6 +288,19 @@ class TransientCollection( TargetCollection ):
         return data
 
 class CompositeTransient( TransientCollection ):
+    """A composite transient.
+
+    Parameters
+    ----------
+    _COLLECTION_OF : type, optional
+        The type of transient in the collection. The default is `Transient`.
+    _KIND : str, optional
+        The kind of transient. The default is "unknown".
+    _RATE : float, optional
+        The rate of the transient. The default is 1e5.
+    _MAGABS : tuple, optional
+        The absolute magnitude of the transient. The default is (-18, 1).
+    """
     _COLLECTION_OF = Transient
 
     _KIND = "unknown"    
@@ -248,47 +318,69 @@ class CompositeTransient( TransientCollection ):
                    skyarea=None,
                    rate=None, effect=None,
                    **kwargs):
-        """ loads the instance from a random draw of targets given the model 
-    
+        """Load the instance from a random draw of targets given the model.
+
         Parameters
         ----------
-        size: int, None
-            number of target you want to sample
-            size=None as in numpy. Usually means 1.
-            = ignored if nyears given =
-    
-        templates: str, None
-            list of template names (sncosmo.Model(source)). 
-            = leave to None if unsure, cls._TEMPLATES used as default =
-    
-        zmax: float
-            maximum redshift to be simulated.
-    
-        tstart: float
-            starting time of the simulation
-            
-        tstop: float
-            ending time of the simulation
-            (if tstart and nyears are both given, tstop will be
-            overwritten by ``tstart+365.25*nyears``
-    
-        nyears: float
-            if given, nyears will set:
-            - size: it will be the number of target expected up to zmax 
-            in the given  number of years. 
-            This uses get_rate(zmax).
-            - tstop: tstart+365.25*nyears
-    
-        **kwargs goes to self.draw()
-    
+        size : int, optional
+            Number of target you want to sample. If None, 1 is assumed.
+            Ignored if `nyears` is given. By default None.
+        model : dict, optional
+            Defines how template parameters are drawn and how they are
+            connected. The model will update the default `cls._MODEL` if any.
+            If None, `cls._MODEL` is used as default. By default None.
+        templates : str, optional
+            Name of the template (`sncosmo.Model(source)`). If None,
+            `cls._TEMPLATE` is used as default. By default None.
+        zmax : float, optional
+            Maximum redshift to be simulated. By default None.
+        tstart : float, str, optional
+            Starting time of the simulation. If a string is given, it is
+            converted to mjd. By default None.
+        tstop : float, str, optional
+            Ending time of the simulation. If a string is given, it is
+            converted to mjd. If `tstart` and `nyears` are both given,
+            `tstop` will be overwritten by `tstart + 365.25 * nyears`.
+            By default None.
+        zmin : float, optional
+            Minimum redshift to be simulated. By default 0.
+        nyears : float, optional
+            If given, `nyears` will set:
+
+            - `size`: it will be the number of target expected up to `zmax`
+              in the given number of years. This uses `get_rate(zmax)`.
+            - `tstop`: `tstart + 365.25 * nyears`
+
+            By default None.
+        skyarea : None, str, geometry, optional
+            Sky area to be considered.
+
+            - str: 'full' (equivalent to None), ['extra-galactic', not implemented yet]
+            - geometry: shapely.Geometry
+            - None: full sky
+
+            By default None.
+        rate : float, callable, optional
+            The transient rate.
+
+            - float: assumed volumetric rate
+            - callable: function of redshift `rate(z)` that provides the rate
+              as a function of z.
+
+            By default None.
+        effect : [type], optional
+            [description]. By default None.
+        **kwargs
+            Goes to `self.draw()`.
+
         Returns
         -------
-        class instance
-            self.data, self.model and self.template will be loaded.
-    
-        See also
+        CompositeTransient
+            The loaded instance.
+
+        See Also
         --------
-        from_setting:  loads an instance given model parameters (dict)            
+        from_setting: loads an instance given model parameters (dict)
         """
         this = cls()
     
@@ -323,7 +415,7 @@ class CompositeTransient( TransientCollection ):
     # ============= #
     @property
     def targets(self):
-        """ list of targets forming the composite transients """
+        """The list of targets forming the composite transients."""
         if not hasattr(self,"_targets") or self._targets is None or len(self._targets) == 0:
             # build targets
             self._targets = [self._COLLECTION_OF.from_sncosmo(source_)
@@ -335,28 +427,38 @@ class CompositeTransient( TransientCollection ):
 
     @property
     def magabs(self):
-        """ """
+        """The absolute magnitudes of the transients in the collection."""
         return self.call_down("magabs")
         
     @property
     def rate(self):
-        """ rate. (If float, assumed to be volumetric rate in Gpc-3 / yr.) """
+        """The rate of the transients in the collection.
+
+        If float, it is assumed to be the volumetric rate in Gpc-3 / yr.
+        """
         return self.call_down("rate", allow_call=False)
 
     @property
     def ntargets(self):
-        """ means n-templates, really"""
+        """The number of templates in the collection."""
         return len(self.templates)
     
     
 class TSTransientCollection( TransientCollection ):
+    """A collection of time-series transients.
+
+    Parameters
+    ----------
+    _COLLECTION_OF : type, optional
+        The type of transient in the collection. The default is `TSTransient`.
+    """
     _COLLECTION_OF = TSTransient
         
     @classmethod
     def from_draw(cls, sources, size=None, nyears=None, 
                       rates=1e3, magabs=None, magscatter=None,
                       **kwargs):
-        """ """
+        """Load the instance from a random draw of targets given the model."""
         this = cls.from_sncosmo(sources, rates=rates,
                                         magabs=magabs, 
                                         magscatter=magscatter)
@@ -367,9 +469,7 @@ class TSTransientCollection( TransientCollection ):
     @classmethod
     def from_sncosmo(cls, sources, rates=1e3, 
                         magabs=None, magscatter=None):
-        """ loads the instance from a list of sources
-        (and relative rates)
-        """
+        """Load the instance from a list of sources (and relative rates)."""
         # make sure the sizes match
         rates = broadcast_mapping(rates, len(sources))
         transients = [cls._COLLECTION_OF.from_sncosmo(source_, rate_)

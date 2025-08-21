@@ -121,9 +121,9 @@ def _get_obsdata_(data, **kwargs):
 def realize_lightcurves(observations, model, parameters,
                         trim_observations=False, phase_range=None,
                         scatter=True):
-    """ Realize data for a set of SNe given a set of observations.
-    
-    note: adapted from sncosmo.realize_lcs, but:
+    """Realize data for a set of SNe given a set of observations.
+
+    Note: adapted from sncosmo.realize_lcs, but:
          - replacing astropy.Table by pandas.DataFrame
          - removing ability to use aliases. (no time lost in that)
          - removing thresh (no time lost in that)
@@ -133,29 +133,23 @@ def realize_lightcurves(observations, model, parameters,
     observations : `pandas.DataFrame`
         Table of observations. Must contain the following column names:
         ``band``, ``mjd``, ``zp``, ``zpsys``, ``gain``, ``skynoise``.
-
     model : `sncosmo.Model`
         The model to use in the simulation.
-
-    params : pandas.DataFrame
+    parameters : pandas.DataFrame
         List of parameters to feed to the model for realizing each light curve.
-
-    trim_observations : bool
+    trim_observations : bool, optional
         If True, only observations with times between
         ``model.mintime()`` and ``model.maxtime()`` are included in
         result table for each SN. Default is False.
-
-    phase_range: list, None
-        if given, only observations within the given rest-frame phase range
+    phase_range: list, None, optional
+        If given, only observations within the given rest-frame phase range
         will be considered.
-
-    scatter : bool
+    scatter : bool, optional
         If True, the ``flux`` value of the realized data is calculated by
         adding  a random number drawn from a Normal Distribution with a
         standard deviation equal to the ``fluxerror`` of the observation to
         the bandflux value of the observation calculated from model. Default
         is True.
-        
 
     Returns
     -------
@@ -175,7 +169,6 @@ def realize_lightcurves(observations, model, parameters,
     PSF photometry, ``skynoise`` would be ``4 * pi * sigma_PSF * sigma_pixel``
     where ``sigma_PSF`` is the standard deviation of the PSF in pixels and
     ``sigma_pixel`` is the background noise in a single pixel in counts.
-
     """
     lcs = []
     indexes = []
