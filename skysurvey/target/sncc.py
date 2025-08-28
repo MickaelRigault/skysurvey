@@ -127,7 +127,7 @@ class SNeIIb( VincenziModels, MultiTemplateTSTransient ):
     _KIND = "SN IIb"
     _RATE = CC_RATE * 0.109
 #    _MAGABS = (-16.7, 2.0) # Table 1 of Vincenzi19
-    _MAGABS = (-17.4, 0.6) # MR from BTS z<0.05
+    _MAGABS = (-17.45, 0.6) # MR from BTS z<0.05
     
 # =============== #
 #                 #
@@ -147,7 +147,8 @@ class SNeIb( VincenziModels, MultiTemplateTSTransient ):
     _KIND = "SN Ib"
     _RATE = CC_RATE * 0.108
     # changing the errors averaging with R14
-    _MAGABS = (-18.3, 0.5) # Table 1 of Vincenzi19
+    #_MAGABS = (-18.3, 0.5) # Table 1 of Vincenzi19
+    _MAGABS = (-17.35, 0.53) # MR from BTS z<0.05
     
 class SNeIc( VincenziModels, MultiTemplateTSTransient ):
     """ SNe Ic model from Vincenzi et al. 2019.
@@ -161,7 +162,8 @@ class SNeIc( VincenziModels, MultiTemplateTSTransient ):
     """    
     _KIND = "SN Ic"
     _RATE = CC_RATE * 0.075
-    _MAGABS = (-17.4, 0.7) # Table 1 of Vincenzi19 
+    # _MAGABS = (-17.4, 0.7) # Table 1 of Vincenzi19
+    _MAGABS = (-17.50, 0.7) # MR from BTS z<0.05
 
 class SNeIcBL( VincenziModels, MultiTemplateTSTransient ):
     """ SNe Ic-BL model from Vincenzi et al. 2019.
@@ -175,4 +177,5 @@ class SNeIcBL( VincenziModels, MultiTemplateTSTransient ):
     """    
     _KIND = "SN Ic-BL"
     _RATE = CC_RATE * 0.097 # joining Ic-BL & Ic-pec    
-    _MAGABS = (-17.7, 1.2) # Table 1 of Vincenzi19 
+    # _MAGABS = (-17.7, 1.2) # Table 1 of Vincenzi19 
+    _MAGABS = (-18.12, 0.9) # MR from BTS z<0.05

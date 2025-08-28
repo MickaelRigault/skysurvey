@@ -871,13 +871,13 @@ class Target( object ):
     # =============== #
     #   Draw Methods  #
     # =============== #
-    def draw(self, size=None,
-                 z=None,
+    def draw(self, size=None, seed=None,
                  zmax=None, zmin=0,
                  tstart=None, tstop=None, nyears=None,
                  skyarea=None,
                  inplace=False,
                  model=None,
+                 allowed_legacyseed=True,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -886,8 +886,6 @@ class Target( object ):
         size : int, optional
             Number of target you want to draw. Ignored is `nyears` is not
             None. By default None.
-        z : [type], optional
-            [description]. By default None.
         zmax : float, optional
             Maximum redshift to be simulated. By default None.
         zmin : int, optional
@@ -933,6 +931,12 @@ class Target( object ):
             from modeldag import ModelDAG
             current_model_dict = self.model.model
             drawn_model = ModelDAG( current_model_dict | model, obj=self)
+
+
+        if seed is not None:
+            allowed_legacyseed = False
+            np.random.seed(seed)
+            
             
         # => tstart, tstop format
         if type(tstart) is str:
@@ -964,9 +968,10 @@ class Target( object ):
         #
         # Redshift
         #
-        key_redshift = drawn_model.get_func_with_args("zmax")
         
         # zmax
+        # -> get forward entries that have 'zmax' as parameters
+        key_redshift = drawn_model.get_func_with_args("zmax")
         for zkey in key_redshift:
             if zmax is not None:
                 kwargs.setdefault(zkey, {}).update({"zmax": zmax})
@@ -975,8 +980,10 @@ class Target( object ):
                 zmax = self.get_model_parameter(zkey, "zmax", None, model=drawn_model)
             
         # zmin
+        # -> get forward entries that have 'zmin' as parameters
         key_redshift = drawn_model.get_func_with_args("zmin")
         for zkey in key_redshift:
+            # note: Why condition "on redshift" ?
             if zmin is not None and "redshift" in self.model.model:
                 kwargs.setdefault(zkey, {}).update({"zmin": zmin})
             
@@ -1032,12 +1039,10 @@ class Target( object ):
             size = int( (self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
         
         # actually draw the data
-        data = drawn_model.draw(size=size, **kwargs)
-
-        if z is not None:
-            if len(z) != size:
-                raise ValueError('Length of redshift vector must be same as size')
-            data['z'] = z
+        data = drawn_model.draw(size=size,
+                                    allowed_legacyseed=allowed_legacyseed,
+                                    seed=seed,
+                                **kwargs)
 
         # shall data be attached to the object?
         if inplace:
