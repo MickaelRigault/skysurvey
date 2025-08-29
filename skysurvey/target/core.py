@@ -698,8 +698,8 @@ class Target( object ):
         Examples
         --------
         Changing the `b` entry function and make it depends on `a`
-
-        >>> self.update_model(b={"func":np.random.normal, "kwargs":{"loc":"@a", "scale":1}})
+        >>> rng = np.random.default_rng()
+        >>> self.update_model(b={"func":rng.normal, "kwargs":{"loc":"@a", "scale":1}})
         """
         new_model = self.model.model | kwargs
         _ = self.set_model(new_model, rate_update=rate_update)
@@ -871,13 +871,12 @@ class Target( object ):
     # =============== #
     #   Draw Methods  #
     # =============== #
-    def draw(self, size=None, seed=None,
+    def draw(self, size=None,
                  zmax=None, zmin=0,
                  tstart=None, tstop=None, nyears=None,
                  skyarea=None,
                  inplace=False,
                  model=None,
-                 allowed_legacyseed=True,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -930,13 +929,7 @@ class Target( object ):
         else:
             from modeldag import ModelDAG
             current_model_dict = self.model.model
-            drawn_model = ModelDAG( current_model_dict | model, obj=self)
-
-
-        if seed is not None:
-            allowed_legacyseed = False
-            np.random.seed(seed)
-            
+            drawn_model = ModelDAG( current_model_dict | model, obj=self)            
             
         # => tstart, tstop format
         if type(tstart) is str:
@@ -1028,7 +1021,6 @@ class Target( object ):
             for k in param_affected:
                 kwargs.setdefault(k,{}).update({"skyarea": skyarea})
                 
-
         #
         # Size
         #
@@ -1040,8 +1032,6 @@ class Target( object ):
         
         # actually draw the data
         data = drawn_model.draw(size=size,
-                                    allowed_legacyseed=allowed_legacyseed,
-                                    seed=seed,
                                 **kwargs)
 
         # shall data be attached to the object?

@@ -474,7 +474,8 @@ class DataSet(object):
             from astropy.time import Time
             
         if index is None:
-            index = np.random.choice(self.obs_index)
+            rng = np.random.default_rng()
+            index = rng.choice(self.obs_index)
 
         # Data
         obs_ = self.get_target_lightcurve(index).copy()

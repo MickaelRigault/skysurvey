@@ -416,7 +416,9 @@ class PolygonSurvey( BaseSurvey ):
         flag_egde = np.any(np.diff(xy, axis=1)>300, axis=1)[:,0]
         xy[flag_egde] = ((xy[flag_egde] + origin)%360 - origin)
         geodf["xy"] = list(xy)
-        data = np.random.uniform(size=len(geodf))
+
+        rng = np.random.default_rng()
+        data = rng.uniform(size=len(geodf))
         if vmin is None: vmin = np.nanmin(data)
         if vmax is None: vmax = np.nanmax(data)
         geodf["value"] = (data-vmin)/(vmax-vmin)
@@ -469,7 +471,8 @@ class PolygonSurvey( BaseSurvey ):
                      bands,  
                      mjd_range, skynoise_range,
                      gain_range=1,
-                     zp_range=[27,30]):
+                     zp_range=[27,30],
+                     rng=None):
         """ 
         Draw random observations.
 
@@ -496,18 +499,28 @@ class PolygonSurvey( BaseSurvey ):
         zp_range: list or array
             min and max zp for the random drawing.
 
+        rng : None, int, (Bit)Generator, optional
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
+
         Returns
         -------
         pandas.DataFrame
         """
+        rng = np.random.default_rng()
         # np.resize(1, 2) -> [1,1]
-        mjd = np.random.uniform(*np.resize(mjd_range,2), size=size)
-        band = np.random.choice(bands, size=size)
-        skynoise = np.random.uniform(*np.resize(skynoise_range, 2), size=size)
-        gain = np.random.uniform(*np.resize(gain_range, 2), size=size)
-        zp = np.random.uniform(*np.resize(zp_range, 2), size=size)
+        mjd = rng.uniform(*np.resize(mjd_range,2), size=size)
+        band = rng.choice(bands, size=size)
+        skynoise = rng.uniform(*np.resize(skynoise_range, 2), size=size)
+        gain = rng.uniform(*np.resize(gain_range, 2), size=size)
+        zp = rng.uniform(*np.resize(zp_range, 2), size=size)
         # = coords
-        fieldid = np.random.choice(fieldids, size=size)
+        fieldid = rng.choice(fieldids, size=size)
         # data sorted by mjd
         data = pandas.DataFrame(zip(mjd, band, skynoise, gain, zp, fieldid),
                                columns=["mjd","band","skynoise", "gain", "zp","fieldid"]

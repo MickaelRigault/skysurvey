@@ -254,11 +254,25 @@ class TransientCollection( TargetCollection ):
                  tstart=None, tstop=None,
                  nyears=None,
                  inplace=True, shuffle=True,
+                 rng=None,
                  **kwargs):
-        """Draw the transients in the collection."""
+        """Draw the transients in the collection.
+
+
+        rng : None, int, (Bit)Generator, optional
+            = ignored if size is None =
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
+        """
         if size is not None:
             relat_rate = np.asarray( self.get_rates(0.1, relative=True) ).reshape(self.ntargets)
-            templates = np.random.choice( np.arange( self.ntargets ), size=size,
+            rng = np.random.default_rng(rng)
+            templates = rng.choice( np.arange( self.ntargets ), size=size,
                                           p=relat_rate/relat_rate.sum() )
             
             # using pandas to convert that into sizes.

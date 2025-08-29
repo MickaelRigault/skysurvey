@@ -16,9 +16,10 @@ class StableTarget( Target ):
                    )
     
     @staticmethod
-    def random_magobs(size=None, zpmax=22.5, scale=3):
+    def random_magobs(size=None, zpmax=22.5, scale=3, rng=None):
         """ """
-        exp_decay = np.random.exponential(scale=scale, size=size)
+        rng = np.random.default_rng(rng)
+        exp_decay = rng.exponential(scale=scale, size=size)
         return zpmax-exp_decay
 
     

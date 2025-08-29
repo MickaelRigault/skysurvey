@@ -92,15 +92,27 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
         return cls(saltource)
         
 
-    def compute_sigma_nodes(self):
+    def compute_sigma_nodes(self, rng=None):
         """
         Computes the sigma nodes.
+        
+        Parameters
+        ----------
+        rng : None, int, (Bit)Generator, optional
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
 
         Returns
         -------
         (array, array)
             lambda nodes, sigma values
         """
+        rng = np.random.default_rng(rng)
+        
         L0, F0, F1, dL = self._parameters
         
         lam_nodes = np.arange(self._minwave, self._maxwave, dL)
@@ -111,7 +123,7 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
 
         siglam_values[lam_nodes < L0] *= 1 + (lam_nodes[lam_nodes < L0] - L0) * F0
         siglam_values[lam_nodes > L0] *= 1 + (lam_nodes[lam_nodes > L0] - L0) * F1
-        siglam_values *= np.random.normal(size=len(lam_nodes))
+        siglam_values *= rng.normal(size=len(lam_nodes))
 
         return lam_nodes, siglam_values
 
@@ -183,10 +195,26 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
         # Rescale covariance as in arXiv:1209.2482
         self._cov_matrix *= self._parameters[1]
 
-    def propagate(self, wave, flux):
-        """Propagate the effect to the flux."""
-        
-        siglam_values = np.random.multivariate_normal(np.zeros(len(self._lam_nodes)),
+    def propagate(self, wave, flux, rng=None):
+        """Propagate the effect to the flux.
+
+        Parameters
+        ----------
+        rng : None, int, (Bit)Generator, optional
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
+        Returns
+        -------
+        flux : array
+            (flux * 10**(-0.4 * magscat))
+        """
+        rng = np.random.default_rng(rng)
+        siglam_values = rng.multivariate_normal(np.zeros(len(self._lam_nodes)),
                                                       self._cov_matrix)
 
         inf_mask = wave <= self._lam_nodes[0]

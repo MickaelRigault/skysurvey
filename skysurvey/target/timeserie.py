@@ -5,6 +5,7 @@ from ..tools.utils import random_radec
 __all__ = ["TSTransient"]
 
 
+RNG = np.random.default_rng()
 
 class TSTransient( Transient ):
     """ TimeSerie Transient.
@@ -25,11 +26,11 @@ class TSTransient( Transient ):
     # - skewed Gaussian: (loc, scatter_low, scatter_high)
     _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05}, 
                                "as": "z"},
-                   t0 = {"func": np.random.uniform,
+                   t0 = {"func": RNG.uniform,
                          "kwargs": {"low": 56_000, "high": 56_200}
                         },
                          
-                   magabs = {"func": np.random.normal,
+                   magabs = {"func": RNG.normal,
                              "kwargs": {"loc": np.nan, "scale": 1} # forcing loc to be given
                             },
                              
@@ -141,7 +142,7 @@ class TSTransient( Transient ):
         if magabs is not None:
             loc, *scale = magabs
             if len(scale) == 1: # gaussian
-                model_magabs = {"func": np.random.normal, "kwargs": {"loc": loc, "scale": scale[0]}}
+                model_magabs = {"func": RNG.normal, "kwargs": {"loc": loc, "scale": scale[0]}}
 
             elif len(scale) == 2: # skewed gaussian
                 from ..tools.stats import skewed_gaussian_pdf
@@ -241,11 +242,12 @@ class MultiTemplateTSTransient( TSTransient ):
     # =========== #
     #  Modeling   #
     # =========== #
-    def draw_template(self, size=None, redshift=None):
+    def draw_template(self, size=None, redshift=None, rng=None):
         """ """
         size = len(redshift)
+        rng = np.random.default_rng(rng)
         if not self.has_multirates and redshift is not None:
-            return np.random.choice(self.template.names, size=size)
+            return rng.choice(self.template.names, size=size)
 
         # flatted all shapes
         fullnames = np.full( (self.template.ntemplates, size), np.asarray(self.template.names)[:,None]).reshape(-1)
@@ -253,7 +255,7 @@ class MultiTemplateTSTransient( TSTransient ):
         # convert rates into weight of being drawn | so rate=0 templates are never drawn.
         weights = self.get_rate(redshift).reshape(-1)
         
-        return np.random.choice(fullnames, size=size, p=weights/weights.sum())
+        return rng.choice(fullnames, size=size, p=weights/weights.sum())
         
     @property
     def model(self):

@@ -106,9 +106,10 @@ class HealpixSurvey( BaseSurvey ):
 
     @classmethod
     def from_random(cls, nside, size, 
-                    bands,  
+                    bands, 
                     mjd_range, skynoise_range,
-                    ra_range=None, dec_range=None, **kwargs):
+                    ra_range=None, dec_range=None,
+                    rng=None, **kwargs):
         """ 
         Load an instance with random observing data.
 
@@ -132,6 +133,15 @@ class HealpixSurvey( BaseSurvey ):
         ra_range, dec_range: 2d-array, None
             min and max to define a coordinate range to be considered.
             None means no limit.
+
+        rng : None, int, (Bit)Generator, optional
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
         
         **kwargs goes to the draw_random() method
 
@@ -143,7 +153,7 @@ class HealpixSurvey( BaseSurvey ):
         this.draw_random(size,  bands,  
                         mjd_range, skynoise_range, 
                         ra_range=ra_range, dec_range=dec_range,
-                        inplace=True, **kwargs)
+                        inplace=True, rng=rng, **kwargs)
         return this
 
     @classmethod
@@ -362,7 +372,8 @@ class HealpixSurvey( BaseSurvey ):
                     bands, mjd_range, skynoise_range,
                     gain_range=1, zp_range=25,
                     ra_range=None, dec_range=None,
-                    inplace=False, nside=None, **kwargs):
+                    inplace=False, nside=None,
+                    rng=None, **kwargs):
         """ draw observations 
 
         Parameters
@@ -413,6 +424,7 @@ class HealpixSurvey( BaseSurvey ):
                                  bands, mjd_range, skynoise_range, 
                                  ra_range=ra_range, dec_range=dec_range,
                                  gain_range=gain_range, zp_range=zp_range,
+                                 rng=rng,
                                  **kwargs)
         
         if not inplace:
@@ -487,7 +499,8 @@ class HealpixSurvey( BaseSurvey ):
                      mjd_range, skynoise_range,
                      gain_range=1,
                      zp_range=[27,30],
-                     ra_range=None, dec_range=None):
+                     ra_range=None, dec_range=None,
+                     rng=None):
         """Draw observations | internal.
 
         Parameters
@@ -509,26 +522,34 @@ class HealpixSurvey( BaseSurvey ):
         ra_range, dec_range: 2d-array, None, optional
             Min and max to define a coordinate range to be considered.
             None means no limit.
+        rng : None, int, (Bit)Generator, optional
+            seed for the random number generator.
+            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            See that documentation for details.)
+            If None, an unpredictable entropy will be pulled from the OS.
+            If an ``int``, (>0), it will set the initial `BitGenerator` state.
+            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
 
         Returns
         -------
         pandas.DataFrame
             A DataFrame with the drawn observations.
         """
+        rng = np.random.default_rng(rng)
         # np.resize(1, 2) -> [1,1]
-        mjd = np.random.uniform(*np.resize(mjd_range,2), size=size)
-        band = np.random.choice(bands, size=size)
-        skynoise = np.random.uniform(*np.resize(skynoise_range, 2), size=size)
-        gain = np.random.uniform(*np.resize(gain_range, 2), size=size)
-        zp = np.random.uniform(*np.resize(zp_range, 2), size=size)
+        mjd = rng.uniform(*np.resize(mjd_range,2), size=size)
+        band = rng.choice(bands, size=size)
+        skynoise = rng.uniform(*np.resize(skynoise_range, 2), size=size)
+        gain = rng.uniform(*np.resize(gain_range, 2), size=size)
+        zp = rng.uniform(*np.resize(zp_range, 2), size=size)
         # = coords
         # no radec limit
         if ra_range is None and dec_range is None:
             npix = hp.nside2npix(nside)
-            ipix = np.random.uniform(0, npix, size=size)
+            ipix = rng.uniform(0, npix, size=size)
         else:
             ipix_ok = get_ipix_in_range(nside, ra_range=ra_range, dec_range=dec_range)
-            ipix = np.random.choice(ipix_ok, size=size)
+            ipix = rng.choice(ipix_ok, size=size)
             
         # data sorted by mjd
         data = pandas.DataFrame(zip(mjd, band, skynoise, gain, zp, ipix),

@@ -7,6 +7,10 @@ from .environments import get_hostmass_rvs
 from ..tools.utils import random_radec
 
 __all__ = ["SNeIa"]
+
+RNG = np.random.default_rng()
+
+
 # ================== #
 #                    #
 # Pre-Defined models #
@@ -175,7 +179,7 @@ class SNeIaMagnitude( object ):
     @staticmethod
     def tripp1998( x1, c,
                    mabs=-19.3, sigmaint=0.10,
-                   alpha=-0.14, beta=3.15):
+                   alpha=-0.14, beta=3.15, rng=None):
         """Get the 2-parameter absolute (natural) SNe Ia magnitude.
 
         Parameters
@@ -194,13 +198,20 @@ class SNeIaMagnitude( object ):
             The stretch linear law coefficient. The default is -0.14.
         beta : float, optional
             The color linear law coeeficient. The default is 3.15.
+        rng: None, int, Generator
+            Random number generator seed. 
+            (docstring extracted from np.random.default_rng(), see this for complete documentation).
+            If None, then fresh, unpredictable entropy will be pulled from the OS. 
+            If an ``int``, then the seed will start from this.
+            If passed a `Generator`, it will be returned unaltered.
 
         Returns
         -------
         array
            The absolute magnitude, with the same format as `x1` and `c`.
         """
-        mabs = np.random.normal(loc=mabs, scale=sigmaint, size=len(x1))
+        rng = np.random.default_rng(rng)
+        mabs = rng.normal(loc=mabs, scale=sigmaint, size=len(x1))
         mabs_notstandard = mabs + (x1*alpha + c*beta)
         return mabs_notstandard
 
@@ -208,7 +219,8 @@ class SNeIaMagnitude( object ):
     @classmethod
     def tripp_and_step( cls, x1, c, isup,
                         mabs=-19.3, sigmaint=0.10,
-                        alpha=-0.14, beta=3.15, gamma=0.1):
+                        alpha=-0.14, beta=3.15, gamma=0.1,
+                        rng=None):
         """Get the 2-parameter and step absolute (natural) SNe Ia magnitude.
 
         Parameters
@@ -240,14 +252,15 @@ class SNeIaMagnitude( object ):
         """
         tripp_mabs = cls.tripp1998( x1, c,
                                     mabs=mabs, sigmaint=sigmaint,
-                                    alpha=alpha, beta=beta)
+                                    alpha=alpha, beta=beta, rng=rng)
         return tripp_mabs + (isup-0.5)*gamma # 0 gets -gamma/2 and 1 get +gamma/2
 
     @classmethod
     def tripp_and_massstep( cls, x1, c, hostmass,
                             mabs=-19.3, sigmaint=0.10,
                             alpha=-0.14, beta=3.15,
-                            gamma=0.1, split=10):
+                            gamma=0.1, split=10,
+                            rng=None):
         """Get the 2-parameter and mass step absolute (natural) SNe Ia magnitude.
 
         Parameters
@@ -282,7 +295,8 @@ class SNeIaMagnitude( object ):
         isup = np.asarray( hostmass>split, dtype=float)
         return cls.tripp_and_step( x1, c, isup,
                                    mabs=mabs, sigmaint=sigmaint,
-                                   alpha=alpha, beta=beta, gamma=gamma)
+                                   alpha=alpha, beta=beta, gamma=gamma,
+                                    rng=rng)
 # ================== #
 #                    #
 # SNeIa Target       #
@@ -318,7 +332,7 @@ class SNeIa( Transient ):
     _KIND = "SNIa"
     _TEMPLATE = "salt2"
     _RATE = 2.35 * 10**4 # Perley 2020
-
+    
     # {'name': {func: ,'kwargs': {}, 'as': str_or_list }}
     _MODEL = dict( redshift = {"func": "draw_redshift", # implicit
                                 "kwargs": {"zmax":0.2},
@@ -328,7 +342,7 @@ class SNeIa( Transient ):
                    
                    c = {"func": SNeIaColor.intrinsic_and_dust},
 
-                   t0 = {"func": np.random.uniform, 
+                   t0 = {"func": RNG.uniform, 
                          "kwargs": {"low":56_000, "high":56_200} },
                        
                    magabs = {"func": SNeIaMagnitude.tripp1998,

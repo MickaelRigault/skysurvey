@@ -49,7 +49,7 @@ def fit_salt_single(dataset, index,
                     modelcov=True, keymap={},
                     bounds = {"t0": 3, "x1": 0.4, "c": 0.2},
                     in_scatter = {"t0": .5, "x1": 0.1, "c": 0.05},
-                    warn=True,
+                    warn=True, 
                     **kwargs):
     """ This is a wrapper of fit_salt_single() that get data and model
     for the skysurvey.dataset.
@@ -58,7 +58,8 @@ def fit_salt_single(dataset, index,
                                                             phase_range=phase_range)
 
     # add random noise in initial guess
-    target_model.set(**{k: target_model.get(k) + np.random.normal(loc=0, scale=scatter)
+    rng = np.random.default_rng()
+    target_model.set(**{k: target_model.get(k) + rng.normal(loc=0, scale=scatter)
                           for k, scatter in in_scatter.items()
                       })
     # create bounds

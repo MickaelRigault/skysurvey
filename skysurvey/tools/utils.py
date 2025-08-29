@@ -119,7 +119,8 @@ def apply_gaussian_noise(target_or_data, **kwargs):
     return newdata
 
 def random_radec(size=None, skyarea=None,
-                ra_range=[0,360], dec_range=[-90,90]):
+                ra_range=[0,360], dec_range=[-90,90],
+                rng=None):
     """ draw the sky positions
 
     Parameters
@@ -138,26 +139,38 @@ def random_radec(size=None, skyarea=None,
     skyarea: shapely.geometry.(Multi)Polyon
         area to consider. This will overwrite 
         if skyarea is given, ra_range, dec_range is ignored.
+
+    rng : None, int, (Bit)Generator, optional
+        seed for the random number generator.
+        (doc adapted from numpy's `np.random.default_rng` docstring. 
+        See that documentation for details.)
+        If None, an unpredictable entropy will be pulled from the OS.
+        If an ``int``, (>0), it will set the initial `BitGenerator` state.
+        If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
     Returns
     -------
     2d-array
         list of ra, list of dec.
     """
+    rng = np.random.default_rng(rng)
     # => MultiPolygon    
     if type(skyarea) is geometry.MultiPolygon:
         radecs = [random_radec(size=size, 
                                ra_range=ra_range,
                                dec_range=dec_range,                               
-                               skyarea=skyarea_) 
+                               skyarea=skyarea_,
+                               rng=rng) 
                   for skyarea_ in skyarea.geoms]
         
         # at this stage they are already in.        
         ra = np.concatenate([radec_[0] for radec_ in radecs])
         dec = np.concatenate([radec_[1] for radec_ in radecs])
         # never twice the same
-        indexes = np.random.choice(np.arange(len(ra)), size=size, replace=False)
+        indexes = rng.choice(np.arange(len(ra)), size=size, replace=False)
         ra, dec = ra[indexes], dec[indexes] # limit to exact input request
         return ra, dec
+
     
     # => Polygon or no skyarea
     if skyarea is not None: # change the ra_range
@@ -170,14 +183,14 @@ def random_radec(size=None, skyarea=None,
         
     # => Draw RA, Dec    
     dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
-    ra = np.random.uniform(*ra_range, size=size_to_draw)
-    dec = np.arcsin( np.random.uniform(*dec_sin_range, size=size_to_draw) ) / (np.pi/180)
+    ra = rng.uniform(*ra_range, size=size_to_draw)
+    dec = np.arcsin( rng.uniform(*dec_sin_range, size=size_to_draw) ) / (np.pi/180)
     
     if skyarea is not None:
         from shapely.vectorized import contains
         flag = contains(skyarea, ra, dec)
         ra, dec = ra[flag], dec[flag] # those in the polygon
-        indexes = np.random.choice(np.arange(len(ra)), size=size, replace=False) # never twice the same
+        indexes = rng.choice(np.arange( len(ra) ), size=size, replace=False) # never twice the same
         ra, dec = ra[indexes], dec[indexes] 
     
     return ra, dec
@@ -207,7 +220,8 @@ def random_radecz_skymap(size=None,skymap={},
                          do_3d=True,
                          nside=512,
                          ra_range=None,dec_range=None,
-                         zcmb_range=None, cosmo=Planck15, batch_size=1000):
+                         zcmb_range=None, cosmo=Planck15, batch_size=1000,
+                         rng=None):
     """
     """
 
@@ -288,11 +302,12 @@ def random_radecz_skymap(size=None,skymap={},
 
     dists = -np.ones(size)
     dists_in_range = np.zeros(size, dtype=bool)
+    rng = np.random.default_rng(rng)
     while not np.all(dists_in_range):
         ipix_tmp = ipix[~dists_in_range]
         dists[~dists_in_range] = (skymap_raster["DISTMEAN"][ipix_tmp] +
                                   skymap_raster["DISTSTD"][ipix_tmp] *
-                                  np.random.normal(size=np.sum(~dists_in_range)))
+                                  rng.normal(size=np.sum(~dists_in_range)))
         dists_in_range = (dists > dist_range[0]) & (dists < dist_range[1])
 
     zs = z_d(dists)

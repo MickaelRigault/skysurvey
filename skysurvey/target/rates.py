@@ -3,8 +3,11 @@ from astropy.cosmology import Planck18
 
 from ..tools.utils import surface_of_skyarea
 
-def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None,
-                      flatten_ndim=True, **kwargs):
+def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
+                  skyarea=None,
+                  flatten_ndim=True,
+                  rng=None,
+                  **kwargs):
     """Draw random redshift following the given rate.
 
     Parameters
@@ -33,6 +36,13 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None,
         By default None.
     flatten_ndim : bool, optional
         [description]. The default is True.
+    rng : None, int, (Bit)Generator, optional
+        seed for the random number generator.
+        (doc adapted from numpy's `np.random.default_rng` docstring. 
+        See that documentation for details.)
+        If None, an unpredictable entropy will be pulled from the OS.
+        If an ``int``, (>0), it will set the initial `BitGenerator` state.
+        If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
     **kwargs
         Goes to `get_redshift_pdf()` -> `get_rate()`.
 
@@ -44,20 +54,21 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4, skyarea=None,
     xx = np.arange(zmin, zmax, zstep)
     pdf = get_redshift_pdf(xx, rate=rate, keepsize=False, **kwargs)
     xx_eff = np.mean([xx[1:],xx[:-1]], axis=0)
-    
+
+    rng = np.random.default_rng(rng)
     # normal pdf
     if np.ndim(pdf) == 1:
-        return np.random.choice(xx_eff, size=size, p=pdf/pdf.sum())
+        return rng.choice(xx_eff, size=size, p=pdf/pdf.sum())
 
     # 2D rates
     if np.ndim(pdf) == 2:
         if not flatten_ndim:
-            return [np.random.choice(xx_eff, size=size, p=pdf_/pdf_.sum())
+            return [rng.choice(xx_eff, size=size, p=pdf_/pdf_.sum())
                         for pdf_ in pdf]
         
         xx_eff_flat = np.full_like(pdf, xx_eff).reshape(-1)
         pdf_flat = pdf.reshape(-1)
-        return np.random.choice(xx_eff_flat, size=size, p=pdf_flat/pdf_flat.sum())
+        return rng.choice(xx_eff_flat, size=size, p=pdf_flat/pdf_flat.sum())
         
     raise ValueError(f"ndim of pdf should be 1 or 2, not {np.ndim(pdf)=}")
 

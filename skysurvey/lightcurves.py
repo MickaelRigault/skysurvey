@@ -10,7 +10,8 @@ import sncosmo
 from astropy.table import Table
 
 
-def get_obsdata(template, observations, parameters, zpsys="ab", incl_error=True, discard_bands=False,
+def get_obsdata(template, observations, parameters,
+                zpsys="ab", incl_error=True, discard_bands=False,
                 trim_observations=False, phase_range=None):
     """ get observed data using ``sncosmo.realize_lcs()``
 
@@ -120,7 +121,7 @@ def _get_obsdata_(data, **kwargs):
 # ====================== #
 def realize_lightcurves(observations, model, parameters,
                         trim_observations=False, phase_range=None,
-                        scatter=True):
+                        scatter=True, rng=None):
     """Realize data for a set of SNe given a set of observations.
 
     Note: adapted from sncosmo.realize_lcs, but:
@@ -150,7 +151,15 @@ def realize_lightcurves(observations, model, parameters,
         standard deviation equal to the ``fluxerror`` of the observation to
         the bandflux value of the observation calculated from model. Default
         is True.
-
+    rng : None, int, (Bit)Generator, optional
+        seed for the random number generator.
+        (doc adapted from numpy's `np.random.default_rng` docstring. 
+        See that documentation for details.)
+        If None, an unpredictable entropy will be pulled from the OS.
+        If an ``int``, (>0), it will set the initial `BitGenerator` state.
+        If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        
+                
     Returns
     -------
     sne : list of `pandas.DataFrame`
@@ -211,7 +220,8 @@ def realize_lightcurves(observations, model, parameters,
         # np.random.normal: when the inputs are both length 1 arrays,
         # the output is a Python float!
         if scatter:
-            flux = np.atleast_1d( np.random.normal(flux, fluxerr) )
+            rng = np.random.default_rng(rng)
+            flux = np.atleast_1d( rng.normal(flux, fluxerr) )
             
         # output
         data = snobs.merge(pandas.DataFrame({"flux": flux, "fluxerr": fluxerr}, index=snobs.index),
