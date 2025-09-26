@@ -120,49 +120,154 @@ class DataSet(object):
         self.set_survey(survey)
         
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, client=None,
-                                    incl_error=True, **kwargs):
+    def from_targets_and_survey(cls, targets, survey,
+                                       incl_error=True,
+                                       # client=None,
+                                       phase_range=[-50, +200],
+                                       seed=None):
         """ loads a dataset (observed data) given targets and a survey
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
         survey to find which target has been observed with which field.
         Then simulate the targets lightcurves given the observing data (survey.data).
         
-
+        
         Parameters
         ----------
-        targets: skysurvey.Target (or child of)
-            target data corresponding to the true target parameters  
-            (as given by nature)
-            
-        survey: skysurvey.Survey, skysurvey.GridSurvey (or child of)
-            sky observation (what was observed when with which situation)
-
-        client: dask.distributed.Client()
-            dask client to use if any. This is used for 
-            parallelization of the lc generation per field.
-
-        incl_error: bool
-
-        **kwargs goes to realize_survey_target_lcs
+        targets: skysurvey.Target, list, skysurvey.TargetCollection
+            Target data corresponding to the true target parameters
+            (as given by nature). Could be a list
+        survey: skysurvey.Survey (or child of)
+            Sky observation (what was observed when with which situation).
+        incl_error: bool, optional
+            Include error in the lightcurve.
+            If False, the flux is the true model flux.
+        phase_range: list, None, optional
+            Rest-frame phase range to be used for simulating 
+            the lightcurves. If None, no cut is applied on time
+            range for the logs.
+        seed : None, int, Generator, RandomState, optional
+            = ignored if incl_error=False = 
+            # docstring adapted from np.random.default_rng()
+            If None, a fresh seed will be pulled. 
+            If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state. 
+            Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
+            When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
 
         Returns
         -------
-        class instance
-            the observation data have been derived and stored as self.data
-
-        See also
-        --------
-        read_parquet: loads a stored dataset
+        dataset:
+            instance of a DataSet loaded from the given targets.
         """
-        from .tools.speedutils import eff_concat
-        lightcurves, fieldids = cls.realize_survey_target_lcs(targets, survey,
-                                                                  client=client,
-                                                                  incl_error=incl_error,
-                                                                  **kwargs)
-        chunk_size = int(np.sqrt( len(lightcurves) )) # good guess
-        return cls( eff_concat(lightcurves, chunk_size=chunk_size, keys=fieldids).reset_index(survey.fieldids.names),
-                       targets=targets, survey=survey)
+        from .tools import speedutils
+
+        # if input targets is a list, create a TemplateCollection
+        if type(targets) in [list, tuple]:
+            from .target.collection import TargetCollection
+            targets = TargetCollection(targets) 
+        
+        # fields in which target fall into
+        dfieldids_ = survey.radec_to_fieldid( targets.data[["ra", "dec"]] )
+                
+        _data_index = targets.data.index.name
+        if _data_index is None:
+            _data_index = "index"
+        
+        # make sure index of dfieldids_ corresponds to the input one.
+        dfieldids_.index.name = _data_index
+        
+        # merge target dataframe with matching fields.
+        # note: pandas.merge conserves dtypes of fieldids, not pandas.join
+        targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
+        target_fields = np.stack(targets_data[survey.fieldids.names].values, dtype="int")
+        #### IS THAT NECESSARY ? ####
+        # =========== #
+        
+        survey_data = survey.data[ ["mjd", "band", "skynoise", "gain", "zp"] + survey.fieldids.names].copy()
+        if survey_data.index.name is None:
+            survey_data.index.name = "index_obs"
+        
+        field_names = survey.fieldids.names
+        gsurvey_indexed = survey_data.groupby(field_names, observed=True, group_keys = False)
+
+        # 
+        # check which fields have been observed
+        # to avoid looping over un-observed targets.
+        # 
+        nobs = gsurvey_indexed.size()
+        fields_observed = np.stack(nobs.index.values, dtype="int")
+
+        # build boolean mask to see which "target" could have data
+        # given the "field" (all field_names) that have been observed.
+        if (nfields:=len(field_names)) == 2:
+            # speed tricks for matching pairs
+            is_target_observed = speedutils.isin_pair_elements(target_fields, fields_observed)
+        elif nfields == 1:
+            is_target_observed = np.isin(target_fields, fields_observed)
+        else:
+            raise NotImplementedError("more than 2 entries for {field_names=}. Not implemented.")
+
+        # List of observed targets
+        targets_data_observed = targets_data[is_target_observed]
+        
+        # 
+        # for lop on targets:
+        # 
+        # each lightcurve's flux and associated error are stored
+        # inside `bandflux`. which is then converted into a unique
+        # pandas.DataFrame, using the faster `eff_concat` trick.
+        #
+        
+        # make sure phase_range is an array to multiple by (1+z)
+        if phase_range is not None:
+            phase_range = np.asarray(phase_range)
+            
+        bandflux = []
+        targets_observed = targets_data_observed.index.unique()
+        for index_target in targets_observed:
+            # get the target model, that will be used to generate the flux
+            # this model is set to the target parameters.
+            model = targets.get_target_template(index=index_target, as_model=True)
+
+            # grab the target information (could be several rows)
+            this_target = targets_data_observed.loc[[index_target]]
+            
+            # logs associated to this target.
+            this_target_logs = pandas.concat([gsurvey_indexed.get_group(tuple(entry_))
+                                              for entry_ in this_target[field_names].values])
+            
+            # limit the logs to the given restframe phase range
+            if phase_range is not None:
+                # to limit per phase:
+                # 1. get the model t0 and redshift to get rest-frame phase
+                t0 = model.parameters[model.param_names.index("t0")]
+                redshift = model.parameters[model.param_names.index("z")]
+                # 2. create the mjd range to consider for this target.
+                this_mjd_range = t0 + phase_range*(1+redshift)
+                # 3. limit the logs to mjd matching this condition. 
+                used_logs = this_target_logs[ this_target_logs["mjd"].between(*this_mjd_range) ].copy()
+            else:
+                used_logs = this_target_logs.copy()
+
+            used_logs = used_logs.sort_values("mjd")
+            # realise the flux lightcurves and its error
+            used_logs["flux"] = model.bandflux(used_logs['band'], used_logs['mjd'],
+                                               zp=used_logs['zp'], zpsys="ab")
+            used_logs["fluxerr"] = np.sqrt(used_logs['skynoise']**2 + \
+                                               np.abs(used_logs["flux"]) / used_logs['gain'])
+            # and store.
+            bandflux.append(used_logs)
+
+        # create a dataframe concatenating all lightcurves
+        lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))),
+                                    keys=targets_observed.values)
+
+        # if incl_error, the true flux is converted into an observed flux
+        if incl_error:
+            rng = np.random.default_rng(seed)
+            lcs["flux"] += rng.normal(loc=0, scale=lcs["fluxerr"])
+            
+        return cls(lcs, targets=targets, survey=survey)
 
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
@@ -537,206 +642,6 @@ class DataSet(object):
 
         return fig
     
-    # -------------- #
-    #    Statics     #
-    # -------------- #
-    @classmethod
-    def realize_survey_target_lcs(cls, targets, survey, 
-                                  template_prop={}, nfirst=None,
-                                  incl_error=True,
-                                  client=None, discard_bands=False,
-                                  trim_observations=False,
-                                  phase_range=None):
-        """Create the lightcurve of the input targets as they would be observed by the survey.
-
-        These are split per survey fields.
-        
-        Parameters
-        ----------
-        targets: skysurvey.Target, skysurvey.TargetCollection
-            Target data corresponding to the true target parameters
-            (as given by nature).
-        survey: skysurvey.Survey (or child of)
-            Sky observation (what was observed when with which situation).
-        template_prop: dict, optional
-            kwargs for template.get(), setting the template parameters.
-        nfirst: int, optional
-            If given, only the first nfirst entries will be considered.
-            This is a debug / test tool.
-        incl_error: bool, optional
-            Include error in the lightcurve.
-        client: dask.distributed.Client(), optional
-            Dask client to use if any. This is used for
-            parallelization of the lc generation per field.
-        discard_bands: bool, optional
-            If True, discard bands that are not in the survey.
-        trim_observations: bool, optional
-            If True, trim observations to the phase range.
-        phase_range: list, optional
-            Phase range to consider.
-            
-        Returns
-        -------
-        list, list
-            - list of dataframe (1 per fields, all targets of the field in)
-            - list of fields (fieldid)
-            
-        See also
-        --------
-        from_targets_and_survey: loads the instance given targets and a survey
-        """
-        from .template import TemplateCollection
-        if type(targets) in [list, tuple]:
-            from .target.collection import TargetCollection
-            targets = TargetCollection(targets) # correct format
-        
-        if hasattr(targets.template, "__iter__") or type(targets.template) is TemplateCollection : # collection of single-kind
-            samekind_targets = targets.as_targets()
-            outs = [cls._realize_survey_kindtarget_lcs(t_, survey) for t_ in samekind_targets]
-            
-            # lightcurves and fields
-            lc_out = [l_ for l,v in outs for l_ in l if l is not None] # list of list of dataframe
-            fieldids_indexes = np.vstack([np.vstack(v) for l,v in outs if v is not None]) # all fields for all cases
-            fieldids_indexes = np.squeeze(fieldids_indexes) # 1-d or n-d ?
-            if len(survey.fieldids.names) > 1: # multi-index
-                fieldids_indexes = pandas.MultiIndex.from_arrays(fieldids_indexes.T, names=survey.fieldids.names)
-            else: # single-index
-                fieldids_indexes = pandas.Index(data=fieldids_indexes, name=survey.fieldids.names[0])
-                
-        else: # input is a single-kind target
-            lc_out, fieldids_indexes = cls._realize_survey_kindtarget_lcs(targets, survey,
-                                                          template_prop=template_prop,
-                                                          nfirst=nfirst,
-                                                          client=client,
-                                                          incl_error=incl_error,
-                                                          discard_bands=discard_bands,
-                                                          trim_observations=trim_observations,
-                                                          phase_range=phase_range)
-        return lc_out, fieldids_indexes
-
-        
-    @staticmethod
-    def _realize_survey_kindtarget_lcs( targets, survey,
-                                           template_prop={}, nfirst=None,
-                                           incl_error=True,
-                                           client=None, discard_bands=False,
-                                            trim_observations=False, phase_range=None):
-        """Create the lightcurve of the input single-kind targets as they would be observed by the survey.
-
-        These are split per survey fields.
-        
-        Parameters
-        ----------
-        targets: skysurvey.Target, skysurvey.TargetCollection
-            Target data corresponding to the true target parameters
-            (as given by nature).
-        survey: skysurvey.Survey (or child of)
-            Sky observation (what was observed when with which situation).
-        template_prop: dict, optional
-            kwargs for template.get(), setting the template parameters.
-        nfirst: int, optional
-            If given, only the first nfirst entries will be considered.
-            This is a debug / test tool.
-        incl_error: bool, optional
-            Include error in the lightcurve.
-        client: dask.distributed.Client(), optional
-            Dask client to use if any. This is used for
-            parallelization of the lc generation per field.
-        discard_bands: bool, optional
-            If True, discard bands that are not in the survey.
-        trim_observations: bool, optional
-            If True, trim observations to the phase range.
-        phase_range: list, optional
-            Phase range to consider.
-            
-        Returns
-        -------
-        list, list
-            - list of dataframe (1 per fields, all targets of the field in)
-            - list of fields (fieldid)
-            
-        See also
-        --------
-        from_targets_and_survey: loads the instance given targets and a survey
-        """
-        # name of template parameters
-        template_columns = targets.get_template_columns()
-
-        # fields in which target fall into
-        dfieldids_ = survey.radec_to_fieldid( targets.data[["ra","dec"]] )
-        
-
-        # now let's join survey and target dataframes.
-        # => first let's grab the index name, 'index by default'
-        _data_index = targets.data.index.name
-        if _data_index is None:
-            _data_index = "index"
-
-        # make sure index of dfieldids_ corresponds to the input one.
-        dfieldids_.index.name = _data_index
-        
-        # merge target dataframe with matching fields.
-        # note: pandas.merge conserves dtypes of fieldids, not pandas.join
-        targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
-
-        # ------------- #
-        
-        # nothing observed. Nothing to do.
-        if len(targets_data) == 0: 
-            return None, None
-
-        # add fieldids (could be multi-index) into the dataframe indexing.
-        target_indexed = targets_data.reset_index().set_index([_data_index]+survey.fieldids.names)
-
-        # group targets per fieldids as realize_lightcurve will be made per fields.
-        # note: best performance when passing by one groupby calls rather than indexing and xs()
-        survey_data = survey.data[["mjd","band","skynoise","gain", "zp"]+survey.fieldids.names].copy()
-        if survey_data.index.name is None:
-            survey_data.index.name = "index_obs"
-            
-        gsurvey_indexed = survey_data.groupby(survey.fieldids.names)
-
-        # get list of 
-        # This works for any size of fieldids
-        names = survey.fieldids.names
-        levels = np.arange(1, len(names)+1).tolist()
-        if len(levels)==1:
-            levels = levels[0] # single index dataframe
-
-        fieldids_indexes = target_indexed.groupby(level=levels).size().index
-        if nfirst is not None:
-            fieldids_indexes = fieldids_indexes[:nfirst]
-            
-        # ------------- #
-        
-        # Build a LC for a given index
-        sncosmo_model_base = targets.get_template(as_model=True, **template_prop)            
-        def _get_index_lc_input_(index_):
-            """Get the lightcurve input for a given index."""
-            try:
-                this_survey = gsurvey_indexed.get_group(index_).copy()
-                #survey_indexed.xs(index_)[["mjd","band","skynoise","gain", "zp"]]
-            except:
-                # no observations for this fieldids 
-                return None
-
-            # get() returns copy
-            sncosmo_model = copy( sncosmo_model_base )
-            # survey matching the input fieldids row
-
-            # Taking the data we need
-            this_target = target_indexed.xs(index_, level=levels)[template_columns].copy()
-            return sncosmo_model, this_survey, this_target
-
-        data = [_get_index_lc_input_(index_) for index_ in fieldids_indexes]
-        lc_out = [_get_obsdata_(data_, incl_error=incl_error,
-                                    discard_bands=discard_bands,
-                                    trim_observations=trim_observations,
-                                    phase_range=phase_range)
-                          for data_ in data if data_ is not None]
-
-        return lc_out, fieldids_indexes
-
     # ============== #
     #   Properties   # 
     # ============== #

@@ -101,13 +101,34 @@ class TargetCollection( object ):
             
         return data
 
-    def get_target_template(self, index):
-        """Get the template for a given target."""
+    def get_target_template(self, index, as_model=False):
+        """ Get the template for a given target.
+
+        Parameters
+        ----------
+        index : int
+            Index of a target (see `self.data.index`) to set the template
+            parameters to that of the target.
+        as_model : bool, optional
+            should this return the sncosmo.Model (True) or the 
+            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+        **kwargs
+            Goes to `seld.template.get()` and passed to `sncosmo.Model`.
+
+        Returns
+        -------
+        skysurvey.Template or sncosmo.Model
+            An instance of the template (or its associated `sncosmo.Model`).
+            (see as_model)
+        """
         from ..template import Template
         data_index = self.data.loc[index]
         this_template = Template.from_sncosmo( data_index["template"] )
         target_params = data_index[np.in1d(data_index.index, this_template.parameters)].to_dict()
         this_template.sncosmo_model.set(**target_params)
+        if as_model:
+            return this_template.sncosmo_model
+        
         return this_template
 
         

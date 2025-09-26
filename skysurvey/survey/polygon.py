@@ -7,7 +7,7 @@ from shapely import geometry
 import warnings
 
 from .core import BaseSurvey
-from ztffields.projection import spatialjoin_radec_to_fields, parse_fields, project_to_radec
+from ..tools.projection import spatialjoin_radec_to_fields, parse_fields, project_to_radec
 
 __all__ = ["PolygonSurvey"] 
 

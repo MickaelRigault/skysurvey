@@ -266,14 +266,16 @@ class Target( object ):
             parameters to that of the target. If None, the default
             `sncosmo.Model` parameters will be used. By default None.
         as_model : bool, optional
-            [description], by default False
+            should this return the sncosmo.Model (True) or the 
+            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 
         Returns
         -------
-        sncosmo.Model
-            An instance of the template (a `sncosmo.Model`).
+        skysurvey.Template or sncosmo.Model
+            An instance of the template (or its associated `sncosmo.Model`).
+            (see as_model)
 
         See Also
         --------
@@ -291,7 +293,7 @@ class Target( object ):
         
         return sncosmo_model
 
-    def get_target_template(self, index, **kwargs):
+    def get_target_template(self, index, as_model=False, **kwargs):
         """Get a template set to the target parameters.
 
         This is a shortcut to `get_template(index=index, **kwargs)`.
@@ -301,20 +303,24 @@ class Target( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+        as_model : bool, optional
+            should this return the sncosmo.Model (True) or the 
+            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 
         Returns
         -------
-        sncosmo.Model
-            An instance of the template (a `sncosmo.Model`).
+        skysurvey.Template or sncosmo.Model
+            An instance of the template (or its associated `sncosmo.Model`).
+            (see as_model)
 
         See Also
         --------
         get_template: get a template instance (sncosmo.Model)
         get_template_parameters: get the template parameters for the given target
         """
-        return self.get_template(index=index, **kwargs)
+        return self.get_template(index=index, as_model=as_model, **kwargs)
     
     def get_target_flux(self, index, band, phase, zp=None, zpsys=None, restframe=True):
         """Flux through the given bandpass(es) at the given time(s).
@@ -493,7 +499,7 @@ class Target( object ):
         ...             "magobs": {"func": stats.lognorm.rvs, "kwargs":{"s":0.9, "loc":0.03, "scale":0.01}},
         ...             }
         >>> snia = skysurvey.SNeIa.from_draw(1000)
-        >>> noisy_data = snia.apply_gaussian_noise(errmodel, data=snia.data)
+        >>> snia = snia.apply_gaussian_noise(errmodel, data=snia.data) 
         """
         from modeldag.tools import apply_gaussian_noise
         
