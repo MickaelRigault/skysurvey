@@ -7,7 +7,8 @@ list of short notebook illustrating some commun usage
   :maxdepth: 1
   :caption: Tutorials
 
-  add_mwebv	    
+  add_mwebv
+  change_rate	  
   radec_in_survey
   target_and_skyarea
   change_model_while_draw
