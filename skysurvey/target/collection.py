@@ -396,11 +396,10 @@ class CompositeTransient( TransientCollection ):
 
             By default None.
         rate : float, callable, optional
-            The transient rate.
-
-            - float: assumed volumetric rate
-            - callable: function of redshift `rate(z)` that provides the rate
-              as a function of z.
+            If a float is given, it is assumed to be the number of targets per
+            Gpc3, and `get_volumetric_rate()` is used. 
+            If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of wavelength.
 
             By default None.
         effect : [type], optional

@@ -170,12 +170,12 @@ class Target( object ):
             By default None.
         rate : float, callable, optional
             The transient rate.
-
-            - float: assumed volumetric rate
-            - callable: function of redshift `rate(z)` that provides the rate
-              as a function of z.
-
+            If a float is given, it is assumed to be the number of targets per
+            Gpc3, and `get_volumetric_rate()` is used. 
+            If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of wavelength.
             By default None.
+
         effect : [type], optional
             [description]. By default None.
         **kwargs
@@ -1034,7 +1034,7 @@ class Target( object ):
         if nyears is not None:
             rate_min = self.get_rate(zmin, skyarea=skyarea) if (zmin is not None and zmin >0) else 0
             kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
-            size = int( (self.get_rate(zmax, skyarea=skyarea)-rate_min) * nyears)
+            size = int( (self.get_rate(zmax, skyarea=skyarea) - rate_min) * nyears)
         
         # actually draw the data
         data = drawn_model.draw(size=size,
@@ -1132,9 +1132,9 @@ class Transient( Target ):
         ----------
         float_or_func : float or callable
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, then `skysurvey.target.rates.get_volumetric_rate()` is used.
-            If a callable is given, it is assumed to be a function that takes
-            as input an array or redshift `z`.
+            Gpc3, and `get_volumetric_rate()` is used. 
+            If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of wavelength.
         """
         if callable(float_or_func):
             self._rate = float_or_func
@@ -1156,6 +1156,10 @@ class Transient( Target ):
             Number of redshifts to draw. By default None.
         rate : float, callable, optional
             The transient rate. If None, `self.rate` is used. By default None.
+            If a float is given, it is assumed to be the number of targets per
+            Gpc3, and `get_volumetric_rate()` is used. 
+            If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of wavelength.
         **kwargs
             Additional keyword arguments to pass to `draw_redshift`.
 
@@ -1191,9 +1195,10 @@ class Transient( Target ):
             By default None.
         rate : float, callable, optional
             If None, `self.rate` is used.
-            If float, assumed volumetric rate (target/Gpc3).
-            If callable, function as a function of rate (`rate(z, **kwargs)`).
-            By default None.
+            If a float is given, it is assumed to be the number of targets per
+            Gpc3, and `get_volumetric_rate()` is used. 
+            If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of wavelength.
         **kwargs
             Goes to the rate function (if a function, not a number).
 
@@ -1381,6 +1386,8 @@ class Transient( Target ):
         """Rate of the transient.
 
         If float, it is assumed to be the volumetric rate in Gpc-3 / yr-1.
+        If a callable is given, it is supposed to be a function of z that
+        returns the volumetric rate as a function of wavelength.
         """
         if not hasattr(self,"_rate"):
             self.set_rate( self._RATE ) # default

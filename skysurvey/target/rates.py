@@ -14,11 +14,11 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     ----------
     size : int
         Number of target to draw.
-    rate : callable or float
-        If a callable is given, it is assumed to be a function that takes as
-        input an array or redshift `z`. If a float is given, it is assumed
-        to be the number of targets per Gpc3, and `get_volumetric_rate()`
-        is used.
+    rate : float or callable
+        If a float is given, it is assumed to be the number of targets per
+        Gpc3, and `get_volumetric_rate()` is used. 
+        If a callable is given, it is supposed to be a function of z that
+        returns the volumetric rate as a function of wavelength.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
@@ -56,6 +56,7 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     xx_eff = np.mean([xx[1:],xx[:-1]], axis=0)
 
     rng = np.random.default_rng(rng)
+    
     # normal pdf
     if np.ndim(pdf) == 1:
         return rng.choice(xx_eff, size=size, p=pdf/pdf.sum())
@@ -82,11 +83,11 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
 
     Parameters
     ----------
-    rate : callable or float
-        If a callable is given, it is assumed to be a function that takes as
-        input an array or redshift `z`. If a float is given, it is assumed
-        to be the number of targets per Gpc3, and `get_volumetric_rate()`
-        is used.
+    rate : float or callable
+        If a float is given, it is assumed to be the number of targets per
+        Gpc3, and `get_volumetric_rate()` is used. 
+        If a callable is given, it is supposed to be a function of z that
+        returns the volumetric rate as a function of wavelength.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
@@ -138,7 +139,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
                                 assume_sorted=True)
 
 
-def get_rate(z, rate, skyarea=None, **kwargs):
+def get_rate(z, rate, skyarea=None, cosmology=Planck18, **kwargs):
     """Get the rate as a function of redshift.
 
     Parameters
@@ -147,21 +148,22 @@ def get_rate(z, rate, skyarea=None, **kwargs):
         Array of redshifts.
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3, and `get_volumetric_rate()` is used. If a callable is given,
-        it is assumed to be a function that takes as input an array or
-        redshift `z`.
+        Gpc3, and `get_volumetric_rate()` is used. 
+        If a callable is given, it is supposed to be a function of z that
+        returns the volumetric rate as a function of wavelength.
     skyarea : None, str, float, geometry, optional
         Sky area (in deg**2).
-
         - None or 'full': 4pi
         - "extra-galactic": 4pi - (milky-way b<5)
         - float: area in deg**2
         - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-
         By default None.
+    cosmology : astropy.Cosmology, optional
+        Cosmology used to get the comiving_volume. The default is
+        `Planck18`.
     **kwargs
-        Rate options. If `rate` is a float, these are that of
-        `get_volumetric_rate` (`cosmology=Planck18`, `skyarea=None`).
+        Rate options if rate is a function. 
+        ignored otherwise.
 
     Returns
     -------
@@ -170,9 +172,12 @@ def get_rate(z, rate, skyarea=None, **kwargs):
     """
     # specified rate function or volumetric rate ?
     if callable(rate): # function
-        target_rate = rate(z, **kwargs)
+        n_per_gpc3 = rate(z, **kwargs)
     else: # volumetric
-        target_rate = get_volumetric_rate(z, n_per_gpc3=rate, **kwargs)
+        n_per_gpc3 = rate
+        
+    target_rate = get_volumetric_rate(z, n_per_gpc3=n_per_gpc3,
+                                        cosmology=cosmology)
 
     skyarea = surface_of_skyarea(skyarea) # in deg**2 or None
     if skyarea is not None:
@@ -190,9 +195,9 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, **kwargs):
         Array of redshifts.
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3, and `get_volumetric_rate()` is used. If a callable is given,
-        it is assumed to be a function that takes as input an array or
-        redshift `z`.
+        Gpc3, and `get_volumetric_rate()` is used. 
+        If a callable is given, it is supposed to be a function of z that
+        returns the volumetric rate as a function of wavelength.
     skyarea : None, str, float, geometry, optional
         Sky area (in deg**2).
 
@@ -231,8 +236,9 @@ def get_volumetric_rate(z, n_per_gpc3, cosmology=Planck18):
     ----------
     z : float
         Redshift.
-    n_per_gpc3 : float
+    n_per_gpc3 : float, array
         Number of targets per Gpc3.
+        If array, it must broadcast with input "z".
     cosmology : astropy.Cosmology, optional
         Cosmology used to get the comiving_volume. The default is
         `Planck18`.
