@@ -8,7 +8,8 @@ list of short notebook illustrating some commun usage
   :caption: Tutorials
 
   add_mwebv
-  change_rate	  
+  change_rate
+  noise_to_target
   radec_in_survey
   target_and_skyarea
   change_model_while_draw
