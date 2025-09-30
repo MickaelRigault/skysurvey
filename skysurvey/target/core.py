@@ -174,7 +174,6 @@ class Target( object ):
             Gpc3, and `get_volumetric_rate()` is used. 
             If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
-            By default None.
 
         effect : [type], optional
             [description]. By default None.
@@ -193,13 +192,8 @@ class Target( object ):
         this = cls()
 
         # backward compatibility
-        if template is None:
-            if "source" in kwargs:
-                warnings.warn("Deprecation warning: source option is now called template")
-                template = kwargs.pop("source")
-                
-            if "source_or_template" in kwargs:
-                template = kwargs.pop("source_or_template")
+        if template is None and  "source_or_template" in kwargs:
+            template = kwargs.pop("source_or_template")
                     
         if template is not None:
             this.set_template(template)

@@ -115,8 +115,10 @@ Step 1: transients
        .. code-block:: python
 
 	  import skysurvey
-	  snib = skysurvey.TSTransient("v19-2005bf-corr")
+	  # genetic time serie transient
+	  # specify the template (e.g. from sncosmo) and the absolute mag (loc, scale)
 	  # see https://sncosmo.readthedocs.io/en/stable/source-list.html
+	  snib = skysurvey.TSTransient("v19-2005bf-corr", magabs=[-18, 1])
 	  snib.draw(50_000, inplace=True) # inplace sets snia.data
 	  snib.data.head(5) # also self.data
 

@@ -48,7 +48,7 @@ class TSTransient( Transient ):
                  )
 
 
-    def __init__(self, source_or_template=None, *args, **kwargs):
+    def __init__(self, source_or_template=None, magabs=None, *args, **kwargs):
         """ loads a TimeSerie Transient 
 
         Parameters
@@ -59,20 +59,28 @@ class TSTransient( Transient ):
             - sncosmo.Source: a loaded sncosmo.Source
             - sncosmo.Model: a  loaded sncosmo.Model
             this is eventually converted into a generic skysurvey.Template.
-
+        magabs: list
+            define the absolute magnitude parameters. Could be 2 or 3 values:
+            - len(magabs)==2 => drawn from normal distribution: 
+                loc, scale = magabs
+            - len(magabs)==3 => drawn from asymetric normal distribution: 
+                loc, scale_low, scale_high = magabs
         """
         if source_or_template is not None:
             self.set_template(source_or_template)
 
         super().__init__(*args, **kwargs)
-        if self._MAGABS is not None: #
+        
+        if magabs is not None:
+            self.set_magabs(magabs)
+        elif self._MAGABS is not None: #
             self.set_magabs(self._MAGABS)
     
     @classmethod
     def from_sncosmo(cls, source_or_template,
                          rate=None,
                          model=None,
-                         magabs=None, magscatter=None):
+                         magabs=None):
         """ loads an instance from a sncosmo TimeSeriesSource source
         (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources) 
 
@@ -84,28 +92,20 @@ class TSTransient( Transient ):
             - sncosmo.Source: a loaded sncosmo.Source
             - sncosmo.Model: a  loaded sncosmo.Model
             this is eventually converted into a generic skysurvey.Template.
-            
         rate: float, func
             the transient rate
             - float: assumed volumetric rate
             - func: function of redshift rate(z) 
                     that provides the rate as a function of z
-        
         model: dict
             provide the model graph structure on how transient 
             parameters are drawn. 
-
-        magabs: float
-            Absolute magnitude central value.
-            This bypasses cls._MAGABS.
-            
-        magscatter: float, list
-            = ignored if magabs is None =
-            absolute magnitude scatter. 
-            If float a gaussian scale is assumed. If list, an assymetric gaussian
-            is assumed such that  scatter_low, scatter_high = magscatter.
-            This bypasses cls._MAGABS.
-
+        magabs: list
+            define the absolute magnitude parameters. Could be 2 or 3 values:
+            - len(magabs)==2 => drawn from normal distribution: 
+                loc, scale = magabs
+            - len(magabs)==3 => drawn from asymetric normal distribution: 
+                loc, scale_low, scale_high = magabs            
         Returns
         -------
         instance
@@ -128,17 +128,23 @@ class TSTransient( Transient ):
 
         # short cut to update the model
         if magabs is not None: # This overwrites with is inside _MAGABS.
-            if np.ndim(magscatter) == 0: #float
-                magabs_ = magabs, magscatter
-            else:
-                magabs_ = [magabs] + list(magscatter)
-                
             this.set_magabs(magabs_) #
 
         return this
 
     def set_magabs(self, magabs):
-        """ update the model for the loc *and* scale of the absolute magnitude distribution """
+        """ update the model for the loc *and* scale of the absolute magnitude distribution 
+        
+        Parameters
+        ----------
+        magabs: list
+            define the absolute magnitude parameters. Could be 2 or 3 values:
+            - len(magabs)==2 => drawn from normal distribution: 
+                loc, scale = magabs
+            - len(magabs)==3 => drawn from asymetric normal distribution: 
+                loc, scale_low, scale_high = magabs
+
+        """
         if magabs is not None:
             loc, *scale = magabs
             if len(scale) == 1: # gaussian
@@ -150,7 +156,6 @@ class TSTransient( Transient ):
                                 "kwargs": {"xx": f"{loc-scale[0]*10}:{loc+scale[1]*10}:10000j",
                                            "loc": loc, "scale_low": scale[0], "scale_high": scale[1]}
                                 }
-                
                 
             self.update_model(magabs=model_magabs)
         
