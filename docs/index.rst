@@ -201,7 +201,7 @@ Step 2: survey
 		       
             import skysurvey
 	    
-            survey = skysurvey.ZTF.from_logs() # need password.
+            survey = skysurvey.ZTF.from_logs()
 
     .. tab-item:: LSST
 
@@ -257,8 +257,8 @@ targets is stored in dset.targets.
        .. code-block:: python
 		       
             import skysurvey
-	    targets = skysurvey.TargetCollection([snia, snii])
-            dset = skysurvey.DataSet.from_targets_and_survey(targets, survey)
+	    # simply pass a list of targets
+            dset = skysurvey.DataSet.from_targets_and_survey([snia, snii], survey)
             dset.data
 	    
 .. image:: ./gallery/lc_example.png
