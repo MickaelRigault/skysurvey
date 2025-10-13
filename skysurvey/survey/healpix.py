@@ -472,7 +472,7 @@ class HealpixSurvey( BaseSurvey ):
                 data = np.random.uniform(size=self.nfields)
             else:
                 data = self.get_fieldstat(stat=stat, columns=column,
-                                              incl_zeros=True, fillna=np.NaN,
+                                              incl_zeros=True, fillna=np.nan,
                                               data=data)
                 
         else:
