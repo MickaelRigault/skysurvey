@@ -75,12 +75,21 @@ class TSTransient( Transient ):
             self.set_magabs(magabs)
         elif self._MAGABS is not None: #
             self.set_magabs(self._MAGABS)
-    
+
+    @classmethod
+    def _parse_init_kwargs_(cls, **kwargs):
+        """ trick to add specific subclass kwargs into the init """
+        # remove any magabs option from input kkwargs => init_kwargs
+        init_kwargs = {"magabs": kwargs.pop("magabs", None)}
+        # first => init_kwargs
+        # second => generic kwargs
+        return init_kwargs, kwargs
+
     @classmethod
     def from_sncosmo(cls, source_or_template,
                          rate=None,
                          model=None,
-                         magabs=None):
+                         magabs=None, **kwargs):
         """ loads an instance from a sncosmo TimeSeriesSource source
         (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources) 
 
@@ -115,7 +124,8 @@ class TSTransient( Transient ):
         --------
         from_draw: load an instance and draw the transient parameters
         """
-        this = cls()
+        init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
+        this = cls(**init_kwargs)
 
         if rate is not None:
             this.set_rate(rate)

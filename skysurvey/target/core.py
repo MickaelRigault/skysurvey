@@ -77,7 +77,7 @@ class Target( object ):
 
 
     @classmethod
-    def from_data(cls, data, template=None, model=None):
+    def from_data(cls, data, template=None, model=None, **kwargs):
         """Load the instance given existing data.
 
         This means that the model will be ignored as data will not be generated
@@ -104,7 +104,8 @@ class Target( object ):
         --------
         from_draw: loads the instance from a random draw of targets given the model
         """
-        this = cls()
+        init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
+        this = cls(**init_kwargs)
 
         if template is not None:
             this.set_template(template, rate_update=False)
@@ -115,7 +116,6 @@ class Target( object ):
         if template is not None and model is not None:
             this._update_rate_in_model_()
 
-            
         this.set_data(data)
         return this
         
@@ -128,6 +128,10 @@ class Target( object ):
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
 
+        kwargs may hold specific transient options like:
+        - magabs for TSTransient(){self._additional_input}
+        (see class.__init__).
+        
         Parameters
         ----------
         size : int, optional
@@ -189,7 +193,8 @@ class Target( object ):
         --------
         from_setting: loads an instance given model parameters (dict)
         """
-        this = cls()
+        init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
+        this = cls(**init_kwargs)
 
         # backward compatibility
         if template is None and  "source_or_template" in kwargs:
@@ -221,7 +226,14 @@ class Target( object ):
                        inplace=True, # creates self.data
                        )
         return this
-        
+
+    @classmethod
+    def _parse_init_kwargs_(cls, **kwargs):
+        """ trick to add specific subclass kwargs into the init """
+        # first kwargs/dict => init
+        # second kwargs => rest (template)
+        return {}, kwargs
+    
     # ------------- #
     #   Template    #
     # ------------- #
