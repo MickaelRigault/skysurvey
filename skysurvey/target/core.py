@@ -43,15 +43,13 @@ class Target( object ):
     def __init__(self):
         pass
         
-    def __repr__(self):
-        """ String representation of the instance. """
-        
-        return self.__str__()
+#    def __repr__(self):
+#        """ String representation of the instance. """        
+#        return self.__str__()
     
-    def __str__(self):
-        """ String representation of the instance. """
-        import pprint
-        return pprint.pformat(self.model.model, sort_dicts=False)
+#    def __str__(self):
+#        """ String representation of the instance. """
+#        return self.__class__
 
     @classmethod
     def from_setting(cls, setting, **kwargs):
