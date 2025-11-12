@@ -43,15 +43,13 @@ class Target( object ):
     def __init__(self):
         pass
         
-    def __repr__(self):
-        """ String representation of the instance. """
-        
-        return self.__str__()
+#    def __repr__(self):
+#        """ String representation of the instance. """        
+#        return self.__str__()
     
-    def __str__(self):
-        """ String representation of the instance. """
-        import pprint
-        return pprint.pformat(self.model.model, sort_dicts=False)
+#    def __str__(self):
+#        """ String representation of the instance. """
+#        return self.__class__
 
     @classmethod
     def from_setting(cls, setting, **kwargs):
@@ -196,10 +194,7 @@ class Target( object ):
         init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
         this = cls(**init_kwargs)
 
-        # backward compatibility
-        if template is None and  "source_or_template" in kwargs:
-            template = kwargs.pop("source_or_template")
-                    
+        # backward compatibility                    
         if template is not None:
             this.set_template(template)
             

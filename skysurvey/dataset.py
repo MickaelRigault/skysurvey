@@ -168,12 +168,12 @@ class DataSet(object):
         
         # fields in which target fall into
         dfieldids_ = survey.radec_to_fieldid( targets.data[["ra", "dec"]] )
-                
+
+        # make sure index of dfieldids_ corresponds to the input one.
         _data_index = targets.data.index.name
         if _data_index is None:
             _data_index = "index"
         
-        # make sure index of dfieldids_ corresponds to the input one.
         dfieldids_.index.name = _data_index
         
         # merge target dataframe with matching fields.
@@ -262,6 +262,7 @@ class DataSet(object):
         lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))),
                                     keys=targets_observed.values)
 
+        lcs.index.set_names("index", level=0, inplace=True)
         # if incl_error, the true flux is converted into an observed flux
         if incl_error:
             rng = np.random.default_rng(seed)
