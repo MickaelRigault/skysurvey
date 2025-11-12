@@ -196,10 +196,7 @@ class Target( object ):
         init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
         this = cls(**init_kwargs)
 
-        # backward compatibility
-        if template is None and  "source_or_template" in kwargs:
-            template = kwargs.pop("source_or_template")
-                    
+        # backward compatibility                    
         if template is not None:
             this.set_template(template)
             
