@@ -1023,3 +1023,7 @@ class TemplateCollection( object ):
     @property
     def parameters(self):
         """The parameters of the templates."""
+        if self.is_uniquetype:
+            return self.templates[0].parameters
+        else:
+            return self.call_down("parameters")
