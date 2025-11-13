@@ -29,7 +29,7 @@ Elements
       :class-card: sd-border-0
       :shadow: None
 
-      ``Target`` are objects as given by natures. You can generate
+      ``Target`` are objects as given by nature. You can generate
       realistic targets, building complex parametrisation thanks to
       the modeldag_ backend.
       skysurvey_ provides multi-predefined targets, such as SNeIa, SNII,
@@ -128,7 +128,7 @@ You have more built-in targets. You can also directly use ``target = Target.from
 Step 2: survey
 -----------------
 
-**provide what has been observed when**
+**Provide what has been observed when**
 
 
 .. tab-set::
@@ -213,8 +213,8 @@ Step 2: survey
             survey = skysurvey.LSST.from_opsim(opsim_path)
 	    
 		       
-`
-`Survey`` uses healpy_ as backend to match position with observing
+
+`Survey` uses healpy_ as backend to match position with observing
 history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both
 can be used equally in any skysurvey_ input ;
 especially for DataSet.
@@ -227,7 +227,7 @@ Step 3: dataset
 
 **and get lightcurve data**
 
-as you would observe them i.e., the dataset. The simulated lightcurves are in
+As you would observe them i.e., the dataset. The simulated lightcurves are in
 dset.data, the input survey is stored in dset.survey, the input
 targets is stored in dset.targets. 
 
@@ -276,6 +276,7 @@ Tutorials
    quickstart/index
    howto/index   
    advanced/index
+   transientclasses/index
    
 .. toctree::
    :maxdepth: 2
