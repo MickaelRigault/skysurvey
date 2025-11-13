@@ -49,6 +49,11 @@ extensions = [
     'sphinx_copybutton'
     ]
     
+# Enable math support in MyST Markdown / notebooks
+myst_enable_extensions = [
+    "amsmath",     # allows \begin{equation} ... \end{equation}
+    "dollarmath",  # allows $$ ... $$ display math
+]
 
 # Class to another class
 nbsphinx_execute = 'never'
