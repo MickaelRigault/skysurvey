@@ -138,7 +138,7 @@ class TSTransient( Transient ):
 
         # short cut to update the model
         if magabs is not None: # This overwrites with is inside _MAGABS.
-            this.set_magabs(magabs_) #
+            this.set_magabs(magabs) #
 
         return this
 
@@ -179,8 +179,16 @@ class MultiTemplateTSTransient( TSTransient ):
             raise AttributeError("self.data has no 'template' column")
         
         gtemplates = self.data.groupby("template")
-        return [TSTransient.from_data(self.data.loc[indices], template=template_)
-                for template_, indices in gtemplates.groups.items()]
+        targets = []
+        for template_name, indices in gtemplates.groups.items():
+            template_index = self.template.nameorindex_to_index(template_name)
+            template = self.template.get(template_index)
+            target = TSTransient.from_data(
+                data=self.data.loc[indices],
+                template=template
+            )
+            targets.append(target)
+        return targets
     
     def set_template(self, template, force_uniquetype=True):
         """ """

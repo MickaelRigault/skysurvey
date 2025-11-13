@@ -1,18 +1,18 @@
-
-import numpy as np
 import pandas
+import sncosmo
+import warnings
+import numpy as np
 
-from .core import Target, Transient
+from ..template import Template
 from .timeserie import TSTransient
+from .core import Target, Transient
 
 __all__ = ["TargetCollection"]
 
 
 def targets_from_collection(transientcollection):
     """Get targets from a transient collection."""
-    # which targets
-
-    return targets
+    raise NotImplementedError
     
 
 def broadcast_mapping(value, ntargets):
@@ -101,7 +101,11 @@ class TargetCollection( object ):
             
         return data
 
-    def get_target_template(self, index, as_model=False):
+    def get_target_template(
+        self,
+        index: int,
+        as_model: bool = False,
+    ) -> Template | sncosmo.Model :
         """ Get the template for a given target.
 
         Parameters
@@ -121,17 +125,38 @@ class TargetCollection( object ):
             An instance of the template (or its associated `sncosmo.Model`).
             (see as_model)
         """
-        from ..template import Template
-        data_index = self.data.loc[index]
-        this_template = Template.from_sncosmo( data_index["template"] )
-        target_params = data_index[np.in1d(data_index.index, this_template.parameters)].to_dict()
-        this_template.sncosmo_model.set(**target_params)
-        if as_model:
-            return this_template.sncosmo_model
-        
-        return this_template
 
+        data_index = self.data.loc[index]
+        template_name = data_index["template"]
+        template_index = self.template_names.index(template_name)
         
+        try:
+            target_template = self.targets[template_index].template
+            
+        except Exception as e:
+            warning_string = (
+                    f"Failed getting target template for index {index} with " +
+                    f"name {template_name} and template index {template_index}. " +
+                    f"Exception on failure was: \n" +
+                    f"{e}\n" +
+                    "Attempting to load template from SNCosmo registry. " +
+                    "THIS WILL IGNORE ANY MODEL EFFECTS YOU HAVE SET!"
+                )
+            warnings.warn(warning_string)
+            target_template = Template.from_sncosmo(template_name)                
+
+        param_mask = np.isin(data_index.index, target_template.parameters)
+        target_params = data_index[param_mask].to_dict()
+        target_template.sncosmo_model.set(**target_params)
+        
+        if as_model:
+            output_template = target_template.sncosmo_model
+        else:
+            output_template = target_template
+
+        return output_template
+
+
     def show_lightcurve(self, band, index, params=None,
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
@@ -242,6 +267,13 @@ class TargetCollection( object ):
             
         return self._templates
 
+    @property
+    def template_names(self):
+        if not hasattr(self, "_template_names") or self._template_names is None:
+            self._template_names = [
+                target.template.source.name for target in self.targets
+            ]
+        return self._template_names
     
 class TransientCollection( TargetCollection ):
     """A collection of transients.
