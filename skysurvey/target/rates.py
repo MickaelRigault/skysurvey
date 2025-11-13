@@ -139,7 +139,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
                                 assume_sorted=True)
 
 
-def get_rate(z, rate, skyarea=None, cosmology=Planck18, **kwargs):
+def get_rate(z, rate, skyarea=None, **kwargs):
     """Get the rate as a function of redshift.
 
     Parameters
@@ -158,17 +158,14 @@ def get_rate(z, rate, skyarea=None, cosmology=Planck18, **kwargs):
         - float: area in deg**2
         - geometry: `shapely.geometry.area` is used (assumed in deg**2)
         By default None.
-    cosmology : astropy.Cosmology, optional
-        Cosmology used to get the comiving_volume. The default is
-        `Planck18`.
     **kwargs
         Rate options if rate is a function. 
         ignored otherwise.
 
     Returns
     -------
-    array
-        The rate.
+    rate
+        the rate per Gpc, array (if func) or float
     """
     # specified rate function or volumetric rate ?
     if callable(rate): # function
@@ -176,17 +173,14 @@ def get_rate(z, rate, skyarea=None, cosmology=Planck18, **kwargs):
     else: # volumetric
         n_per_gpc3 = rate
         
-    target_rate = get_volumetric_rate(z, n_per_gpc3=n_per_gpc3,
-                                        cosmology=cosmology)
-
     skyarea = surface_of_skyarea(skyarea) # in deg**2 or None
     if skyarea is not None:
         full_sky = 4*np.pi * (180/np.pi)**2 # 4pi in deg**2
-        target_rate *= (skyarea/full_sky)
+        n_per_gpc3 *= (skyarea/full_sky)
 
-    return target_rate
+    return n_per_gpc3
 
-def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, **kwargs):
+def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, **kwargs):
     """Get the redshift pdf given the rate (function or volumetric).
 
     Parameters
@@ -211,9 +205,11 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, **kwargs):
         Should this keep the size of the input `z`? If so, this that `z` is
         linear binned and add an extra step. This is because this func
         assume rate as 3d (not shell). The default is True.
+    cosmology : astropy.Cosmology, optional
+        Cosmology used to get the comiving_volume. The default is
+        `Planck18`.
     **kwargs
-        Rate options. If `rate` is a float, these are that of
-        `get_volumetric_rate` (`cosmology=Planck18`).
+        Rate options. ignored if `rate` is a float
 
     Returns
     -------
@@ -224,9 +220,18 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, **kwargs):
         step_ = z[-1]-z[-2]
         z = np.append(z, z[-1] + step_)
     
-    target_rate = get_rate(z, rate, skyarea=skyarea, **kwargs)
+    n_per_gpc3 = get_rate(z, rate, skyarea=skyarea, **kwargs) # len(input_z) (+ 1 if keepsize)
+    # volume
+    volume = cosmology.comoving_volume(z).to("Gpc**3").value # len(input_z) (+ 1 if keepsize)
+    shell = np.diff(volume) # len(input_z) -1 (+ 1 if keepsize)
+
+    # what matters is the rate of that shell
+    if len(np.atleast_1d(n_per_gpc3))==1: # float
+        n_per_shell = n_per_gpc3
+    else: # average within the shell
+        n_per_shell = np.mean([n_per_gpc3[:-1], n_per_gpc3[1:]], axis=0) # len(input_z) -1 (+ 1 if keepsize)
     
-    rates = np.diff(target_rate)
+    rates = n_per_shell * shell
     return rates/np.nansum(rates)
 
 def get_volumetric_rate(z, n_per_gpc3, cosmology=Planck18):
