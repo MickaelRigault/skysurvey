@@ -3,7 +3,9 @@
 #
 import pandas
 import numpy as np
-from .target.timeserie import MultiTemplateTSTransient
+
+from .tools import speedutils
+from .target.collection import TargetCollection
 
 __all__ = ["DataSet"]
 
@@ -152,30 +154,10 @@ class DataSet(object):
         dataset:
             instance of a DataSet loaded from the given targets.
         """
-        from .tools import speedutils
 
         # if input targets is a list, create a TemplateCollection
-        is_multitemplate_instance = isinstance(
-            targets, MultiTemplateTSTransient
-        )
         if type(targets) in [list, tuple]:
-            from .target.collection import TargetCollection
-            for target in targets:
-                is_multitemplate_instance |= isinstance(
-                    target, MultiTemplateTSTransient
-                )
             targets = TargetCollection(targets) 
-        
-        if is_multitemplate_instance:
-            targets_type = type(targets)
-            exception_string = (
-                f"The provided targets is an instance of {targets_type}, " +
-                "which is a subclass of MultiTemplateTSTransient. DataSet does " +
-                "not currently support this input type due to a bug, which will " +
-                "will be fixed in a future release. To proceed, please pass the " +
-                "output of MultiTemplateTSTransient.as_targets() to this function."
-            )
-            raise NotImplementedError(exception_string)
         
         # fields in which target fall into
         dfieldids_ = survey.radec_to_fieldid( targets.data[["ra", "dec"]] )
