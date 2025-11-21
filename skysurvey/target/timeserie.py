@@ -48,12 +48,12 @@ class TSTransient( Transient ):
                  )
 
 
-    def __init__(self, source_or_template=None, magabs=None, *args, **kwargs):
+    def __init__(self, template=None, magabs=None, *args, **kwargs):
         """ loads a TimeSerie Transient 
 
         Parameters
         ----------
-        source_or_template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
+        template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
             the sncosmo TimeSeriesSource, you can provide:
             - str: the name, e.g. "v19-2013ge-corr"
             - sncosmo.Source: a loaded sncosmo.Source
@@ -66,8 +66,8 @@ class TSTransient( Transient ):
             - len(magabs)==3 => drawn from asymetric normal distribution: 
                 loc, scale_low, scale_high = magabs
         """
-        if source_or_template is not None:
-            self.set_template(source_or_template)
+        if template is not None:
+            self.set_template(template)
 
         super().__init__(*args, **kwargs)
         
@@ -86,7 +86,7 @@ class TSTransient( Transient ):
         return init_kwargs, kwargs
 
     @classmethod
-    def from_sncosmo(cls, source_or_template,
+    def from_sncosmo(cls, template,
                          rate=None,
                          model=None,
                          magabs=None, **kwargs):
@@ -95,7 +95,7 @@ class TSTransient( Transient ):
 
         Parameters
         ----------
-        source_or_template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
+        template: str, `sncosmo.Source`, `sncosmo.Model`, skysurvey.Template
             the sncosmo TimeSeriesSource, you can provide:
             - str: the name, e.g. "v19-2013ge-corr"
             - sncosmo.Source: a loaded sncosmo.Source
@@ -130,8 +130,8 @@ class TSTransient( Transient ):
         if rate is not None:
             this.set_rate(rate)
             
-        if source_or_template is not None:
-            this.set_template(source_or_template)
+        if template is not None:
+            this.set_template(template)
             
         if model is not None:
             this.update_model(**model) # will update any model entry.

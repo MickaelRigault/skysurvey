@@ -980,10 +980,11 @@ class TemplateCollection( object ):
             sncosmo_model = self.get(ref_index=index, as_model=True)
         elif index is not None:
             warnings.warn(f"{index=} is ignored as sncosmo_model is given.")
-
-        return self.templates[0].get_lightcurve(band, times, 
-                                                   sncosmo_model=sncosmo_model, 
-                                                   in_mag=in_mag, zp=zp, zpsys=zpsys,
+            index = 0
+            
+        return self.templates[index].get_lightcurve(band, times, 
+                                                    sncosmo_model=sncosmo_model, 
+                                                    in_mag=in_mag, zp=zp, zpsys=zpsys,
                                                     **kwargs)
             
     # ============ #

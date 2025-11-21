@@ -36,7 +36,7 @@ def get_lsst_footprint():
 def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD", 
                                     "visitExposureTime", "filter", "skyBrightness", 
                                     "fiveSigmaDepth", "night", "numExposures", 
-                                    "observationId"], 
+                                    "observationId", "note"],  # note = pointing origin
               sql_where=None):
     """ parse input opsim database and returns a dataframe
     
