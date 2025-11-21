@@ -103,9 +103,9 @@ class TargetCollection( object ):
 
     def get_target_template(
         self,
-        index: int,
-        as_model: bool = False,
-    ) -> Template | sncosmo.Model :
+        index,
+        as_model,
+    ):
         """ Get the template for a given target.
 
         Parameters
