@@ -1,6 +1,7 @@
 """ core template tools """
 
 import os
+import warnings
 import numpy as np
 import pandas
 import sncosmo
@@ -77,10 +78,6 @@ def parse_template(template):
      # you provided a source | do the same
     elif sncosmo.Source in template.__class__.__mro__ or type(template) in [str, np.str_]:
         template = Template.from_sncosmo(template) # let's build a skysurvey.Template
-
-    # you provided a skysurvey.Template
-    else:
-        pass
     
     return template
 # =============== #
@@ -1031,4 +1028,3 @@ class TemplateCollection( object ):
             return self.templates[0].parameters
         else:
             return self.call_down("parameters")
-            

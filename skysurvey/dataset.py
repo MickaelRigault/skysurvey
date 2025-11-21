@@ -3,14 +3,9 @@
 #
 import pandas
 import numpy as np
-from copy import copy
 
-#
-import sncosmo
-from astropy.table import Table
-
-from .template import Template
-from .lightcurves import get_obsdata, _get_obsdata_
+from .tools import speedutils
+from .target.collection import TargetCollection
 
 __all__ = ["DataSet"]
 
@@ -159,11 +154,9 @@ class DataSet(object):
         dataset:
             instance of a DataSet loaded from the given targets.
         """
-        from .tools import speedutils
 
         # if input targets is a list, create a TemplateCollection
         if type(targets) in [list, tuple]:
-            from .target.collection import TargetCollection
             targets = TargetCollection(targets) 
         
         # fields in which target fall into
