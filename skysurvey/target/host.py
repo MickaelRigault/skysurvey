@@ -56,7 +56,7 @@ def get_stellarmassfunction(redshift, which="all", xx="6:13:100j"):
     tuple
         A tuple containing the mass array and the pdf.
     """
-    if type(xx) == str: # assumed r_ input
+    if isinstance(type(xx), str): # assumed r_ input
         xx = eval(f"np.r_[{xx}]")
                 
     prop = {#(0, 0.3): # Driver et al. 2022

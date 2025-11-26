@@ -35,7 +35,7 @@ def project_to_radec(verts_or_polygon, ra, dec):
         - list of new geometries
 
     """
-    if type(verts_or_polygon) == geometry.Polygon: # polygon
+    if isinstance(type(verts_or_polygon), geometry.Polygon): # polygon
         as_polygon = True
         fra, fdec = np.asarray(verts_or_polygon.exterior.xy)
     else:
@@ -110,10 +110,10 @@ def spatialjoin_radec_to_fields(radec, fields,
     if len(fields)>30_000 and allow_dask:
         try:
             import dask_geopandas
-        except:
-            pass # no more warnings.
+        except ImportError:
+            pass # no more warnings, we will deal with it.
         else:
-            if type(fields.index) is not pandas.MultiIndex: # not supported
+            if isinstance(type(fields.index), pandas.MultiIndex): # not supported
                 fields = dask_geopandas.from_geopandas(fields, npartitions=10)
                 geopoints = dask_geopandas.from_geopandas(geopoints, npartitions=10)
             else:
@@ -124,10 +124,10 @@ def spatialjoin_radec_to_fields(radec, fields,
         sjoined = sjoined.compute()
 
     # multi-index
-    if type(fields.index) == pandas.MultiIndex:
+    if type(fields.index) is pandas.MultiIndex:
         sjoined = sjoined.rename({f"index_right{i}":name for i, name in enumerate(fields.index.names)}, axis=1)
     else:
-        sjoined = sjoined.rename({f"index_right": fields.index.name}, axis=1)
+        sjoined = sjoined.rename({"index_right": fields.index.name}, axis=1)
 
     return sjoined
 
@@ -296,7 +296,7 @@ def sph2cart(vec):
     array
         [x, y, z]
     """
-    v, l, b = vec[0], np.asarray(vec[1])*_DEG2RA, np.asarray(vec[2])*_DEG2RA
+    v, l, b = vec[0], np.asarray(vec[1])*_DEG2RA, np.asarray(vec[2])*_DEG2RA # noqa: E741
     return np.asarray([v*np.cos(b)*np.cos(l), 
                        v*np.cos(b)*np.sin(l), 
                        v*np.sin(b)])  
@@ -321,7 +321,7 @@ def rot_xz(vec, theta):
             vec[1][None,:],
             vec[2]*np.cos(theta*_DEG2RA) + vec[0]*np.sin(theta*_DEG2RA)]
 
-def rot_xz_sph(l, b, theta):
+def rot_xz_sph(l, b, theta): # noqa: E741
     """ Rotate spherical coordinate (l,b = theta, phi) by angle theta around axis (0,1,0)
     (calls does to rot_xz and cart2sph)
     

@@ -41,7 +41,7 @@ def get_blackbody_transient_source(phase, temperature, amplitude,
 
     """
     from sncosmo import TimeSeriesSource
-    if type(lbda) == str: # assumed r_ input
+    if type(lbda) is str: # assumed r_ input
         lbda = eval(f"np.r_[{lbda}]")
     
     fluxes = get_blackbody_transient_flux(lbda, temperature=temperature, amplitude=amplitude)

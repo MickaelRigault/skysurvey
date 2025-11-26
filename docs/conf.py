@@ -1,21 +1,3 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
-
-
-
-# -- Project information -----------------------------------------------------
-# https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
-
-project = 'skysurvey'
-copyright = '2022, Mickael Rigault'
-author = 'Mickael Rigault'
-
-
-
-
-
 import os
 import sys
 
@@ -23,9 +5,7 @@ sys.path.insert(0, os.path.abspath('..'))
 for x in os.walk('../skysurvey'):
   sys.path.insert(0, x[0])
 
-
-from skysurvey import *
-from skysurvey import target
+from skysurvey import * # noqa: F403, E402
 
 
 
@@ -97,7 +77,7 @@ html_theme = 'sphinx_book_theme'
 html_theme_options = {
     'logo_only': True,
     'show_toc_level': 2,
-    'repository_url': f'https://github.com/MickaelRigault/{project}',
+    'repository_url': 'https://github.com/MickaelRigault/skysurvey',
     'use_repository_button': True,     # add a "link to repository" button
 }
 

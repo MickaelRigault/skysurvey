@@ -29,7 +29,7 @@ def skewed_gaussian_pdf(xx, loc, scale_low, scale_high):
     -----
     The normalization factor ensures the PDF integrates to 1.
     """
-    if type(xx) == str: # assumed r_ input
+    if type(xx) is str: # assumed r_ input
         xx = eval(f"np.r_[{xx}]")
         
     # doing it first symetric assuming sigma-low

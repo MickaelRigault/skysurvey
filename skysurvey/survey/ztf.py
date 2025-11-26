@@ -1,3 +1,5 @@
+import pandas
+
 from .basesurvey import GridSurvey
 from ztffields.fields import Fields
 
@@ -42,7 +44,7 @@ class ZTF( GridSurvey ):
         """
         try:
             import ztfcosmo
-        except:
+        except ImportError:
             raise ImportError("you need to install ztfcosmo => pip install ztfcosmo")
         
         logs = ztfcosmo.get_observing_logs()

@@ -1,1 +1,1 @@
-from .mocksurvey import *
+from .mocksurvey import * # noqa: F403

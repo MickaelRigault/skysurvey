@@ -3,7 +3,6 @@ import numpy as np
 from scipy import stats
 from .core import Transient
 
-from .environments import get_hostmass_rvs
 from ..tools.utils import random_radec
 
 __all__ = ["SNeIa"]
@@ -67,7 +66,7 @@ class SNeIaColor( object ):
         tuple
             A tuple containing the x-axis and the pdf.
         """
-        if type(xx) == str: # assumed r_ input
+        if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
         
         from scipy import stats
@@ -102,7 +101,7 @@ class SNeIaColor( object ):
         tuple
             A tuple containing the x-axis and the pdf.
         """
-        if type(xx) == str: # assumed r_ input
+        if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
 
         from scipy import stats
@@ -124,7 +123,7 @@ class SNeIaStretch( object ):
     def nicolas2021( xx="-4:4:0.005", 
                      mu1=0.33, sigma1=0.64, 
                      mu2=-1.50, sigma2=0.58, a=0.45,
-                     fprompt=0.5, redshift=None):
+                     fprompt=0.5):
         """Get the pdf of the Nicolas (2021) model.
 
         Parameters
@@ -148,9 +147,6 @@ class SNeIaStretch( object ):
         fprompt : float, optional
             The fraction of prompt SNe Ia. This is ignored if `redshift` is
             given. The default is 0.5.
-        redshift : array, optional
-            The redshift of the target. This defines `fprompt`. The default is
-            None.
 
         Returns
         -------
@@ -158,11 +154,8 @@ class SNeIaStretch( object ):
             A tuple containing the x-axis and the pdf.
         """
         from scipy.stats import norm
-        if type(xx) == str: # assumed r_ input
+        if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
-
-        if redshift is not None:
-            fprompt = Rigault_AgePop.deltaz(redshift)
             
         mode1 = norm.pdf(xx, loc=mu1, scale=sigma1)
         mode2 = norm.pdf(xx, loc=mu2, scale=sigma2)

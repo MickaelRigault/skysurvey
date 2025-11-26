@@ -1,3 +1,4 @@
+import warnings
 
 from shapely import geometry
 import numpy as np
@@ -94,8 +95,8 @@ def parse_simlib_block(block):
     # ok this is the line with READ on it.
     read_start = read_start[0]
     # columns
-    columns = [l_strip.lower() for l in block[read_start+1].replace("#", "").split()
-              if len(l_strip:=l.strip())>1]
+    columns = [block_strip.lower() for block_ in block[read_start+1].replace("#", "").split()
+              if len(block_strip:=block_.strip())>1]
 
     # data
     data_block = block[read_start+2:]
@@ -103,8 +104,9 @@ def parse_simlib_block(block):
     for block_line in data_block:
         try:
             data_, comments = block_line.split("#")
-        except:
+        except Exception as e:
             print(block_line)
+            warnings.warn(e)            
             return
         case, data_ = data_.split(":")
         data_ = data_.split()
@@ -115,12 +117,14 @@ def parse_simlib_block(block):
     # metadata
     try:
         meta_block = block[:read_start]
-        meta = " ".join([l.split("#")[0] for l in meta_block if not l.startswith("#") and len(l)>0 
-                         and not "LIBGEN" in l]
+        meta = " ".join([block_.split("#")[0] for block_ in meta_block if not block_.startswith("#") and len(block_)>0 
+                         and "LIBGEN" not in block_]
                ).replace(": ", ":").split()
-        meta = pandas.Series({k.lower():v for k,v in [l.split(":") for l in meta]})
-    except:
+        meta = pandas.Series({key.lower():val for key,val in [meta_.split(":") for meta_ in meta]})
+    except Exception as e:        
         print(f"failed meta for {meta_block}")
-        meta= None
+        warnings.warn(e)        
+        meta = None
+        
     return dataframe, meta
             

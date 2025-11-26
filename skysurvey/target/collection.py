@@ -1,5 +1,4 @@
 import pandas
-import sncosmo
 import warnings
 import numpy as np
 
@@ -137,7 +136,7 @@ class TargetCollection( object ):
             warning_string = (
                     f"Failed getting target template for index {index} with " +
                     f"name {template_name} and template index {template_index}. " +
-                    f"Exception on failure was: \n" +
+                     "Exception on failure was: \n" +
                     f"{e}\n" +
                     "Attempting to load template from SNCosmo registry. " +
                     "THIS WILL IGNORE ANY MODEL EFFECTS YOU HAVE SET!"

@@ -116,7 +116,7 @@ class Template( object ):
         -------
         instance
         """
-        if type(source) != sncosmo.Model:
+        if type(source) is not sncosmo.Model:
             sncosmo_model = get_sncosmo_model(source, **kwargs)
         else:
             sncosmo_model = source
@@ -418,9 +418,9 @@ class Template( object ):
             ax.set_xlabel("time [in day]", fontsize="large")
 
         if in_mag:
-            ax.set_ylabel(f"Magnitude", fontsize="large")
+            ax.set_ylabel("Magnitude", fontsize="large")
         elif zp is None:
-            ax.set_ylabel(f"Flux [erg/s/cm^2/A]", fontsize="large")
+            ax.set_ylabel("Flux [erg/s/cm^2/A]", fontsize="large")
         else:
             ax.set_ylabel(f"Flux [zp={zp}]", fontsize="large")
 

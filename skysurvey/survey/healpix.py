@@ -270,7 +270,7 @@ class HealpixSurvey( BaseSurvey ):
         if observed_fields:
             fieldid = self.data[self.fieldids.name].unique()
         else:
-            fieldid = ultrasat.fieldids
+            fieldid = self.fieldids
 
         corners = hp.boundaries(nside=self.nside, pix=fieldid)
         corners = np.moveaxis(corners,1,2)

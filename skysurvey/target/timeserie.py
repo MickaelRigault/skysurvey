@@ -1,5 +1,4 @@
 import numpy as np
-from scipy import stats
 from .core import Transient
 from ..tools.utils import random_radec
 __all__ = ["TSTransient"]

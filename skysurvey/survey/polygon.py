@@ -226,14 +226,14 @@ class PolygonSurvey( BaseSurvey ):
             if backend == "polars":
                 try:
                     import polars as pl
-                except:
+                except ImportError:
                     warnings.warn("You do not have polars installed. conda/pip install polars. falling back to pandas backend")
                     backend = "pandas"
                     
             if backend == "dask":
                 try:
                     import dask.dataframe as dd
-                except:
+                except ImportError:
                     warnings.warn("You do not have dask installed. conda/pip install dask. falling back to pandas backend")
                     backend = "pandas"
             
@@ -403,7 +403,6 @@ class PolygonSurvey( BaseSurvey ):
         """
         import matplotlib.pyplot as plt
         from matplotlib.collections import PolyCollection
-        from matplotlib.colors import to_rgba
         import cartopy.crs as ccrs
 
         if data is None and self.data is not None and len(self.data)>0:
@@ -419,8 +418,11 @@ class PolygonSurvey( BaseSurvey ):
 
         rng = np.random.default_rng()
         data = rng.uniform(size=len(geodf))
-        if vmin is None: vmin = np.nanmin(data)
-        if vmax is None: vmax = np.nanmax(data)
+        if vmin is None:
+            vmin = np.nanmin(data)
+        if vmax is None:
+            vmax = np.nanmax(data)
+            
         geodf["value"] = (data-vmin)/(vmax-vmin)
 
         # figure

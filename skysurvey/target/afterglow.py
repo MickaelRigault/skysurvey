@@ -1,11 +1,10 @@
 
 import numpy as np
-from scipy import stats
 
 import sncosmo
 try:
     import afterglowpy
-except:
+except ImportError:
     raise ImportError("could not import afterglowpy ; run pip install afterglowpy")
 
 

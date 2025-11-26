@@ -4,9 +4,7 @@ import pandas
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
 
-
-from ..template import Template
-from ..tools.utils import parse_skyarea, surface_of_skyarea
+from ..tools.utils import parse_skyarea
 
 
 __all__ = ["Target", "Transient"]
@@ -720,7 +718,7 @@ class Target( object ):
         self.update_model_parameter(**{k: {"rate": self.rate} for k in keys},
                                         rate_update=False)
 
-    def add_effect(self, effect, model=None, data=None, overwrite=False):
+    def add_effect(self, effect, model=None, data=None, overwrite=False, **kwargs):
         """Add an effect to the target affecting how spectra or lightcurve are generated.
 
         This changes the template, using `self.template.add_effect()`, and
@@ -743,7 +741,7 @@ class Target( object ):
             If data and model are given, model is not used. By default None.
         overwrite : bool, optional
             [description], by default False
-
+        **kwargs goes to self.data.merge(data, **kwargs) if data is given. Ignored otherwise.
         Returns
         -------
         None

@@ -1,14 +1,12 @@
-from .basesurvey import *
-from .ztf import *
-from .des import *
-from .snls import *
-from .lsst import *
-#from .healpix import *
-#from .polygon import *
+import warnings
 
-# real surveys
+from .basesurvey import * # noqa: F403
+from .ztf import * # noqa: F403
+from .des import * # noqa: F403
+from .snls import * # noqa: F403
+from .lsst import * # noqa: F403
 
-
+# shortcut
 def get_footprint(which, **kwargs):
     """ 
     Get the footprint of a given survey.
@@ -28,7 +26,8 @@ def get_footprint(which, **kwargs):
     
     try:
         footprint = eval(f"{which}.get_{which}_footprint(**kwargs)")
-    except:
-        raise ValueError(f"{which} has not get_{which}_footprint() function")
+    except Exception as e:
+        warnings.warn(e)
+        raise ValueError(f"{which} has no get_{which}_footprint() function")
 
     return footprint

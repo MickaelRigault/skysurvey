@@ -1,6 +1,5 @@
 import warnings
 import numpy as np
-import pandas
 
 __all__ = ["BaseSurvey"] # no import when 'import *'
 

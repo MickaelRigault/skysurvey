@@ -87,7 +87,8 @@ def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacamp
     try:
         sncosmo.get_bandpass("megacampsf::g")
         return
-    except: # not well done...
+    # not well done...
+    except: # noqa
         pass
     
     for filter_ in filters:

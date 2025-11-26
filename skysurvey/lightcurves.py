@@ -7,7 +7,6 @@ import pandas
 import numpy as np
 #
 import sncosmo
-from astropy.table import Table
 
 
 def get_obsdata(template, observations, parameters,
@@ -184,9 +183,6 @@ def realize_lightcurves(observations, model, parameters,
 
     # Copy model so we don't mess up the user's model.
     model = copy.copy(model)
-
-    # sn parameters
-    list_of_parameters = [p_.to_dict() for i_,p_ in parameters.iterrows()] # sncosmo format
 
     # loops over targets
     for target_index, param in parameters.iterrows():
