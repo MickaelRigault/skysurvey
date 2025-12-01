@@ -9,7 +9,7 @@ import sncosmo
 __all__ = ["AngularTimeSeriesSource"]
 
 class AngularTimeSeriesSource(sncosmo.Source):
-    """ A single-component spectral time series model.
+    r""" A single-component spectral time series model.
         The spectral flux density of this model is given by
         .. math::
         F(t, \lambda) = A \\times M(t, \lambda, \cos_\theta)
