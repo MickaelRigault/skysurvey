@@ -197,7 +197,7 @@ class PolygonSurvey( BaseSurvey ):
             used by pandas when need (which will then slow things down).
             
         Returns
-        --------
+        -------
         HealpixSurvey
         """
         from .healpix import HealpixSurvey
