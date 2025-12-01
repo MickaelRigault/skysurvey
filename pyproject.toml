@@ -63,3 +63,49 @@ skysurvey = ["data/*"]
 
 [tool.setuptools.dynamic]
 version = {attr = "skysurvey.__version__"}
+
+[tool.ruff.lint]
+select = [
+  "E", "F", # flake8
+  # "W",      # flake8 warnings
+  # "I",      # isort
+  # "UP",     # pyupgrade
+  "NPY",         # numpy
+]
+ignore = [
+  "E501",  # line-too-long
+]
+unfixable = [
+  "F841", # Removes unused variables
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["skysurvey"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    # action:message:category:module:lineno
+    # "error",
+    # "ignore:.*Call to deprecated Parameter testval.*:DeprecationWarning:pymc3",
+]
+
+[tool.coverage.run]
+source = ["skysurvey"]
+parallel = true
+omit = ["tests/*"]
+
+# [tool.coverage.paths]
+# source = ["src", "*/site-packages"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "pragma: no cover", # Have to re-enable the standard pragma
+  "except ImportError", # Don't complain about packages we have installed
+  "raise AssertionError", # Don't complain if tests don't hit assertion code
+  "raise NotImplementedError",
+  "'def main(.*):'", # Don't complain about script hooks
+  "if __name__ == .__main__.:",
+  "def _ipython_key_completions_", # Don't complain about IPython completion
+]
+
