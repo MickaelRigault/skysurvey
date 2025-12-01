@@ -1,0 +1,16 @@
+# Basics
+numpy
+pandas
+scipy
+
+# Astro
+astropy
+sncosmo
+healpy
+extinction
+
+# Special
+modeldag
+
+# ZTF
+ztffields
