@@ -58,6 +58,9 @@ tests = ["pytest", "coverage"]
 [tool.setuptools]
 include-package-data = true
 
+[tool.setuptools.packages.find]
+include = ["skysurvey*"]
+
 [tool.setuptools.package-data]
 skysurvey = ["data/*"]
 
