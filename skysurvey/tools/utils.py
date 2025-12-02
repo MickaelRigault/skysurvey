@@ -61,7 +61,7 @@ def build_covariance(as_dataframe=False, **kwargs):
                                     columns=param_names)
     return cov_diag, param_names
 
-def apply_gaussian_noise(target_or_data, **kwargs):
+def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
     """ apply random gaussian noise to the target
     
     pass the entries error and covariance as kwargs 
@@ -95,10 +95,11 @@ def apply_gaussian_noise(target_or_data, **kwargs):
     covmatrix, names = build_covariance(**kwargs)
 
     # create the noise
-    noise = np.random.multivariate_normal( np.zeros( len(names)),
-                                               covmatrix,
-                                               size=( len(target.data), )
-                                         )
+    rng = np.random.default_rng(seed=seed)
+    noise = rng.multivariate_normal( np.zeros( len(names)),
+                                    covmatrix,
+                                    size=( len(target.data), )
+                                    )
     
     # create the noisy data form
     datanoisy = data.copy()
