@@ -95,11 +95,10 @@ filterwarnings = [
 
 [tool.coverage.run]
 source = ["skysurvey"]
-parallel = true
 omit = ["tests/*"]
 
 # [tool.coverage.paths]
-# source = ["src", "*/site-packages"]
+# source = ["skysurvey", "*/site-packages"]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -111,4 +110,3 @@ exclude_lines = [
   "if __name__ == .__main__.:",
   "def _ipython_key_completions_", # Don't complain about IPython completion
 ]
-
