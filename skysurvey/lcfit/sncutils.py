@@ -6,7 +6,7 @@ import pandas
 
 def sncosmo_results_to_dataframe(result, flatten=True):
     """ """
-    fitted = np.in1d(result.param_names, result.vparam_names)
+    fitted = np.isin(result.param_names, result.vparam_names)
     df = pandas.DataFrame(np.asarray([result.parameters, fitted]).T, 
                           result.param_names, 
                           columns=["values", "fitted"])
