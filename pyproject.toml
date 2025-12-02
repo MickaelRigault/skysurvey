@@ -86,6 +86,7 @@ unfixable = [
 known-first-party = ["skysurvey"]
 
 [tool.pytest.ini_options]
+addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
 filterwarnings = [
     # action:message:category:module:lineno
@@ -96,6 +97,7 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["skysurvey"]
 omit = ["tests/*"]
+branch = true
 
 # [tool.coverage.paths]
 # source = ["skysurvey", "*/site-packages"]
