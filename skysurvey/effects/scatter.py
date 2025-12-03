@@ -158,7 +158,7 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
     """
 
     _param_names = ["C_vU", 'S_f']
-    param_names_latex = ["\rho_\mathrm{vU}", 'S_f']
+    param_names_latex = [r"\rho_\mathrm{vU}", 'S_f']
     _minwave = 2000
     _maxwave = 11000
 

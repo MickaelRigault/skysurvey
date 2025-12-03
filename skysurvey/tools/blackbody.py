@@ -175,7 +175,7 @@ def blackbody_lambda(lbda, temperature, normed=True):
     return flux 
 
 def get_wein_lbdamax(temperature):
-    """ lambda max temperature
+    r""" lambda max temperature
     {\displaystyle \lambda _{m}={\frac {hc}{4.96511423174\,\mathrm {kT} }}}
     """
     if not hasattr(temperature, 'unit'): # assumed Angstrom

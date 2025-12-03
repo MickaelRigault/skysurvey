@@ -67,7 +67,7 @@ class BaseSurvey( object ):
             self._data = None
             return
         
-        if not np.in1d(self.REQUIRED_COLUMNS, data.columns).all():
+        if not np.isin(self.REQUIRED_COLUMNS, data.columns).all():
             warnings.warn(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
 
         if self.fields is not None and self.fieldids.name is not None:

@@ -462,7 +462,7 @@ class Target( object ):
         pandas.Index
             The template columns.
         """
-        return self.data.columns[np.in1d(self.data.columns, self.template_parameters)]
+        return self.data.columns[np.isin(self.data.columns, self.template_parameters)]
 
 
     # -------------- #

@@ -14,7 +14,7 @@ def get_band_color(bands, fill_value=None):
 
     Parameters
     ----------
-    bands: str or list
+    bands: str or list of str
         Band or list of bands.
     fill_value: str or None, optional
         Value to fill if the band is not found.
@@ -24,6 +24,6 @@ def get_band_color(bands, fill_value=None):
     str or list
         Color or list of colors.
     """
-    squeeze = type(bands) in [str, np.str_]
+    squeeze = isinstance(bands, (str, np.str_))
     colors = [BAND_COLORS.get(band_, fill_value) for band_ in np.atleast_1d(bands)]
     return colors if not squeeze else colors[0]
