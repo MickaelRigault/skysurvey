@@ -346,10 +346,6 @@ class SNeIa( Transient ):
                    magobs = {"func": "magabs_to_magobs", # str-> method of the class
                              "kwargs": {"z":"@z", "magabs":"@magabs"},
                             },
-
-                   x0 = {"func": "magobs_to_amplitude", # str-> method of the class
-                         "kwargs": {"magobs":"@magobs", "param_name": "x0"},
-                        }, #because it needs to call sncosmo_model.get(param_name)
                        
                    radec = {"func": random_radec,
                             "kwargs": {},

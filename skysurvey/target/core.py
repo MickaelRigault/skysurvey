@@ -1302,16 +1302,6 @@ class Transient( Target ):
                                           sncosmo_model=sncosmo_model,
                                           as_phase=as_phase,
                                           **kwargs)
-
-    # ------------ #
-    #  Model       #
-    # ------------ #    
-    def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
-        """Convert observed magnitude to amplitude."""
-        template = self.get_template(as_model=True)
-        m_current = template._source.peakmag(band, zpsys)
-        return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
-
             
     # ------------ #
     #  Show LC     #

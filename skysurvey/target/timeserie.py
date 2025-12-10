@@ -37,9 +37,6 @@ class TSTransient( Transient ):
                              "kwargs": {"z":"@z", "magabs": "@magabs"}
                             },
                                
-                   amplitude = {"func": "magobs_to_amplitude",
-                                "kwargs": {"magobs": "@magobs"}
-                            },
                    # This you need to match with the survey
                    radec = {"func": random_radec,
                             "as": ["ra","dec"]
