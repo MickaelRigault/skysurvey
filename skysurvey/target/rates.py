@@ -101,7 +101,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
         return the previous or next value of the point; 'nearest-up' and
         'nearest' differ when interpolating half-integers (e.g. 0.5, 1.5)
         in that 'nearest-up' rounds up and 'nearest' rounds down. Default
-        is 'linear'.
+        is 'cubic'.
     bounds_error : bool, optional
         If True, a ValueError is raised any time interpolation is attempted on
         a value outside of the range of x (where extrapolation is
