@@ -1,13 +1,19 @@
+import pytest
 import sncosmo
-from skysurvey.target.afterglow import Afterglow
 
 # tests for the class Afterglow
 def test_afterglow_instantiation():
+    pytest.importorskip("afterglowpy")
+    from skysurvey.target.afterglow import Afterglow
+
     ag = Afterglow()
 
     assert ag.__class__.__name__ == "Afterglow"
 
 def test_afterglow_attributes():
+    pytest.importorskip("afterglowpy")
+    from skysurvey.target.afterglow import Afterglow
+
     ag = Afterglow()
 
     assert hasattr(ag, "_KIND")
@@ -21,6 +27,9 @@ def test_afterglow_attributes():
     assert "t0" in ag._MODEL
 
 def test_afterglow_template():
+    pytest.importorskip("afterglowpy")
+    from skysurvey.target.afterglow import Afterglow
+    
     ag = Afterglow()
 
     assert isinstance(ag._TEMPLATE, sncosmo.Model)
