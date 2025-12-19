@@ -35,6 +35,10 @@ class Target( object ):
     _TEMPLATE = None
     _MODEL = None # dict config
     
+    # Params to set peak amplitude
+    _MAGSYS = "ab"
+    _PEAK_ABSMAG_BAND = "bessellb"
+    
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
 
@@ -286,6 +290,15 @@ class Target( object ):
             kwargs = prop | kwargs
 
         sncosmo_model = self.template.get(**kwargs)
+
+        if index is not None:
+            peak_absmag = self.data.loc[index, "magabs"]
+            sncosmo_model.set_source_peakabsmag(
+                absmag=peak_absmag,
+                band=self.peak_absmag_band,
+                magsys=self.magsys,
+                cosmo=self.cosmology
+            )
         if not as_model:
             from ..template import Template
             return Template.from_sncosmo(sncosmo_model)
@@ -1051,7 +1064,20 @@ class Target( object ):
 
     # ============== #
     #   Properties   #
-    # ============== #  
+    # ============== #
+
+    @classproperty
+    def peak_absmag_band(self):
+        if not hasattr(self, "_peak_absmag_band"):
+            self._peak_absmag_band = self._PEAK_ABSMAG_BAND
+        return self._peak_absmag_band
+    
+    @classproperty
+    def magsys(self):
+        if not hasattr(self, "_magsys"):
+            self._magsys = self._MAGSYS
+        return self._magsys
+
     @classproperty
     def kind(self):
         """The kind of target."""
