@@ -293,10 +293,12 @@ class Target( object ):
 
         if index is not None:
             peak_absmag = self.data.loc[index, "magabs"]
+            peak_absmag_band = self.data.loc[index, "magabs_band"]
+            peak_absmag_magsys = self.data.loc[index, "magabs_sys"]
             sncosmo_model.set_source_peakabsmag(
                 absmag=peak_absmag,
-                band=self.peak_absmag_band,
-                magsys=self.magsys,
+                band=peak_absmag_band,
+                magsys=peak_absmag_magsys,
                 cosmo=self.cosmology
             )
         if not as_model:
@@ -1051,7 +1053,8 @@ class Target( object ):
         # actually draw the data
         data = drawn_model.draw(size=size,
                                 **kwargs)
-
+        data['magabs_band'] = self.peak_absmag_band
+        data['magabs_sys'] = self.magsys
         # shall data be attached to the object?
         if inplace:
             # lower precision
