@@ -1,8 +1,6 @@
-
 import numpy as np
+
 from .core import Target
-
-
 
 
 class StableTarget( Target ):
@@ -26,5 +24,3 @@ class StableTarget( Target ):
 class Star( StableTarget ):
 
     _KIND = "star"
-    
-    
