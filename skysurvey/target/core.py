@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import pandas
+from tqdm import tqdm
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
 
@@ -126,6 +127,7 @@ class Target( object ):
                       zmin=0, nyears=None,
                       skyarea=None, rate=None,
                       effect=None,
+                      verbose=False,
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
 
@@ -222,6 +224,7 @@ class Target( object ):
                        nyears=nyears,
                        skyarea=skyarea,
                        inplace=True, # creates self.data
+                       verbose=verbose
                        )
         return this
 
@@ -908,6 +911,7 @@ class Target( object ):
                  skyarea=None,
                  inplace=False,
                  model=None,
+                 verbose=False,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -1066,7 +1070,7 @@ class Target( object ):
                                 **kwargs)
         # shall data be attached to the object?
         amplitudes = np.zeros(len(data))
-        for i in range(size):
+        for i in tqdm(range(size)) if verbose else range(size):
             sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
             amplitude = sncosmo_model_i.get(self.amplitude_name)
             amplitudes[i] = amplitude
