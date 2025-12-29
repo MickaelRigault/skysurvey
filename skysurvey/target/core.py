@@ -38,6 +38,7 @@ class Target( object ):
     # Params to set peak amplitude
     _MAGSYS = "ab"
     _PEAK_ABSMAG_BAND = "bessellb"
+    _AMPLITUDE_NAME = "amplitude"
     
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
@@ -259,7 +260,7 @@ class Target( object ):
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
         
-    def get_template(self, index=None, as_model=False, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, **kwargs):
         """Get a template (`sncosmo.Model`).
 
         Parameters
@@ -285,14 +286,18 @@ class Target( object ):
         get_target_template: get a template set to the target parameters.
         get_template_parameters: get the template parameters for the given target
         """
+        
+        if data is None:
+            data = self.data
+        
         if index is not None:
-            prop = self.get_template_parameters(index).to_dict()
+            prop = self.get_template_parameters(index, data=data).to_dict()
             kwargs = prop | kwargs
 
         sncosmo_model = self.template.get(**kwargs)
 
         if index is not None:
-            peak_absmag = self.data.loc[index, "magabs"]
+            peak_absmag = data.loc[index, "magabs"]
             peak_absmag_band = self.peak_absmag_band
             peak_absmag_magsys = self.magsys
 
@@ -441,7 +446,7 @@ class Target( object ):
     # -------------- #
     #   Getter       #
     # -------------- #
-    def get_template_parameters(self, index=None):
+    def get_template_parameters(self, index=None, data=None):
         """Get the template parameters for the given target.
 
         This method selects from `self.data` the parameters that actually are
@@ -463,14 +468,16 @@ class Target( object ):
         template_parameter: parameters of the template (sncosmo.Model) | argument
         get_template: get a template instance (sncosmo.Model)
         """
-        known = self.get_template_columns()
-        prop = self.data[known]
+        if data is None:
+            data = self.data
+        known = self.get_template_columns(data=data)
+        prop = data[known]
         if index is not None:
             return prop.loc[index]
         
         return prop
 
-    def get_template_columns(self):
+    def get_template_columns(self, data=None):
         """Get the data columns that are template parameters.
 
         Returns
@@ -478,7 +485,9 @@ class Target( object ):
         pandas.Index
             The template columns.
         """
-        return self.data.columns[np.isin(self.data.columns, self.template_parameters)]
+        if data is None:
+            data = self.data
+        return data.columns[np.isin(data.columns, self.template_parameters)]
 
 
     # -------------- #
@@ -1054,9 +1063,14 @@ class Target( object ):
         # actually draw the data
         data = drawn_model.draw(size=size,
                                 **kwargs)
-        data['magabs_band'] = self.peak_absmag_band
-        data['magabs_sys'] = self.magsys
         # shall data be attached to the object?
+        amplitudes = np.zeros(len(data))
+        for i in range(size):
+            sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
+            amplitude = sncosmo_model_i.get(self.amplitude_name)
+            amplitudes[i] = amplitude
+        data[self.amplitude_name] = amplitudes
+        
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
@@ -1069,6 +1083,12 @@ class Target( object ):
     # ============== #
     #   Properties   #
     # ============== #
+
+    @classproperty
+    def amplitude_name(self):
+        if not hasattr(self, "_amplitude_name"):
+            self._amplitude_name = self._AMPLITUDE_NAME
+        return self._amplitude_name
 
     @classproperty
     def peak_absmag_band(self):
