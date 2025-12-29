@@ -26,7 +26,6 @@ def broadcast_mapping(value, ntargets):
     return broadcasted_values
 
 
-    
 class TargetCollection( object ):
     """A collection of targets.
 
