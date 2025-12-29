@@ -9,3 +9,4 @@ list of transient classes and specifications
   
   sne_ia
   sne_cc
+  kilonovae

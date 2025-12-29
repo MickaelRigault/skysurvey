@@ -8,8 +8,9 @@ list of short notebook illustrating some commun usage
   :caption: Tutorials
   
   draw_and_from_draw
-  add_mwebv
   change_rate
+  add_mwebv
+  create_new_transient_class
   noise_to_target
   radec_in_survey
   target_and_skyarea

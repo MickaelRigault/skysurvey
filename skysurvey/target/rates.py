@@ -25,14 +25,11 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         Maximum redshift. The default is 2.
     zstep : float, optional
         Sampling of the redshift. The default is 1e-4.
-    skyarea : None, str, float, geometry, optional
+    skyarea : None, float, geometry, optional
         Sky area (in deg**2).
-
-        - None or 'full': 4pi
-        - "extra-galactic": 4pi - (milky-way b<5)
+        - None : 4pi in deg**2 (full sky)
         - float: area in deg**2
         - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-
         By default None.
     flatten_ndim : bool, optional
         [description]. The default is True.
@@ -104,7 +101,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
         return the previous or next value of the point; 'nearest-up' and
         'nearest' differ when interpolating half-integers (e.g. 0.5, 1.5)
         in that 'nearest-up' rounds up and 'nearest' rounds down. Default
-        is 'linear'.
+        is 'cubic'.
     bounds_error : bool, optional
         If True, a ValueError is raised any time interpolation is attempted on
         a value outside of the range of x (where extrapolation is
@@ -151,10 +148,9 @@ def get_rate(z, rate, skyarea=None, **kwargs):
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of wavelength.
-    skyarea : None, str, float, geometry, optional
+    skyarea : None, float, geometry, optional
         Sky area (in deg**2).
-        - None or 'full': 4pi
-        - "extra-galactic": 4pi - (milky-way b<5)
+        - None : 4pi in deg**2 (full sky)
         - float: area in deg**2
         - geometry: `shapely.geometry.area` is used (assumed in deg**2)
         By default None.
@@ -192,17 +188,14 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, *
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of wavelength.
-    skyarea : None, str, float, geometry, optional
+      skyarea : None, float, geometry, optional
         Sky area (in deg**2).
-
-        - None or 'full': 4pi
-        - "extra-galactic": 4pi - (milky-way b<5)
+        - None : 4pi in deg**2 (full sky)
         - float: area in deg**2
         - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-
         By default None.
     keepsize : bool, optional
-        Should this keep the size of the input `z`? If so, this that `z` is
+        Should this keep the size of the input `z`? If so, this `z` is
         linear binned and add an extra step. This is because this func
         assume rate as 3d (not shell). The default is True.
     cosmology : astropy.Cosmology, optional
@@ -243,15 +236,16 @@ def get_volumetric_rate(z, n_per_gpc3, cosmology=Planck18):
         Redshift.
     n_per_gpc3 : float, array
         Number of targets per Gpc3.
-        If array, it must broadcast with input "z".
+        If array, it must broadcast with input `z`.
     cosmology : astropy.Cosmology, optional
-        Cosmology used to get the comiving_volume. The default is
+        Cosmology used to get the comoving_volume. The default is
         `Planck18`.
 
     Returns
     -------
-    float
-        The volumetric rate.
+    float, array 
+        The volumetric rate. The return type matches the type of input
+        `n_per_gpc3`.
     """
     volume = cosmology.comoving_volume(z).to("Gpc**3").value
     z_rate = volume * n_per_gpc3
