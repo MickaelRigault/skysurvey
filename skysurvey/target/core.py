@@ -293,16 +293,8 @@ class Target( object ):
 
         if index is not None:
             peak_absmag = self.data.loc[index, "magabs"]
-            
-            if "magabs_band" in self.data.columns:
-                peak_absmag_band = self.data.loc[index, "magabs_band"]
-            else:
-                peak_absmag_band = self.peak_absmag_band
-
-            if "magabs_sys" in self.data.columns:
-                peak_absmag_magsys = self.data.loc[index, "magabs_sys"]
-            else:
-                peak_absmag_magsys = self.magsys
+            peak_absmag_band = self.peak_absmag_band
+            peak_absmag_magsys = self.magsys
 
             sncosmo_model.set_source_peakabsmag(
                 absmag=peak_absmag,
