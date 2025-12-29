@@ -293,6 +293,7 @@ class Target( object ):
         if index is not None:
             prop = self.get_template_parameters(index, data=data).to_dict()
             kwargs = prop | kwargs
+            _ = kwargs.pop(self.amplitude_name, None)
 
         sncosmo_model = self.template.get(**kwargs)
 
