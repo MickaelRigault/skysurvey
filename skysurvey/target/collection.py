@@ -2,7 +2,6 @@ import pandas
 import warnings
 import numpy as np
 
-from astropy import cosmology
 from ..template import Template
 from .timeserie import TSTransient
 from .core import Target, Transient
