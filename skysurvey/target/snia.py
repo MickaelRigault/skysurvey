@@ -325,6 +325,7 @@ class SNeIa( Transient ):
     _KIND = "SNIa"
     _TEMPLATE = "salt2"
     _RATE = 2.35 * 10**4 # Perley 2020
+    _AMPLITUDE_NAME = "x0"
     
     # {'name': {func: ,'kwargs': {}, 'as': str_or_list }}
     _MODEL = dict( redshift = {"func": "draw_redshift", # implicit
