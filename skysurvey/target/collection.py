@@ -2,6 +2,7 @@ import pandas
 import warnings
 import numpy as np
 
+from astropy import cosmology
 from ..template import Template
 from .timeserie import TSTransient
 from .core import Target, Transient
@@ -137,6 +138,7 @@ class TargetCollection( object ):
             peak_absmag_magsys = target.magsys
             peak_absmag_band = target.peak_absmag_band
             amplitude_name = target.amplitude_name
+            cosmology = target.cosmology
             
         except Exception as e:
             warning_string = (
@@ -152,16 +154,18 @@ class TargetCollection( object ):
             peak_absmag_magsys = "ab"
             peak_absmag_band = "bessellb"   
             amplitude_name = "amplitude"
+            cosmology = cosmology.Planck18
+
 
         param_mask = np.isin(data_index.index, target_template.parameters)
         target_params = data_index[param_mask].to_dict()
         _ = target_params.pop(amplitude_name, None)
         target_template.sncosmo_model.set(**target_params)
         target_template.sncosmo_model.set_source_peakabsmag(
-                absmag=data_index['absmag'],
+                absmag=data_index['magabs'],
                 band=peak_absmag_band,
                 magsys=peak_absmag_magsys,
-                cosmo=self.cosmology
+                cosmo=cosmology
             )
         
         if as_model:
