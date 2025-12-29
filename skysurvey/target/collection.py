@@ -134,8 +134,9 @@ class TargetCollection( object ):
             # TODO: Generalize. Currently not handling the edge case where we have a
             # collection of targets with the same template but different peak
             # magsys / rest-frame band.
-            peak_absmag_magsys = self.targets[template_index].magsys
-            peak_absmag_band = self.targets[template_index].peak_absmag_band
+            peak_absmag_magsys = target.magsys
+            peak_absmag_band = target.peak_absmag_band
+            amplitude_name = target.amplitude_name
             
         except Exception as e:
             warning_string = (
@@ -149,10 +150,12 @@ class TargetCollection( object ):
             warnings.warn(warning_string)
             target_template = Template.from_sncosmo(template_name)   
             peak_absmag_magsys = "ab"
-            peak_absmag_band = "bessellb"          
+            peak_absmag_band = "bessellb"   
+            amplitude_name = "amplitude"
 
         param_mask = np.isin(data_index.index, target_template.parameters)
         target_params = data_index[param_mask].to_dict()
+        _ = target_params.pop(amplitude_name, None)
         target_template.sncosmo_model.set(**target_params)
         target_template.sncosmo_model.set_source_peakabsmag(
                 absmag=data_index['absmag'],
