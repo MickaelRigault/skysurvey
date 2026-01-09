@@ -125,10 +125,6 @@ class Kilonova( Transient ):
                              "kwargs": {"z":"@z", "magabs": "@magabs"}
                             },
                                
-                   amplitude = {"func": "magobs_to_amplitude",
-                                "kwargs": {"magobs": "@magobs"}
-                            },
-
                    theta = {"func": RNG.uniform,
                             "kwargs": {"low":0., "high":90.}
                             },
