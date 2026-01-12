@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 import sncosmo
 from skysurvey.effects.core import Effect
