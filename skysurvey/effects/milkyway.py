@@ -4,21 +4,21 @@ from astropy.coordinates import SkyCoord
 __all__ = ["mwebv_model"]
 
 def get_mwebv(ra, dec, which="planck"):
-    """ get the mikly way E(B-V) extinction parameter for input coordinates
+    """ Get the Milky Way E(B-V) extinction parameter for input coordinates.
 
     This is based on dustmaps. 
     If this is the first time you use it, you may have to download the maps 
-    first (instruction will be given)
+    first (instructions will be given).
     
     Parameters
     ----------
     ra, dec: float, array
-        coordinates
+        Coordinates.
 
     which: string
-        name of the dustmap to use.
-        - planck: Planck 2013
-        - SFD: 
+        Name of the dustmap to use.
+        - planck: Planck (2013)
+        - sfd: Schlegel, Finkbeiner & Davis (1998)
 
     Returns
     -------
@@ -27,10 +27,10 @@ def get_mwebv(ra, dec, which="planck"):
     """
     if which.lower() == "planck":
         from dustmaps.planck import PlanckQuery as dustquery
-    elif which.lower() == "sdf":
+    elif which.lower() == "sfd":
         from dustmaps.sfd import SFDQuery as dustquery
     else:
-        raise NotImplementedError("Only Planck and SDF maps implemented")
+        raise NotImplementedError("Only Planck and SFD maps implemented")
         
     coords = SkyCoord(ra, dec, unit="deg")
     return dustquery()(coords) # Instanciate and call.

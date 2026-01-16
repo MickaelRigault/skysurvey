@@ -92,6 +92,7 @@ filterwarnings = [
     # action:message:category:module:lineno
     # "error",
     # "ignore:.*Call to deprecated Parameter testval.*:DeprecationWarning:pymc3",
+    "ignore:.*Configuration file not found.*:Warning:dustmaps.config"
 ]
 
 [tool.coverage.run]
