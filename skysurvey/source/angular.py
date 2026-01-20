@@ -1,9 +1,5 @@
-
-# basics
 import numpy as np
 from scipy.interpolate import RectBivariateSpline as Spline2d
-
-# sncosmo
 import sncosmo
 
 __all__ = ["AngularTimeSeriesSource"]
