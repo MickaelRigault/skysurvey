@@ -31,3 +31,6 @@ def get_footprint(which, **kwargs):
         raise ValueError(f"{which} has no get_{which}_footprint() function")
 
     return footprint
+
+#Andrade addition
+from .lsst_comcam import from_dp1_parquet
