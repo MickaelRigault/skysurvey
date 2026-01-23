@@ -164,7 +164,7 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
 
     def __init__(self):
         """
-        Initialise C11 class.
+        Initialize C11 class.
         """
         self._parameters = np.array([0., 1.3])
 
@@ -196,10 +196,17 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
         self._cov_matrix *= self._parameters[1]
 
     def propagate(self, wave, flux, rng=None):
-        """Propagate the effect to the flux.
+        """
+        Propagate the effect to the flux.
 
         Parameters
         ----------
+        wave: array
+            wavelengths.
+
+        flux: array
+            fluxes.
+
         rng : None, int, (Bit)Generator, optional
             seed for the random number generator.
             (doc adapted from numpy's `np.random.default_rng` docstring. 
@@ -210,8 +217,8 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
 
         Returns
         -------
-        flux : array
-            (flux * 10**(-0.4 * magscat))
+        array
+            propagated fluxes.
         """
         rng = np.random.default_rng(rng)
         siglam_values = rng.multivariate_normal(np.zeros(len(self._lam_nodes)),
