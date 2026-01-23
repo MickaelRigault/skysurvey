@@ -55,6 +55,9 @@ def sncosmo_fit_single(target_data, target_model, free_param,
                         modelcov=True, keymap={},
                         **kwargs):
     """ 
+    Fit a sncosmo model to a single lightcurve dataset and return the fit
+    results as a pandas.Series.
+
     Parameters
     ----------
     target_data: pandas.DataFrame
