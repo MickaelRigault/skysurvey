@@ -53,7 +53,7 @@ docs = [
     "sphinx_copybutton",
     "sphinx-design",
 ]
-tests = ["pytest", "coverage"]
+tests = ["pytest", "coverage", "pytest-remotedata"]
 
 [tool.setuptools]
 include-package-data = true
@@ -88,6 +88,9 @@ known-first-party = ["skysurvey"]
 [tool.pytest.ini_options]
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
+markers = [
+    "remote_data: mark tests that require internet access"
+]
 filterwarnings = [
     # action:message:category:module:lineno
     # "error",
