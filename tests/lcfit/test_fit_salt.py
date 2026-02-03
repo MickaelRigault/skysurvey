@@ -2,7 +2,8 @@ import pandas
 import pytest
 import sncosmo
 from unittest.mock import patch, Mock
-from skysurvey.lcfit.fit_salt import fit_salt, fit_salt_single, _dataset_to_model_and_data_
+import importlib
+fit_salt_module = importlib.import_module("skysurvey.lcfit.fit_salt")
 
 # tests for the func fit_salt
 class FakeDataset:
@@ -16,8 +17,8 @@ def dataset():
 def test_fit_salt_indexes_none(dataset):
     result = {"t0": 56000.0, "x0": 1e-4}
 
-    with patch ("skysurvey.lcfit.fit_salt.fit_salt_single", return_value=result) as mock_fit:
-        output = fit_salt(dataset)
+    with patch.object(fit_salt_module, "fit_salt_single", return_value=result) as mock_fit:
+        output = fit_salt_module.fit_salt(dataset)
     
     assert mock_fit.call_count == 3 
     assert isinstance(output, pandas.DataFrame)
@@ -28,8 +29,8 @@ def test_fit_salt_indexes_none(dataset):
 def test_fit_salt_indexes_not_none(dataset):
     result = {"t0": 56000.0, "x0": 1e-4}
 
-    with patch ("skysurvey.lcfit.fit_salt.fit_salt_single", return_value=result) as mock_fit:
-        output = fit_salt(dataset, indexes=[1])
+    with patch.object(fit_salt_module, "fit_salt_single", return_value=result) as mock_fit:
+        output = fit_salt_module.fit_salt(dataset, indexes=[1])
     
     assert mock_fit.call_count == 1
     assert set(output.index) == {1}
@@ -43,8 +44,8 @@ def test_fit_salt_drops_none(dataset):
         elif index == 2:
             return {"t0": None, "x0": None}
         
-    with patch ("skysurvey.lcfit.fit_salt.fit_salt_single", side_effect=drops_none_results):
-        output = fit_salt(dataset)
+    with patch.object(fit_salt_module, "fit_salt_single", side_effect=drops_none_results):
+        output = fit_salt_module.fit_salt(dataset)
 
     assert set(output.index) == {0}
 
@@ -58,21 +59,21 @@ class FakeClient:
 def test_fit_salt_client_as_future_not_none(dataset):
     client = FakeClient()
 
-    with patch ("skysurvey.lcfit.fit_salt.fit_salt_single", return_value=FakeFuture()):
-        output = fit_salt(dataset, client=client, as_future=True)
+    with patch.object(fit_salt_module, "fit_salt_single", return_value=FakeFuture()):
+        output = fit_salt_module.fit_salt(dataset, client=client, as_future=True)
 
     assert isinstance(output, dict)
     assert all(isinstance(values_, FakeFuture) for values_ in output.values())
 
 def test_fit_salt_gather_client(dataset):
-    with patch ("skysurvey.lcfit.fit_salt.fit_salt_single", return_value="future"):
+    with patch.object(fit_salt_module, "fit_salt_single", return_value="future"):
         client = Mock()
         client.gather.return_value = {
             0: {"t0": 56000., "x0": 1e-4},
             1: {"t0": 56050, "x0": 2e-4},
             2: {"t0":56100, "x0": 3e-4}
             }
-        output = fit_salt(dataset, client=client, as_future=False)
+        output = fit_salt_module.fit_salt(dataset, client=client, as_future=False)
 
     client.gather.assert_called_once() 
     assert isinstance(output, pandas.DataFrame)
@@ -81,8 +82,8 @@ def test_fit_salt_progress_bar_true(dataset):
     result = {"t0": 56000.0, "x0": 1e-4}
 
     with patch("tqdm.tqdm", side_effect=lambda x: x) as mock_tqdm:
-        with patch("skysurvey.lcfit.fit_salt.fit_salt_single", return_value=result):
-            output = fit_salt(dataset, progress_bar=True)
+        with patch.object(fit_salt_module, "fit_salt_single", return_value=result):
+            output = fit_salt_module.fit_salt(dataset, progress_bar=True)
 
     mock_tqdm.assert_called_once()
     assert isinstance(output, pandas.DataFrame)
@@ -108,42 +109,42 @@ def fake_target_data():
 def test_fit_salt_single_no_data_warn_true(target_model):
     empty_target_data = pandas.DataFrame()
 
-    with patch ("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, empty_target_data)):
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, empty_target_data)):
         with pytest.warns(UserWarning, match="no data in the target lightcurves"):
-            output = fit_salt_single(dataset=None, index=[0])
+            output = fit_salt_module.fit_salt_single(dataset=None, index=[0])
 
     assert output is None
 
 def test_fit_salt_single_no_data_warn_false(target_model):
     empty_target_data = pandas.DataFrame()
 
-    with patch("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, empty_target_data)):
-        output = fit_salt_single(dataset=None, index=[0], warn=False)
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, empty_target_data)):
+        output = fit_salt_module.fit_salt_single(dataset=None, index=[0], warn=False)
     
     assert output is None
 
 def test_fit_salt_single_no_detection_warn_true(target_model):
     noisy_target_data = pandas.DataFrame({"flux": [1.0, 2.0], "fluxerr": [1.0, 2.0]})
 
-    with patch ("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, noisy_target_data)):
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, noisy_target_data)):
         with pytest.warns(UserWarning, match="no detection >5 in the target lightcurves"):
-            output = fit_salt_single(dataset=None, index=[0])
+            output = fit_salt_module.fit_salt_single(dataset=None, index=[0])
 
     assert output is None
 
 def test_fit_salt_single_no_detection_warn_false(target_model):
     noisy_target_data = pandas.DataFrame({"flux": [1.0, 2.0], "fluxerr": [1.0, 2.0]})
 
-    with patch ("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, noisy_target_data)):
-            output = fit_salt_single(dataset=None, index=[0], warn=False)
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, noisy_target_data)):
+            output = fit_salt_module.fit_salt_single(dataset=None, index=[0], warn=False)
 
     assert output is None
 
 def test_fit_salt_single(target_model):
     target_data = fake_target_data()
 
-    with patch ("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, target_data)), patch("skysurvey.lcfit.fit_salt.sncosmo_fit_single", return_value="results",) as mock_fit:
-        output = fit_salt_single(dataset=None, index=[0])
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, target_data)), patch.object(fit_salt_module, "sncosmo_fit_single", return_value="results",) as mock_fit:
+        output = fit_salt_module.fit_salt_single(dataset=None, index=[0])
     
     assert output == "results"
     mock_fit.assert_called_once()
@@ -154,8 +155,8 @@ def test_fit_salt_client_not_none(target_model):
     client = Mock()
     client.submit.return_value = "future"
 
-    with patch ("skysurvey.lcfit.fit_salt._dataset_to_model_and_data_", return_value=(target_model, target_data)):
-        output = fit_salt_single(dataset=None, index=[0], client=client)
+    with patch.object(fit_salt_module, "_dataset_to_model_and_data_", return_value=(target_model, target_data)):
+        output = fit_salt_module.fit_salt_single(dataset=None, index=[0], client=client)
 
     client.submit.assert_called_once() 
     assert output == "future"
@@ -208,7 +209,7 @@ class FakeDatasetToModelAndData:
 def test_dataset_to_model_and_data_model_copy():
     this_template = FakeTargetTemplate(with_effects=False)
     dataset = FakeDatasetToModelAndData(this_template, time_column="time")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0)
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0)
 
     assert this_model is not this_template.sncosmo_model
     assert this_model.source.name == this_template.sncosmo_model.source.name
@@ -218,14 +219,14 @@ def test_dataset_to_model_and_data_model_copy():
 def test_dataset_to_model_and_data_with_effects():
     this_template = FakeTargetTemplate(with_effects=True)
     dataset = FakeDatasetToModelAndData(this_template, time_column="time")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0)
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0)
     assert "mwebv" in this_model.param_names
 
 @pytest.mark.remote_data
 def test_dataset_to_model_and_data_rename_mjd():
     this_template = FakeTargetTemplate(with_effects=False)
     dataset = FakeDatasetToModelAndData(this_template, time_column="mjd")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0)
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0)
 
     assert "time" in this_data.columns
     assert "mjd" not in this_data.columns
@@ -234,7 +235,7 @@ def test_dataset_to_model_and_data_rename_mjd():
 def test_dataset_to_model_and_data_rename_jd():
     this_template = FakeTargetTemplate(with_effects=False)
     dataset = FakeDatasetToModelAndData(this_template, time_column="jd")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0)
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0)
 
     assert "time" in this_data.columns
     assert "jd" not in this_data.columns
@@ -245,13 +246,13 @@ def test_dataset_to_model_and_data_no_time_key():
     dataset = FakeDatasetToModelAndData(this_template, time_column=None) 
     
     with pytest.raises(ValueError, match="cannot parse time entry from input dataset, provide time_key."):
-        _dataset_to_model_and_data_(dataset, index=0)
+        fit_salt_module._dataset_to_model_and_data_(dataset, index=0)
 
 @pytest.mark.remote_data
 def test_dataset_to_model_and_data_custom_time_key():
     this_template = FakeTargetTemplate(with_effects=False)
     dataset = FakeDatasetToModelAndData(this_template, time_column="custom_time_key")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0, time_key="custom_time_key")
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0, time_key="custom_time_key")
 
     assert "custom_time_key" in this_data.columns
 
@@ -259,7 +260,7 @@ def test_dataset_to_model_and_data_custom_time_key():
 def test_dataset_to_model_and_data_phase_range():
     this_template = FakeTargetTemplate(with_effects=False)
     dataset = FakeDatasetToModelAndData(this_template, time_column="time")
-    this_model, this_data =  _dataset_to_model_and_data_(dataset, index=0, phase_range=[-10,10])
+    this_model, this_data =  fit_salt_module._dataset_to_model_and_data_(dataset, index=0, phase_range=[-10,10])
 
     this_t0 = this_model.get("t0")
     this_redshift = this_model.get("z")

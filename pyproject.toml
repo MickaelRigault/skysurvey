@@ -89,7 +89,7 @@ known-first-party = ["skysurvey"]
 addopts = ["-ra", "--showlocals", "--strict-markers", "--strict-config"]
 testpaths = ["tests"]
 markers = [
-    "remote_data: mark tests that require internet access"
+    "remote_data: tests that need internet (skipped by default; use --remote-data=any to run)"
 ]
 filterwarnings = [
     # action:message:category:module:lineno
