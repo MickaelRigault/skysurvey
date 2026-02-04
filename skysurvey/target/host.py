@@ -30,7 +30,30 @@ def get_sfr_as_function_of_mass_and_redshift(mass, redshift):
     return  ampl * fraction
 
 def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
-    """Get the Schechter probability density function."""
+    """Get the Schechter probability density function.
+    
+    Parameters
+    ----------
+    mass : float or array
+        Stellar mass value(s) at which to evaluate the Schechter function.   
+    mstar : float or array
+         Characteristic stellar mass defining the exponential cutoff at higher masses.
+    alpha : float
+        Low-mass end slope of the Schechter function.
+    phi : float
+        Normalization of the Schechter function.
+    alpha2 : None, float, optional
+        Second low-mass end slope (for double Schechter).
+        By default None.
+    phi2 : None, float, optional
+        Second normalization of the Schechter function (for double Schechter).
+        By default None.
+
+    Returns
+    -------
+    float or array
+        The single or double Schechter pdf.
+    """
     delta_logmass = mass-mstar
     # single schechter
     if alpha2 is None or phi2 is None: 
@@ -38,6 +61,7 @@ def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
     # double schechter
     return np.log(10)* np.exp(-10**(delta_logmass)) * 10**(delta_logmass) * (phi*10**(delta_logmass*alpha) + 
                                                                     phi2*10**(delta_logmass*alpha2))
+
 def get_stellarmassfunction(redshift, which="all", xx="6:13:100j"):
     """Get the stellar mass function.
 
@@ -56,7 +80,7 @@ def get_stellarmassfunction(redshift, which="all", xx="6:13:100j"):
     tuple
         A tuple containing the mass array and the pdf.
     """
-    if isinstance(type(xx), str): # assumed r_ input
+    if isinstance(xx, str): # assumed r_ input
         xx = eval(f"np.r_[{xx}]")
                 
     prop = {#(0, 0.3): # Driver et al. 2022
