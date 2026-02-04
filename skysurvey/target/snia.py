@@ -234,7 +234,7 @@ class SNeIaMagnitude( object ):
         alpha : float, optional
             The stretch linear law coefficient. The default is -0.14.
         beta : float, optional
-            The color linear law coeeficient. The default is 3.15.
+            The color linear law coefficient. The default is 3.15.
         gamma : float, optional
             The step's amplitude. The default is 0.1.
 
