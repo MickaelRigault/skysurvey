@@ -196,13 +196,16 @@ def test_sneia_attributes():
     assert hasattr(sneia, "_RATE")
     assert sneia._RATE == 2.35 * 10**4
 
+    assert hasattr(sneia, "_AMPLITUDE_NAME")
+    assert sneia._AMPLITUDE_NAME == "x0"
+
     assert "_MODEL" in dir(sneia)
 
 def test_sneia_model_keys():
     sneia = SNeIa()
     model = sneia._MODEL
 
-    model_keys = {"redshift", "x1", "c", "t0", "magabs", "magobs", "x0", "radec"}
+    model_keys = {"redshift", "x1", "c", "t0", "magabs", "magobs", "radec"}
     assert model_keys.issubset(model.keys())
 
     redshift = model["redshift"]
@@ -234,11 +237,6 @@ def test_sneia_model_keys():
     assert "func" in magobs
     assert magobs["func"] == "magabs_to_magobs"
     assert magobs["kwargs"] == {"z":"@z", "magabs":"@magabs"}
-
-    x0 = model["x0"]
-    assert "func" in x0
-    assert x0["func"] == "magobs_to_amplitude"
-    assert x0["kwargs"] == {"magobs":"@magobs", "param_name": "x0"}
 
     radec = model["radec"]
     assert "func" in radec

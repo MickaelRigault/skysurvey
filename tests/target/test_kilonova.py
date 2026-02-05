@@ -1,6 +1,7 @@
 import numpy as np
 import sncosmo
 from skysurvey.target.kilonova import read_possis_file, get_kilonova_model, Kilonova, _KILONOVA_MODEL
+from skysurvey.tools.utils import random_radec
 
 # tests for the func read_possis_file
 def make_fake_possis_file(tmp_path):
@@ -79,10 +80,43 @@ def test_kilonova_attributes():
     assert kilonova._RATE == 1e3 
 
     assert "_MODEL" in dir(kilonova)
-    assert "t0" in kilonova._MODEL
-    assert "redshift" in kilonova._MODEL
-    assert "magabs" in kilonova._MODEL
-    assert "magobs" in kilonova._MODEL
-    assert "amplitude" in kilonova._MODEL
-    assert "theta" in kilonova._MODEL
-    assert "radec" in kilonova._MODEL
+
+def test_kilonova_model_keys():
+    kilonova = Kilonova()
+    model = kilonova._MODEL
+
+    model_keys = {"t0", "redshift", "magabs", "magobs", "theta", "radec"}
+    assert model_keys.issubset(model.keys())
+
+    t0 = model["t0"]
+    assert "func" in t0
+    assert callable(t0["func"])
+    assert t0["func"].__name__ == "uniform"     
+    assert t0["kwargs"] == {"low":56_000, "high":56_200}
+
+    redshift = model["redshift"]
+    assert redshift["kwargs"] == {"zmax":0.2}
+    assert redshift["as"] == "z"
+
+    magabs = model["magabs"]
+    assert "func" in magabs
+    assert callable(magabs["func"])
+    assert magabs["func"].__name__ == "normal" 
+    assert magabs["kwargs"] ==  {"loc": -18, "scale": 1}
+
+    magobs = model["magobs"]
+    assert "func" in magobs
+    assert magobs["func"] == "magabs_to_magobs"
+    assert magobs["kwargs"] == {"z":"@z", "magabs":"@magabs"}
+
+    theta = model["theta"]
+    assert "func" in theta
+    assert callable(theta["func"])
+    assert theta["func"].__name__ == "uniform"     
+    assert theta["kwargs"] == {"low":0., "high":90.}
+
+    radec = model["radec"]
+    assert "func" in radec
+    assert radec["func"] == random_radec
+    assert radec["kwargs"] == {}
+    assert radec["as"] == ["ra","dec"]
