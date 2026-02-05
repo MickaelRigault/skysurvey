@@ -5,7 +5,26 @@ import pandas
 
 
 def sncosmo_results_to_dataframe(result, flatten=True):
-    """ """
+    """
+    Convert a sncosmo fit result into a pandas DataFrame or flattened Series.
+
+    Parameters
+    ----------
+    result: result object returned by sncosmo.fit_lc().
+        dict subclass with attribute access. It must provide:
+        - result.param_names
+        - result.vparam_names
+        - result.parameters
+        - result["errors"]
+        - result["covariance"] 
+    
+    flatten : bool, default is True.
+        If False, return a DataFrame. If True, return a flattened pandas.Series.
+
+    Returns
+    -------
+    pandas.DataFrame or pandas.Series
+    """
     fitted = np.isin(result.param_names, result.vparam_names)
     df = pandas.DataFrame(np.asarray([result.parameters, fitted]).T, 
                           result.param_names, 
@@ -36,11 +55,14 @@ def sncosmo_fit_single(target_data, target_model, free_param,
                         modelcov=True, keymap={},
                         **kwargs):
     """ 
+    Fit a sncosmo model to a single lightcurve dataset and return the fit
+    results as a pandas.Series.
+
     Parameters
     ----------
     target_data: pandas.DataFrame
         dataframe containing the lightcurve data. It must contain
-        "time", "band", "flux", "fluxerr","zp", "zpsys"]
+        ["time", "band", "flux", "fluxerr","zp", "zpsys"]
         (but see keymap).
 
     target_model: sncosmo.Model
@@ -62,7 +84,7 @@ def sncosmo_fit_single(target_data, target_model, free_param,
 
     Return
     ------
-    dict
+    pandas.Series
     """
     # lightcurve parameters to enter the fit.
     lc_dict = {key: target_data[keymap.get(key, key)].values

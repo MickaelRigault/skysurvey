@@ -6,7 +6,7 @@ from skysurvey.effects import hostdust
 from skysurvey.effects import scatter
 
 # tests for the class Effect
-def test_effect_default_instantiation():
+def test_effect_default_initialization():
     effect = Effect()
 
     assert effect.effect is None
@@ -14,7 +14,7 @@ def test_effect_default_instantiation():
     assert effect.frame is None
     assert effect.model == {}
 
-def test_effect_instantiation():
+def test_effect_initialization():
     dummy = object
     model = {"a":1}
 

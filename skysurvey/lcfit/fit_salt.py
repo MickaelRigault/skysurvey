@@ -17,7 +17,54 @@ def fit_salt(dataset, free_param=['t0', 'x0', 'x1', 'c'],
              progress_bar=False, client=None,
              as_future=False,
              **kwargs):
-    """ fit salt model on given dataset. """
+    """ 
+    Fit a salt model on a given dataset. 
+    
+    Parameters
+    ----------
+    dataset: skysurvey.dataset.Dataset
+        Dataset containing targets and their lightcurves.
+
+    free_param: list
+        Model parameters to vary in the fit. Default is ['t0', 'x0', 'x1', 'c'].
+
+    modelcov: bool
+        Include model covariance when calculating chisq. 
+        If True, the fit is performed multiple times until convergence. Default is True.
+        
+    keymap: dict
+        Change the key naming convention for lightcurve columns.
+
+    indexes: iterable or None
+        Subset of target indices to fit. If None, uses dataset.obs_index. Default is None.
+    
+    phase_range: list, None, optional
+        Rest-frame phase range to be used for simulating 
+        the lightcurves. If None, no cut is applied on time
+        range for the logs. Default is [-10, +40].
+
+    progress_bar: bool
+        If True, display a progress bar over the target indices. Default is False.
+    
+    client: dask.distributed.Client or None
+        If provided, submit fits to the Dask client for parallel execution. Default is None.
+    
+    as_future: bool
+        If True and a Dask client is provided, return a dictionary of
+        futures instead of waiting for completion. Default is False.
+
+    **kwargs: 
+        Additional keyword arguments passed to fit_salt_single.
+
+    Return
+    ------
+    pandas.DataFrame or dict
+        If client is None or as_future is False, returns a DataFrame of 
+        flattened salt fit results. If client is provided and as_future is True,
+        returns a dict.
+
+    """
+
     results = {}
     if indexes is None:
         indexes = dataset.obs_index
@@ -51,8 +98,53 @@ def fit_salt_single(dataset, index,
                     in_scatter = {"t0": .5, "x1": 0.1, "c": 0.05},
                     warn=True, 
                     **kwargs):
-    """ This is a wrapper of fit_salt_single() that get data and model
-    for the skysurvey.dataset.
+    """
+    This is a wrapper of sncosmo_fit_single() that get data and model
+    for a skysurvey.dataset.Dataset target.
+
+    Parameters
+    ----------
+    dataset: skysurvey.dataset.Dataset
+        Dataset containing the target and its lightcurves.
+
+    index: hashable
+        Target index identifying which lightcurve to fit.
+
+    free_param: list
+        Model parameters to vary in the fit. Default is ['t0', 'x0', 'x1', 'c'].
+        
+    client: dask.distributed.Client or None
+        If provided, submit the fit to the Dask client. Default is None.
+
+    phase_range: list, None, optional
+        Rest-frame phase range to be used for simulating 
+        the lightcurves. If None, no cut is applied on time
+        range for the logs. Default is [-10, +40].
+
+    modelcov: bool
+        Include model covariance when calculating chisq. 
+        If True, the fit is performed multiple times until convergence. Default is True.
+        
+    keymap: dict
+        Change the key naming convention for lightcurve columns.
+
+    bounds: dict
+        Half-width bounds around the initial parameter values. Default is {"t0": 3, "x1": 0.4, "c": 0.2}.
+
+    in_scatter: dict
+        Gaussian scatter added to initial parameter guesses. Default is {"t0": .5, "x1": 0.1, "c": 0.05}.
+
+    warn: bool
+        If True, emit warnings when rejecting a target. Default is True.
+
+    **kwargs:
+        Additional keyword arguments passed to sncutils.sncosmo_fit_single.
+
+    Return
+    ------
+    pandas.Series or dask.distributed.Future or None
+        Flattened salt fit results for the target, a Dask future if
+        client is provided, or None if the target is rejected.
     """
     target_model, target_data = _dataset_to_model_and_data_(dataset, index,
                                                             phase_range=phase_range)
@@ -94,7 +186,31 @@ def fit_salt_single(dataset, index,
 # - Internal shortcut
 #
 def _dataset_to_model_and_data_(dataset, index, phase_range=None, time_key=None):
-    """ """
+    """ 
+    Extract a sncosmo model and lightcurve data for a skysurvey.dataset.Dataset target. 
+
+    Parameters
+    ----------
+    dataset: skysurvey.dataset.Dataset
+        Dataset containing the target and its lightcurve.
+
+    index: hashable
+        Target index identifying which lightcurve to fit.
+
+    phase_range: list, None, optional
+        Rest-frame phase range to be used for simulating 
+        the lightcurves. If None, no cut is applied on time
+        range for the logs. Default is None.
+
+    time_key: str or None
+        Column name to use as the time axis. If None, attempts to infer
+        from "time", "mjd", or "jd". Default is None.
+
+    Return
+    ------
+    sncosmo.Model, pandas.DataFrame
+        salt model and lightcurve data for the target.
+    """
     salt_keys = ['z', 't0', 'x0', 'x1', 'c']
     
     # get the sncosmo_model from this source
