@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import pandas
+from tqdm import tqdm
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
 
@@ -34,6 +35,11 @@ class Target( object ):
     _KIND = "unknow"
     _TEMPLATE = None
     _MODEL = None # dict config
+    
+    # Params to set peak amplitude
+    _MAGSYS = "ab"
+    _PEAK_ABSMAG_BAND = "bessellb"
+    _AMPLITUDE_NAME = "amplitude"
     
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
@@ -121,6 +127,7 @@ class Target( object ):
                       zmin=0, nyears=None,
                       skyarea=None, rate=None,
                       effect=None,
+                      verbose=False,
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
 
@@ -217,6 +224,7 @@ class Target( object ):
                        nyears=nyears,
                        skyarea=skyarea,
                        inplace=True, # creates self.data
+                       verbose=verbose
                        )
         return this
 
@@ -255,7 +263,7 @@ class Target( object ):
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
         
-    def get_template(self, index=None, as_model=False, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, **kwargs):
         """Get a template (`sncosmo.Model`).
 
         Parameters
@@ -281,11 +289,28 @@ class Target( object ):
         get_target_template: get a template set to the target parameters.
         get_template_parameters: get the template parameters for the given target
         """
+        
+        if data is None:
+            data = self.data
+        
         if index is not None:
-            prop = self.get_template_parameters(index).to_dict()
+            prop = self.get_template_parameters(index, data=data).to_dict()
             kwargs = prop | kwargs
+            _ = kwargs.pop(self.amplitude_name, None)
 
         sncosmo_model = self.template.get(**kwargs)
+
+        if index is not None:
+            peak_absmag = data.loc[index, "magabs"]
+            peak_absmag_band = self.peak_absmag_band
+            peak_absmag_magsys = self.magsys
+
+            sncosmo_model.set_source_peakabsmag(
+                absmag=peak_absmag,
+                band=peak_absmag_band,
+                magsys=peak_absmag_magsys,
+                cosmo=self.cosmology
+            )
         if not as_model:
             from ..template import Template
             return Template.from_sncosmo(sncosmo_model)
@@ -425,7 +450,7 @@ class Target( object ):
     # -------------- #
     #   Getter       #
     # -------------- #
-    def get_template_parameters(self, index=None):
+    def get_template_parameters(self, index=None, data=None):
         """Get the template parameters for the given target.
 
         This method selects from `self.data` the parameters that actually are
@@ -447,14 +472,16 @@ class Target( object ):
         template_parameter: parameters of the template (sncosmo.Model) | argument
         get_template: get a template instance (sncosmo.Model)
         """
-        known = self.get_template_columns()
-        prop = self.data[known]
+        if data is None:
+            data = self.data
+        known = self.get_template_columns(data=data)
+        prop = data[known]
         if index is not None:
             return prop.loc[index]
         
         return prop
 
-    def get_template_columns(self):
+    def get_template_columns(self, data=None):
         """Get the data columns that are template parameters.
 
         Returns
@@ -462,7 +489,9 @@ class Target( object ):
         pandas.Index
             The template columns.
         """
-        return self.data.columns[np.isin(self.data.columns, self.template_parameters)]
+        if data is None:
+            data = self.data
+        return data.columns[np.isin(data.columns, self.template_parameters)]
 
 
     # -------------- #
@@ -882,6 +911,7 @@ class Target( object ):
                  skyarea=None,
                  inplace=False,
                  model=None,
+                 verbose=False,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -1038,8 +1068,14 @@ class Target( object ):
         # actually draw the data
         data = drawn_model.draw(size=size,
                                 **kwargs)
-
         # shall data be attached to the object?
+        amplitudes = np.zeros(len(data))
+        for i in tqdm(range(size)) if verbose else range(size):
+            sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
+            amplitude = sncosmo_model_i.get(self.amplitude_name)
+            amplitudes[i] = amplitude
+        data[self.amplitude_name] = amplitudes
+        
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
@@ -1051,7 +1087,26 @@ class Target( object ):
 
     # ============== #
     #   Properties   #
-    # ============== #  
+    # ============== #
+
+    @classproperty
+    def amplitude_name(self):
+        if not hasattr(self, "_amplitude_name"):
+            self._amplitude_name = self._AMPLITUDE_NAME
+        return self._amplitude_name
+
+    @classproperty
+    def peak_absmag_band(self):
+        if not hasattr(self, "_peak_absmag_band"):
+            self._peak_absmag_band = self._PEAK_ABSMAG_BAND
+        return self._peak_absmag_band
+    
+    @classproperty
+    def magsys(self):
+        if not hasattr(self, "_magsys"):
+            self._magsys = self._MAGSYS
+        return self._magsys
+
     @classproperty
     def kind(self):
         """The kind of target."""
@@ -1302,16 +1357,6 @@ class Transient( Target ):
                                           sncosmo_model=sncosmo_model,
                                           as_phase=as_phase,
                                           **kwargs)
-
-    # ------------ #
-    #  Model       #
-    # ------------ #    
-    def magobs_to_amplitude(self, magobs, band="bessellb", zpsys="ab", param_name="amplitude"):
-        """Convert observed magnitude to amplitude."""
-        template = self.get_template(as_model=True)
-        m_current = template._source.peakmag(band, zpsys)
-        return 10.**(0.4 * (m_current - magobs)) * template.get(param_name)
-
             
     # ------------ #
     #  Show LC     #
