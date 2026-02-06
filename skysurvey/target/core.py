@@ -474,6 +474,7 @@ class Target( object ):
         """
         if data is None:
             data = self.data
+            
         known = self.get_template_columns(data=data)
         prop = data[known]
         if index is not None:
@@ -1066,16 +1067,18 @@ class Target( object ):
             size = int( (self.get_rate(zmax, skyarea=skyarea) - rate_min) * nyears)
         
         # actually draw the data
-        data = drawn_model.draw(size=size,
-                                **kwargs)
-        # shall data be attached to the object?
+        data = drawn_model.draw(size=size, **kwargs)
+        
+        # patch the missing `amplitude` back to .data
         amplitudes = np.zeros(len(data))
         for i in tqdm(range(size)) if verbose else range(size):
             sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
             amplitude = sncosmo_model_i.get(self.amplitude_name)
             amplitudes[i] = amplitude
+            
         data[self.amplitude_name] = amplitudes
-        
+
+        # shall data be attached to the object?
         if inplace:
             # lower precision
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
