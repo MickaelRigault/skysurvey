@@ -113,6 +113,7 @@ def test_volumetric_rate_array():
 
 def test_nyears_in_target():
     """ """
+    import skysurvey
     rate_test = 3e4
     nyears = 0.1
     snia = skysurvey.SNeIa.from_draw(nyears=nyears, zmin=0, zmax=0.145, rate=rate_test, cosmology=Planck18)
