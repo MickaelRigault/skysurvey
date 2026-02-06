@@ -176,7 +176,7 @@ def get_rate(z, rate, skyarea=None, **kwargs):
 
     return n_per_gpc3
 
-def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, **kwargs):
+def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, normed=True, **kwargs):
     """Get the redshift pdf given the rate (function or volumetric).
 
     Parameters
@@ -201,6 +201,8 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, *
     cosmology : astropy.Cosmology, optional
         Cosmology used to get the comiving_volume. The default is
         `Planck18`.
+    normed: bool
+        should the sum of the pdf be forced to 1?
     **kwargs
         Rate options. ignored if `rate` is a float
 
@@ -225,7 +227,10 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, *
         n_per_shell = np.mean([n_per_gpc3[:-1], n_per_gpc3[1:]], axis=0) # len(input_z) -1 (+ 1 if keepsize)
     
     rates = n_per_shell * shell
-    return rates/np.nansum(rates)
+    if normed:
+        return rates/np.nansum(rates)
+    
+    return rates
 
 def get_volumetric_rate(z, n_per_gpc3, cosmology=Planck18):
     """Get the number of target (per year) up to the given redshift.

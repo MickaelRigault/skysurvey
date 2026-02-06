@@ -127,6 +127,7 @@ class Target( object ):
                       zmin=0, nyears=None,
                       skyarea=None, rate=None,
                       effect=None,
+                      cosmology=None,
                       verbose=False,
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
@@ -184,6 +185,9 @@ class Target( object ):
 
         effect : [type], optional
             [description]. By default None.
+
+        cosmology: None, astropy.Cosmology, optional
+            specify the cosmology to be used.
         **kwargs
             Goes to `self.update_model_parameter()`.
 
@@ -199,7 +203,10 @@ class Target( object ):
         init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
         this = cls(**init_kwargs)
 
-        # backward compatibility                    
+        # backward compatibility
+        if cosmology is not None:
+            this.set_cosmology(cosmology)
+            
         if template is not None:
             this.set_template(template)
             
@@ -234,7 +241,19 @@ class Target( object ):
         # first kwargs/dict => init
         # second kwargs => rest (template)
         return {}, kwargs
-    
+
+
+    def set_cosmology(self, cosmology):
+        """Set the cosmology to be used across the target.
+
+        Parameters
+        ----------
+        cosmology: astropy.Cosmology
+             the cosmology to be used.
+        
+        """
+        self._cosmology = cosmology
+        
     # ------------- #
     #   Template    #
     # ------------- #
@@ -1062,10 +1081,18 @@ class Target( object ):
         #
         # skyarea affect get_rate
         if nyears is not None:
-            rate_min = self.get_rate(zmin, skyarea=skyarea) if (zmin is not None and zmin >0) else 0
-            kwargs.setdefault("t0",{}).update({"low": tstart, "high": tstart + 365.25*nyears})
-            size = int( (self.get_rate(zmax, skyarea=skyarea) - rate_min) * nyears)
-        
+            from .rates import get_redshift_pdf
+            # redefine timing given nyears
+            kwargs.setdefault("t0", {}).update({"low": tstart, "high": tstart + 365.25*nyears})
+
+            if zmin is None:
+                zmin = 0
+            
+            zchecks = np.arange(zmin, zmax, step=1e-3)
+            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, skyarea=skyarea,
+                                             normed=False).sum()
+            size = int(size_per_year * nyears)
+            
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
         
@@ -1121,6 +1148,9 @@ class Target( object ):
     @classproperty
     def cosmology(self):
         """The cosmology to use."""
+        if not hasattr(self, "_cosmology") or self._cosmology is None:
+            self._cosmology = self._COSMOLOGY
+
         return self._COSMOLOGY
 
     # model

@@ -108,3 +108,15 @@ def test_volumetric_rate_array():
     np.testing.assert_allclose(z_rate_actual, z_rate_expected)
 
     assert z_rate_actual.shape == n_per_gpc3_array.shape
+
+
+
+def test_nyears_in_target():
+    """ """
+    rate_test = 3e4
+    nyears = 0.1
+    snia = skysurvey.SNeIa.from_draw(nyears=nyears, zmin=0, zmax=0.145, rate=rate_test, cosmology=Planck18)
+
+    volume = Planck18.comoving_volume(0.145).to("Gpc^3").value
+    expected_size = volume * rate_test * nyears
+    assert np.isclose(len(snia.data), expected_size, rtol=0.01)
