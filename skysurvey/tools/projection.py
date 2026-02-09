@@ -35,7 +35,7 @@ def project_to_radec(verts_or_polygon, ra, dec):
         - list of new geometries
 
     """
-    if isinstance(type(verts_or_polygon), geometry.Polygon): # polygon
+    if isinstance(verts_or_polygon, geometry.Polygon): # polygon
         as_polygon = True
         fra, fdec = np.asarray(verts_or_polygon.exterior.xy)
     else:

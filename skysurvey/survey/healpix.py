@@ -158,7 +158,7 @@ class HealpixSurvey( BaseSurvey ):
 
     @classmethod
     def from_pointings(cls, nside, data,
-                       footprint=None,  moc=None,
+                       footprint=None, moc=None,
                        rakey="ra", deckey="dec",
                        backend="polars",
                        use_pyarrow_extension_array=False,

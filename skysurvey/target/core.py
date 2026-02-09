@@ -282,7 +282,7 @@ class Target( object ):
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
         
-    def get_template(self, index=None, as_model=False, data=None, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
         """Get a template (`sncosmo.Model`).
 
         Parameters
@@ -319,7 +319,7 @@ class Target( object ):
 
         sncosmo_model = self.template.get(**kwargs)
 
-        if index is not None:
+        if index is not None and set_magabs:
             peak_absmag = data.loc[index, "magabs"]
             peak_absmag_band = self.peak_absmag_band
             peak_absmag_magsys = self.magsys

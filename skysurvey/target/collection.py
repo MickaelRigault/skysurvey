@@ -99,11 +99,7 @@ class TargetCollection( object ):
             
         return data
 
-    def get_target_template(
-        self,
-        index,
-        as_model,
-    ):
+    def get_target_template(self, index, as_model=False, set_magabs=True):
         """ Get the template for a given target.
 
         Parameters
@@ -160,12 +156,14 @@ class TargetCollection( object ):
         target_params = data_index[param_mask].to_dict()
         _ = target_params.pop(amplitude_name, None)
         target_template.sncosmo_model.set(**target_params)
-        target_template.sncosmo_model.set_source_peakabsmag(
+        
+        if set_magabs:
+            target_template.sncosmo_model.set_source_peakabsmag(
                 absmag=data_index['magabs'],
                 band=peak_absmag_band,
                 magsys=peak_absmag_magsys,
                 cosmo=cosmology
-            )
+                )
         
         if as_model:
             output_template = target_template.sncosmo_model

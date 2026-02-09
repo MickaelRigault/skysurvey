@@ -236,7 +236,7 @@ class MultiTemplateTSTransient( TSTransient ):
 
         return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, flatten_ndim=True, **kwargs)
 
-    def get_template(self, index=None, as_model=False, data=None, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
         """ """
 
         if data is None:
@@ -252,17 +252,18 @@ class MultiTemplateTSTransient( TSTransient ):
 
         templateindex = self.template.nameorindex_to_index(which)
         sncosmo_model = self.template.get(ref_index=templateindex, **kwargs)
-        
-        peak_absmag = data.loc[index, "magabs"]
-        peak_absmag_band = self.peak_absmag_band
-        peak_absmag_magsys = self.magsys
 
-        sncosmo_model.set_source_peakabsmag(
-            absmag=peak_absmag,
-            band=peak_absmag_band,
-            magsys=peak_absmag_magsys,
-            cosmo=self.cosmology
-        )
+        if set_magabs:
+            peak_absmag = data.loc[index, "magabs"]
+            peak_absmag_band = self.peak_absmag_band
+            peak_absmag_magsys = self.magsys
+
+            sncosmo_model.set_source_peakabsmag(
+                absmag=peak_absmag,
+                band=peak_absmag_band,
+                magsys=peak_absmag_magsys,
+                cosmo=self.cosmology
+                )
 
         if not as_model:
             from ..template import Template

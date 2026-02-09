@@ -227,7 +227,7 @@ class PolygonSurvey( BaseSurvey ):
                 try:
                     import polars as pl
                 except ImportError:
-                    warnings.warn("You do not have polars installed. conda/pip install polars. falling back to pandas backend")
+                    # warnings.warn("You do not have polars installed. conda/pip install polars. falling back to pandas backend")
                     backend = "pandas"
                     
             if backend == "dask":
