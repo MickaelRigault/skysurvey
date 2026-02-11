@@ -1,5 +1,3 @@
-
-
 import itertools
 import pandas
 import numpy as np
@@ -35,6 +33,11 @@ def eff_concat(dfs, chunk_size, keys=None, **kwargs):
     if len(list(dfs_len)) < chunk_size:
         return concat_chunk(dfs, keys=keys, **kwargs)
     
+    if keys is None:
+        return pandas.concat(concat_chunk(dfs_chunk, **kwargs)
+            for dfs_chunk, _ in chunk_dfs(dfs, chunk_size)
+        )
+
     return pandas.concat( (concat_chunk(dfs, keys=keys[i*chunk_size:i*chunk_size+step_], **kwargs)
                             for i, (dfs, step_) in enumerate( chunk_dfs(dfs, chunk_size))
                           )
