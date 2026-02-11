@@ -11,8 +11,6 @@ def isin_pair_elements(elements, test_elements):
     test_elements_combined = (test_elements[:, 0] << 16) | test_elements[:, 1]
     return np.isin(elements_combined, test_elements_combined)
 
-# pandas concat tricks suggested by: AntoineGillesLordet (https://github.com/MickaelRigault/skysurvey/issues/35)
-# aranged by: Mickael Rigault
 def chunk_dfs(dfs, chunk_size):
     """ """
     dfs_out = []
