@@ -1,14 +1,10 @@
 import numpy as np
 import pytest
-from shapely import geometry
 from astropy.cosmology import Planck18
-from skysurvey.target.rates import get_rate
+# from skysurvey.target.rates import get_rate
 from skysurvey.target.rates import get_redshift_pdf
 from skysurvey.target.rates import get_volumetric_rate
 
-#tests for the func get_rate()
-def evolving_rate(z, r0=2.3e4, alpha=1.70):
-    return r0 * (1 + z)**alpha
 
 constant_rate = 1.0e4
 z = np.array([0.1, 0.2, 0.3])
