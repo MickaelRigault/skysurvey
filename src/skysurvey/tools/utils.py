@@ -204,14 +204,20 @@ def random_radec(size=None, skyarea=None,
     
     return ra, dec
 
-def surface_of_skyarea(skyarea):
+def surface_of_skyarea(skyarea, incl_projection=True):
     """ convert input skyarea into deg**2
     """
     if  type(skyarea) is str and skyarea != "full":
         return None
 
     if "shapely" in str(type(skyarea)):
-        return skyarea.area
+        if not incl_projection:
+            return skyarea.area
+        else:
+            # create a new skyarea deformed.
+            ra, dec = np.asarray(skyarea.exterior.xy)
+            dec = np.sin(dec / 180*np.pi) * 180/np.pi # keeps degree
+            return geometry.Polygon( np.vstack([ra, dec]).T).area
     
     return skyarea
     
