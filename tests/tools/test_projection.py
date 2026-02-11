@@ -1,3 +1,4 @@
+import numpy as np
 from shapely import geometry
 from skysurvey.tools import utils
 from skysurvey.survey.polygon import project_to_radec
@@ -15,7 +16,7 @@ def test_project_to_radec():
 def test_radecmodel_to_skysurface():
     """ """
     
-    radec = {"func": random_radec,
+    radec = {"func": utils.random_radec,
              "kwargs": {"dec_range":[0, 90], "ra_range":[0, 360]},
              "as": ["ra","dec"]
             }
