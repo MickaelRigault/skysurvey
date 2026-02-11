@@ -236,7 +236,7 @@ class MultiTemplateTSTransient( TSTransient ):
 
         return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, flatten_ndim=True, **kwargs)
 
-    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
         """ """
 
         if data is None:

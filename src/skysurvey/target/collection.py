@@ -99,7 +99,7 @@ class TargetCollection( object ):
             
         return data
 
-    def get_target_template(self, index, as_model=False, set_magabs=True):
+    def get_target_template(self, index, as_model=False, set_magabs=False):
         """ Get the template for a given target.
 
         Parameters
@@ -223,7 +223,7 @@ class TargetCollection( object ):
         if params is None:
             params = {}
         # get the template
-        template = self.get_target_template(index, **params)
+        template = self.get_target_template(index, set_magabs=True, **params)
         return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
                                              time_range=time_range, npoints=npoints,

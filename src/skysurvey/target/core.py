@@ -129,6 +129,7 @@ class Target( object ):
                       effect=None,
                       cosmology=None,
                       verbose=False,
+                      set_amplitude=False,
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
 
@@ -188,6 +189,8 @@ class Target( object ):
 
         cosmology: None, astropy.Cosmology, optional
             specify the cosmology to be used.
+        set_amplitude: bool
+            should the amplitude of the template be set at this stage ?
         **kwargs
             Goes to `self.update_model_parameter()`.
 
@@ -231,7 +234,8 @@ class Target( object ):
                        nyears=nyears,
                        skyarea=skyarea,
                        inplace=True, # creates self.data
-                       verbose=verbose
+                       verbose=verbose,
+                       set_amplitude=set_amplitude
                        )
         return this
 
@@ -282,7 +286,7 @@ class Target( object ):
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
         
-    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
         """Get a template (`sncosmo.Model`).
 
         Parameters
@@ -932,6 +936,7 @@ class Target( object ):
                  inplace=False,
                  model=None,
                  verbose=False,
+                 set_amplitude=False,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -970,7 +975,9 @@ class Target( object ):
             Sets `self.data` to the newly drawn dataframe. By default False.
         model : [type], optional
             [description]. By default None.
-
+            
+        set_amplitude: bool
+            should the template amplitude be computed.
         Returns
         -------
         DataFrame
@@ -1097,13 +1104,14 @@ class Target( object ):
         data = drawn_model.draw(size=size, **kwargs)
         
         # patch the missing `amplitude` back to .data
-        amplitudes = np.zeros(len(data))
-        for i in tqdm(range(size)) if verbose else range(size):
-            sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
-            amplitude = sncosmo_model_i.get(self.amplitude_name)
-            amplitudes[i] = amplitude
+        if set_amplitude:
+            amplitudes = np.zeros( len(data) )
+            for i in tqdm(range(size)) if verbose else range(size):
+                sncosmo_model_i = self.get_template(index=i, as_model=True, data=data, set_magabs=True)
+                amplitude = sncosmo_model_i.get(self.amplitude_name)
+                amplitudes[i] = amplitude
             
-        data[self.amplitude_name] = amplitudes
+            data[self.amplitude_name] = amplitudes
 
         # shall data be attached to the object?
         if inplace:
@@ -1444,7 +1452,7 @@ class Transient( Target ):
         if params is None:
             params = {}
             
-        template = self.get_target_template(index, **params)
+        template = self.get_target_template(index, set_magabs=True, **params)
         return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
                                              phase_range=phase_range, npoints=npoints,

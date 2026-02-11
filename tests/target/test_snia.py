@@ -243,3 +243,14 @@ def test_sneia_model_keys():
     assert radec["func"] == random_radec
     assert radec["kwargs"] == {}
     assert radec["as"] == ["ra","dec"]
+
+
+
+def test_set_amplitude():
+    """ """
+    snia = SNeIa.from_draw(10, set_amplitude=False)    
+    assert "x0" not in snia.data.columns
+
+    snia = SNeIa.from_draw(10, set_amplitude=True)    
+    assert "x0" in snia.data.columns
+    assert not np.all( np.isclose(snia.data["x0"], 1) )

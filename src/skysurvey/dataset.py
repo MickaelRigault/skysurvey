@@ -220,7 +220,7 @@ class DataSet(object):
         for index_target in targets_observed:
             # get the target model, that will be used to generate the flux
             # this model is set to the target parameters.
-            model = targets.get_target_template(index=index_target, as_model=True)
+            model = targets.get_target_template(index=index_target, as_model=True, set_magabs=True)
 
             # grab the target information (could be several rows)
             this_target = targets_data_observed.loc[[index_target]]
