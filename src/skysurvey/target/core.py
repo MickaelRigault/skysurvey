@@ -299,6 +299,10 @@ class Target( object ):
         as_model : bool, optional
             should this return the sncosmo.Model (True) or the 
             skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+        data: pandas.DataFrame, None, optional
+            which data should be used to set the parameter of the template. Ignored if index is None.
+        set_magabs: bool, optional
+            should the peal magnitude of the template be set to magabs ?
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 
@@ -1352,7 +1356,7 @@ class Transient( Target ):
         # get the template            
         if index is not None:
             if sncosmo_model is None:
-                sncosmo_model = self.get_template(index=index, as_model=True)
+                sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
                 kwargs = prop | kwargs
@@ -1396,7 +1400,7 @@ class Transient( Target ):
         # get the template            
         if index is not None:
             if sncosmo_model is None:
-                sncosmo_model = self.get_template(index=index, as_model=True)
+                sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
 

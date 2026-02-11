@@ -110,6 +110,8 @@ class TargetCollection( object ):
         as_model : bool, optional
             should this return the sncosmo.Model (True) or the 
             skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+        set_magabs: bool, optional
+            should the peal magnitude of the template be set to magabs ?
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 

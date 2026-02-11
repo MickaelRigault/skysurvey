@@ -16,7 +16,7 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshift.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
@@ -76,7 +76,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshidt.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
@@ -139,7 +139,7 @@ def get_rate(z, rate, **kwargs):
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshift.
     **kwargs
         Rate options if rate is a function. 
         ignored otherwise.
@@ -168,7 +168,7 @@ def get_redshift_pdf(z, rate, keepsize=True, cosmology=Planck18, normed=True, **
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshift.
     keepsize : bool, optional
         Should this keep the size of the input `z`? If so, this `z` is
         linear binned and add an extra step. This is because this func
