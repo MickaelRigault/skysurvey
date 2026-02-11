@@ -10,6 +10,58 @@ __all__ = ["project_to_radec", "spatialjoin_radec_to_fields" ]
 
 _DEG2RA = np.pi / 180 # compute once.
 
+def radecmodel_to_skysurface(radecmodel, ntrial=1e4, frac=True):
+    """Compute the sky area covered by points drawn from a ModelDAG model in RA/Dec space.
+
+    This function samples points from a ModelDAG model, projects them onto a unit sphere,
+    and computes the convex hull of the projected points to estimate the sky area.
+    The area can be returned as a fraction of the total sky (4π steradians) or in steradians.
+
+    Parameters
+    ----------
+    radecmodel : object
+        A ModelDAG-compatible model that generates RA/Dec points.
+    ntrial : int, optional
+        Number of points to sample from the model. Default is 1e4.
+    frac : bool, optional
+        If True, return the area as a fraction of the total sky (4π steradians).
+        If False, return the area in steradians. Default is True.
+
+    Returns
+    -------
+    float
+        The sky area covered by the sampled points. If `frac=True`, the value is a fraction of the total sky.
+        If `frac=False`, the value is in steradians.
+
+    Notes
+    -----
+    - The RA/Dec points are converted to radians and projected using `sin(dec)` to account for spherical geometry.
+    - The convex hull of the projected points is computed to estimate the sky area.
+    - The total sky area is 4π steradians, which corresponds to 41253 square degrees.
+
+    Examples
+    --------
+    >>> from modeldag import ModelDAG
+    >>> radecmodel = ...  # Your ModelDAG-compatible RA/Dec model
+    >>> area_frac = radecmodel_to_skysurface(radecmodel, ntrial=10000, frac=True)
+    >>> print(f"Fraction of sky covered: {area_frac:.4f}")
+    """
+    from modeldag import ModelDAG
+    import geopandas as gpd
+    mdag = ModelDAG({"radec": radecmodel})
+    data = mdag.draw( int(ntrial) )
+    # account for projection delta_ra*delta_sindec
+    data["sin_dec_rad"] = np.sin(data["dec"]*_DEG2RA)
+    data["ra_rad"] = data["ra"]*_DEG2RA
+
+    # get the (projected) skyarea # in radian
+    projected_skyarea = gpd.GeoDataFrame(geometry=gpd.points_from_xy(data["ra_rad"], 
+                                                           data["sin_dec_rad"])
+                              ).union_all().convex_hull
+    if frac:
+        return projected_skyarea.area / (4*np.pi)
+        
+    return projected_skyarea.area # steradian
 
 def project_to_radec(verts_or_polygon, ra, dec):
     """ project a geometry (or its vertices) to given ra, dec coordinates

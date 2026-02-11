@@ -121,3 +121,12 @@ def test_nyears_in_target():
     volume = Planck18.comoving_volume(0.145).to("Gpc^3").value
     expected_size = volume * rate_test * nyears
     assert np.isclose(len(snia.data), expected_size, rtol=0.01)
+
+
+def test_nyears_and_radec():
+    """ """
+    import skysurvey
+    snia_fullsky = skysurvey.SNeIa.from_draw(zmax=0.1, nyears=1., rate=1e3)
+    snia_northsky = skysurvey.SNeIa.from_draw(zmax=0.1, nyears=1., rate=1e3, radec={"dec_range": [0, 90]})
+
+    assert np.isclose( len(snia_northsky.data)/len(snia_fullsky.data), 0.5, rtol=0.01)

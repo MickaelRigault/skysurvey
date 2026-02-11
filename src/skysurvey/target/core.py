@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import pandas
+from copy import deepcopy
 from tqdm import tqdm
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
@@ -1081,14 +1082,29 @@ class Target( object ):
                 warnings.warn("skyarea given but no model have skyarea as parameters. This is ignored.")
             
             for k in param_affected:
-                kwargs.setdefault(k,{}).update({"skyarea": skyarea})
-                
+                kwargs.setdefault(k, {}).update({"skyarea": skyarea})
+
         #
         # Size
         #
         # skyarea affect get_rate
         if nyears is not None:
             from .rates import get_redshift_pdf
+            from ..tools.projection import radecmodel_to_skysurface
+            
+            if "radec" in drawn_model.model.keys():
+                # radec model 
+                radec_model = deepcopy(drawn_model.model["radec"])
+                # as updated by requested kwargs
+                radec_model["kwargs"] |= kwargs.get("radec", {})
+                print(radec_model)
+                f_area = radecmodel_to_skysurface( radec_model )
+            else:
+                if skyarea is not None:
+                    warnings.warn("skyarea given, but no radec not in model | *nyears* will not account for skyarea.")
+                    
+                f_area = 1
+            
             # redefine timing given nyears
             kwargs.setdefault("t0", {}).update({"low": tstart, "high": tstart + 365.25*nyears})
 
@@ -1096,9 +1112,9 @@ class Target( object ):
                 zmin = 0
             
             zchecks = np.arange(zmin, zmax, step=1e-3)
-            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, skyarea=skyarea,
-                                             normed=False).sum()
-            size = int(size_per_year * nyears)
+            # skyarea removed from get_redshift_pdf as take into account by f_area.
+            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, normed=False, skyarea=None).sum() 
+            size = int(size_per_year * nyears * f_area)
             
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
