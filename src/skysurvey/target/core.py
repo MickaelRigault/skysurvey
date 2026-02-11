@@ -1112,8 +1112,8 @@ class Target( object ):
                 zmin = 0
             
             zchecks = np.arange(zmin, zmax, step=1e-3)
-            # skyarea removed from get_redshift_pdf as take into account by f_area.
-            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, normed=False, skyarea=None).sum() 
+            # get_redshift_pdf is full sky. f_area corrects that.
+            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, normed=False).sum() 
             size = int(size_per_year * nyears * f_area)
             
         # actually draw the data
@@ -1288,22 +1288,13 @@ class Transient( Target ):
     # ------- #
     #  GETTER #
     # ------- #
-    def get_rate(self, z, skyarea=None, rate=None, **kwargs):
+    def get_rate(self, z, rate=None, **kwargs):
         """Get the number of target (per year) up to the given redshift.
 
         Parameters
         ----------
         z : float
             Redshift.
-        skyarea : None, str, float, geometry, optional
-            Sky area (in deg**2).
-
-            - None or 'full': 4pi
-            - "extra-galactic": 4pi - (milky-way b<5)
-            - float: area in deg**2
-            - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-
-            By default None.
         rate : float, callable, optional
             If None, `self.rate` is used.
             If a float is given, it is assumed to be the number of targets per
@@ -1326,7 +1317,7 @@ class Transient( Target ):
         if rate is None:
             rate = self.rate
             
-        return get_rate(z, skyarea=skyarea, rate=rate, **kwargs)
+        return get_rate(z, rate=rate, **kwargs)
     
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None,
