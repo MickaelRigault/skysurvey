@@ -123,7 +123,7 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
     return newdata
 
 def random_radec(size=None, skyarea=None,
-                ra_range=[0,360], dec_range=[-90,90],
+                ra_range=[0, 360], dec_range=[-90,90],
                 rng=None):
     """ draw the sky positions
 
@@ -178,6 +178,11 @@ def random_radec(size=None, skyarea=None,
     
     # => Polygon or no skyarea
     if skyarea is not None: # change the ra_range
+        default_skyrea = geometry.Polygon([ [ra_range[0], dec_range[0]],
+                                            [ra_range[0], dec_range[1]],
+                                            [ra_range[1], dec_range[1]],
+                                            [ra_range[1], dec_range[0]]])
+        skyarea = default_skyrea.intersection(skyarea)
         size_to_draw = size*4
         ramin, decmin, ramax, decmax = skyarea.bounds
         ra_range = [ramin, ramax]
@@ -199,14 +204,20 @@ def random_radec(size=None, skyarea=None,
     
     return ra, dec
 
-def surface_of_skyarea(skyarea):
+def surface_of_skyarea(skyarea, incl_projection=True):
     """ convert input skyarea into deg**2
     """
     if  type(skyarea) is str and skyarea != "full":
         return None
 
     if "shapely" in str(type(skyarea)):
-        return skyarea.area
+        if not incl_projection:
+            return skyarea.area
+        else:
+            # create a new skyarea deformed.
+            ra, dec = np.asarray(skyarea.exterior.xy)
+            dec = np.sin(dec / 180*np.pi) * 180/np.pi # keeps degree
+            return geometry.Polygon( np.vstack([ra, dec]).T).area
     
     return skyarea
     

@@ -1,6 +1,7 @@
 import warnings
 import numpy as np
 import pandas
+from copy import deepcopy
 from tqdm import tqdm
 from astropy import cosmology, time
 from astropy.utils.decorators import classproperty
@@ -129,6 +130,7 @@ class Target( object ):
                       effect=None,
                       cosmology=None,
                       verbose=False,
+                      set_amplitude=False,
                       **kwargs):
         """Load the instance from a random draw of targets given the model.
 
@@ -188,6 +190,8 @@ class Target( object ):
 
         cosmology: None, astropy.Cosmology, optional
             specify the cosmology to be used.
+        set_amplitude: bool
+            should the amplitude of the template be set at this stage ?
         **kwargs
             Goes to `self.update_model_parameter()`.
 
@@ -231,7 +235,8 @@ class Target( object ):
                        nyears=nyears,
                        skyarea=skyarea,
                        inplace=True, # creates self.data
-                       verbose=verbose
+                       verbose=verbose,
+                       set_amplitude=set_amplitude
                        )
         return this
 
@@ -282,7 +287,7 @@ class Target( object ):
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
         
-    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
         """Get a template (`sncosmo.Model`).
 
         Parameters
@@ -294,6 +299,10 @@ class Target( object ):
         as_model : bool, optional
             should this return the sncosmo.Model (True) or the 
             skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+        data: pandas.DataFrame, None, optional
+            which data should be used to set the parameter of the template. Ignored if index is None.
+        set_magabs: bool, optional
+            should the peal magnitude of the template be set to magabs ?
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 
@@ -932,6 +941,7 @@ class Target( object ):
                  inplace=False,
                  model=None,
                  verbose=False,
+                 set_amplitude=False,
                  **kwargs):
         """Draw the parameter model (using `self.model.draw()`).
 
@@ -970,7 +980,9 @@ class Target( object ):
             Sets `self.data` to the newly drawn dataframe. By default False.
         model : [type], optional
             [description]. By default None.
-
+            
+        set_amplitude: bool
+            should the template amplitude be computed.
         Returns
         -------
         DataFrame
@@ -1074,14 +1086,29 @@ class Target( object ):
                 warnings.warn("skyarea given but no model have skyarea as parameters. This is ignored.")
             
             for k in param_affected:
-                kwargs.setdefault(k,{}).update({"skyarea": skyarea})
-                
+                kwargs.setdefault(k, {}).update({"skyarea": skyarea})
+
         #
         # Size
         #
         # skyarea affect get_rate
         if nyears is not None:
             from .rates import get_redshift_pdf
+            from ..tools.projection import radecmodel_to_skysurface
+            
+            if "radec" in drawn_model.model.keys():
+                # radec model 
+                radec_model = deepcopy(drawn_model.model["radec"])
+                # as updated by requested kwargs
+                radec_model["kwargs"] |= kwargs.get("radec", {})
+                print(radec_model)
+                f_area = radecmodel_to_skysurface( radec_model )
+            else:
+                if skyarea is not None:
+                    warnings.warn("skyarea given, but no radec not in model | *nyears* will not account for skyarea.")
+                    
+                f_area = 1
+            
             # redefine timing given nyears
             kwargs.setdefault("t0", {}).update({"low": tstart, "high": tstart + 365.25*nyears})
 
@@ -1089,21 +1116,22 @@ class Target( object ):
                 zmin = 0
             
             zchecks = np.arange(zmin, zmax, step=1e-3)
-            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, skyarea=skyarea,
-                                             normed=False).sum()
-            size = int(size_per_year * nyears)
+            # get_redshift_pdf is full sky. f_area corrects that.
+            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, normed=False).sum() 
+            size = int(size_per_year * nyears * f_area)
             
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
         
         # patch the missing `amplitude` back to .data
-        amplitudes = np.zeros(len(data))
-        for i in tqdm(range(size)) if verbose else range(size):
-            sncosmo_model_i = self.get_template(index=i, as_model=True, data=data)
-            amplitude = sncosmo_model_i.get(self.amplitude_name)
-            amplitudes[i] = amplitude
+        if set_amplitude:
+            amplitudes = np.zeros( len(data) )
+            for i in tqdm(range(size)) if verbose else range(size):
+                sncosmo_model_i = self.get_template(index=i, as_model=True, data=data, set_magabs=True)
+                amplitude = sncosmo_model_i.get(self.amplitude_name)
+                amplitudes[i] = amplitude
             
-        data[self.amplitude_name] = amplitudes
+            data[self.amplitude_name] = amplitudes
 
         # shall data be attached to the object?
         if inplace:
@@ -1264,22 +1292,13 @@ class Transient( Target ):
     # ------- #
     #  GETTER #
     # ------- #
-    def get_rate(self, z, skyarea=None, rate=None, **kwargs):
+    def get_rate(self, z, rate=None, **kwargs):
         """Get the number of target (per year) up to the given redshift.
 
         Parameters
         ----------
         z : float
             Redshift.
-        skyarea : None, str, float, geometry, optional
-            Sky area (in deg**2).
-
-            - None or 'full': 4pi
-            - "extra-galactic": 4pi - (milky-way b<5)
-            - float: area in deg**2
-            - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-
-            By default None.
         rate : float, callable, optional
             If None, `self.rate` is used.
             If a float is given, it is assumed to be the number of targets per
@@ -1302,7 +1321,7 @@ class Transient( Target ):
         if rate is None:
             rate = self.rate
             
-        return get_rate(z, skyarea=skyarea, rate=rate, **kwargs)
+        return get_rate(z, rate=rate, **kwargs)
     
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None,
@@ -1337,7 +1356,7 @@ class Transient( Target ):
         # get the template            
         if index is not None:
             if sncosmo_model is None:
-                sncosmo_model = self.get_template(index=index, as_model=True)
+                sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
                 kwargs = prop | kwargs
@@ -1381,7 +1400,7 @@ class Transient( Target ):
         # get the template            
         if index is not None:
             if sncosmo_model is None:
-                sncosmo_model = self.get_template(index=index, as_model=True)
+                sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
 
@@ -1444,7 +1463,7 @@ class Transient( Target ):
         if params is None:
             params = {}
             
-        template = self.get_target_template(index, **params)
+        template = self.get_target_template(index, set_magabs=True, **params)
         return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
                                              phase_range=phase_range, npoints=npoints,

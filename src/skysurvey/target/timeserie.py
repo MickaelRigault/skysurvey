@@ -236,8 +236,31 @@ class MultiTemplateTSTransient( TSTransient ):
 
         return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, flatten_ndim=True, **kwargs)
 
-    def get_template(self, index=None, as_model=False, data=None, set_magabs=True, **kwargs):
-        """ """
+    def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
+        """Get a template (`sncosmo.Model`).
+
+        Parameters
+        ----------
+        index : int, optional
+            Index of a target (see `self.data.index`) to set the template
+            parameters to that of the target. If None, the default
+            `sncosmo.Model` parameters will be used. By default None.
+        as_model : bool, optional
+            should this return the sncosmo.Model (True) or the 
+            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+        data: pandas.DataFrame, None, optional
+            which data should be used to set the parameter of the template. Ignored if index is None.
+        set_magabs: bool, optional
+            should the peal magnitude of the template be set to magabs ?
+        **kwargs
+            Goes to `seld.template.get()` and passed to `sncosmo.Model`.
+
+        Returns
+        -------
+        skysurvey.Template or sncosmo.Model
+            An instance of the template (or its associated `sncosmo.Model`).
+            (see as_model)
+        """
 
         if data is None:
             data = self.data

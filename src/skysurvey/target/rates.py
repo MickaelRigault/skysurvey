@@ -1,10 +1,8 @@
 import numpy as np
 from astropy.cosmology import Planck18
 
-from ..tools.utils import surface_of_skyarea
 
 def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
-                  skyarea=None,
                   flatten_ndim=True,
                   rng=None,
                   **kwargs):
@@ -18,19 +16,13 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshift.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
         Maximum redshift. The default is 2.
     zstep : float, optional
         Sampling of the redshift. The default is 1e-4.
-    skyarea : None, float, geometry, optional
-        Sky area (in deg**2).
-        - None : 4pi in deg**2 (full sky)
-        - float: area in deg**2
-        - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-        By default None.
     flatten_ndim : bool, optional
         [description]. The default is True.
     rng : None, int, (Bit)Generator, optional
@@ -84,7 +76,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
+        returns the volumetric rate as a function of redshidt.
     zmin : float, optional
         Minimum redshift. The default is 0.
     zmax : float, optional
@@ -136,7 +128,7 @@ def get_redshift_pdf_func(rate, zmin=0, zmax=1., zstep=1e-3,
                                 assume_sorted=True)
 
 
-def get_rate(z, rate, skyarea=None, **kwargs):
+def get_rate(z, rate, **kwargs):
     """Get the rate as a function of redshift.
 
     Parameters
@@ -147,13 +139,7 @@ def get_rate(z, rate, skyarea=None, **kwargs):
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
-    skyarea : None, float, geometry, optional
-        Sky area (in deg**2).
-        - None : 4pi in deg**2 (full sky)
-        - float: area in deg**2
-        - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-        By default None.
+        returns the volumetric rate as a function of redshift.
     **kwargs
         Rate options if rate is a function. 
         ignored otherwise.
@@ -169,14 +155,9 @@ def get_rate(z, rate, skyarea=None, **kwargs):
     else: # volumetric
         n_per_gpc3 = rate
         
-    skyarea = surface_of_skyarea(skyarea) # in deg**2 or None
-    if skyarea is not None:
-        full_sky = 4*np.pi * (180/np.pi)**2 # 4pi in deg**2
-        n_per_gpc3 *= (skyarea/full_sky)
-
     return n_per_gpc3
 
-def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, normed=True, **kwargs):
+def get_redshift_pdf(z, rate, keepsize=True, cosmology=Planck18, normed=True, **kwargs):
     """Get the redshift pdf given the rate (function or volumetric).
 
     Parameters
@@ -187,13 +168,7 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, n
         If a float is given, it is assumed to be the number of targets per
         Gpc3, and `get_volumetric_rate()` is used. 
         If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of wavelength.
-      skyarea : None, float, geometry, optional
-        Sky area (in deg**2).
-        - None : 4pi in deg**2 (full sky)
-        - float: area in deg**2
-        - geometry: `shapely.geometry.area` is used (assumed in deg**2)
-        By default None.
+        returns the volumetric rate as a function of redshift.
     keepsize : bool, optional
         Should this keep the size of the input `z`? If so, this `z` is
         linear binned and add an extra step. This is because this func
@@ -215,7 +190,7 @@ def get_redshift_pdf(z, rate, skyarea=None, keepsize=True, cosmology=Planck18, n
         step_ = z[-1]-z[-2]
         z = np.append(z, z[-1] + step_)
     
-    n_per_gpc3 = get_rate(z, rate, skyarea=skyarea, **kwargs) # len(input_z) (+ 1 if keepsize)
+    n_per_gpc3 = get_rate(z, rate, **kwargs) # len(input_z) (+ 1 if keepsize)
     # volume
     volume = cosmology.comoving_volume(z).to("Gpc**3").value # len(input_z) (+ 1 if keepsize)
     shell = np.diff(volume) # len(input_z) -1 (+ 1 if keepsize)
