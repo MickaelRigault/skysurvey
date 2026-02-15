@@ -181,8 +181,7 @@ class Target( object ):
         rate : float, callable, optional
             The transient rate.
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, and `get_volumetric_rate()` is used. 
-            If a callable is given, it is supposed to be a function of z that
+            Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
 
         effect : [type], optional
@@ -410,6 +409,27 @@ class Target( object ):
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
         return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase_obs, zp=zp, zpsys=zpsys)
 
+    def get_target_peakmag(self, index, band, magsys="ab"):
+        """Peak magnitude through the given bandpass(es) at the given time(s).
+
+        Parameters
+        ----------
+        index : int
+            Index of a target (see `self.data.index`) to set the template
+            parameters to that of the target.
+        band : str or list_like
+            Name(s) of Bandpass(es) in registry.
+        magsys : str or list_like, optional
+            Name(s) of `~sncosmo.MagSystem` in registry. By default "ab".
+
+        Returns
+        -------
+        float
+            Magnitude at peak for the given band.
+        """
+        sncosmo_model = self.get_template(index=index, set_magabs=True, as_model=True)
+        return sncosmo_model.bandmag(band, magsys, sncosmo_model.get("t0") + sncosmo_model._source.peakphase(band))
+    
     def get_target_mag(self, index, band, phase, magsys="ab", restframe=True):
         """Magnitude through the given bandpass(es) at the given time(s).
 
@@ -434,7 +454,7 @@ class Target( object ):
             a float if all parameters are not interables. The return value is
             an `~numpy.ndarray` if any are interable.
         """
-        sncosmo_model = self.get_target_template(index).sncosmo_model
+        sncosmo_model = self.get_template(index=index, set_magabs=True, as_model=True)
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
         return sncosmo_model.bandmag(band=band, time=sncosmo_model.get('t0')+phase_obs, magsys=magsys)
         
@@ -1028,7 +1048,6 @@ class Target( object ):
         #
         # Redshift
         #
-        
         # zmax
         # -> get forward entries that have 'zmax' as parameters
         key_redshift = drawn_model.get_func_with_args("zmax")
@@ -1093,15 +1112,13 @@ class Target( object ):
         #
         # skyarea affect get_rate
         if nyears is not None:
-            from .rates import get_redshift_pdf
+            from .rates import get_ntargets
             from ..tools.projection import radecmodel_to_skysurface
-            
             if "radec" in drawn_model.model.keys():
                 # radec model 
                 radec_model = deepcopy(drawn_model.model["radec"])
                 # as updated by requested kwargs
                 radec_model["kwargs"] |= kwargs.get("radec", {})
-                print(radec_model)
                 f_area = radecmodel_to_skysurface( radec_model )
             else:
                 if skyarea is not None:
@@ -1114,11 +1131,11 @@ class Target( object ):
 
             if zmin is None:
                 zmin = 0
-            
+                
             zchecks = np.arange(zmin, zmax, step=1e-3)
-            # get_redshift_pdf is full sky. f_area corrects that.
-            size_per_year = get_redshift_pdf(zchecks, rate=self.rate, normed=False).sum() 
-            size = int(size_per_year * nyears * f_area)
+            # get_ntargets is full sky. f_area corrects that.
+            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, as_type="float")
+            size = int(ntarget_per_year * nyears * f_area)
             
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
@@ -1247,8 +1264,7 @@ class Transient( Target ):
         ----------
         float_or_func : float or callable
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, and `get_volumetric_rate()` is used. 
-            If a callable is given, it is supposed to be a function of z that
+            Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
         """
         if callable(float_or_func):
@@ -1272,8 +1288,7 @@ class Transient( Target ):
         rate : float, callable, optional
             The transient rate. If None, `self.rate` is used. By default None.
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, and `get_volumetric_rate()` is used. 
-            If a callable is given, it is supposed to be a function of z that
+            Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
         **kwargs
             Additional keyword arguments to pass to `draw_redshift`.
@@ -1302,8 +1317,7 @@ class Transient( Target ):
         rate : float, callable, optional
             If None, `self.rate` is used.
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, and `get_volumetric_rate()` is used. 
-            If a callable is given, it is supposed to be a function of z that
+            Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
         **kwargs
             Goes to the rate function (if a function, not a number).
