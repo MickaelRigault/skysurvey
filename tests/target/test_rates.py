@@ -1,5 +1,5 @@
 import numpy as np
-import pytest
+
 from astropy.cosmology import Planck18
 from skysurvey.target.rates import get_ntargets_per_shell, get_rate, draw_redshift, get_ntargets
 
@@ -57,8 +57,33 @@ def test_get_ntargets_constantrate():
     assert ntargets_constant_array_shell.shape == rates_float_array.shape
     assert np.isclose(ntargets_constant_array_shell, ntargets_constant_array, rtol=1e-3).all() # isclose to avoid rounding error
 
+def test_get_ntargets_multirates():
+    """ """
+    # test cases with rate is list
+    for ztest in [0.1, 0.2, 0.8]:
+        vol_universe = Planck18.comoving_volume(ztest).to("Gpc^3").value
+        ntargets_1, ntargets_2 = get_ntargets(ztest, rate=[1e3, 2e4])
+        assert np.isclose(ntargets_1, 1e3*vol_universe, rtol=1e-3)
+        assert np.isclose(ntargets_2, 2e4*vol_universe, rtol=1e-3)
+    
 
+def test_get_ntargets_volumeconsistancy():
 
+    # assuming Planck18, z=0.145 => 1Gpc3 ; z=0.18457 => 2Gpc3
+
+    rate_test = 1e3
+    prop_test = dict( rate=rate_test, cosmology=Planck18, astype="float")
+
+    for force_shell_ in [True, False]:
+        prop_test["force_shell"] = force_shell_
+        ntarget_vol1 = get_ntargets(zmax=0.145, **prop_test)
+        ntarget_vol2 = get_ntargets(zmax=0.18457, **prop_test)
+        ntarget_vol_21 = get_ntargets(zmax=0.18457, zmin=0.145, **prop_test)
+
+        assert np.isclose(ntarget_vol1/ntarget_vol2, 0.5, rtol=0.01)
+        assert np.isclose(ntarget_vol1/ntarget_vol_21, 1, rtol=0.01)
+
+    
 def test_draw_redshift_constantrate():
     """ """
     # ks test specify if two sample are drawn 
@@ -73,6 +98,18 @@ def test_draw_redshift_constantrate():
                                            c=rate_float)
     
     kstest = ks_2samp(redshifts_float, redshifts_funcflat)
+    assert kstest.pvalue>0.1
+
+def test_draw_redshift_ndim2():
+    """ """
+    # ks test specify if two sample are drawn 
+    # from the same underlying population.
+    from scipy.stats import ks_2samp
+
+    # constant rate should provide the same thing as the number of target is given. 
+    # hence, as long as the rate(z) is the same at a constant, this cancels out.
+    ntargets_1, ntargets_2 = draw_redshift(10_000, rate=[1, 2])
+    kstest = ks_2samp(ntargets_1, ntargets_2)
     assert kstest.pvalue>0.1
     
 # tests for the func volumetric_rate()

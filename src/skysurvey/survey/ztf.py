@@ -74,6 +74,7 @@ class ZTF( GridSurvey ):
 
     def get_skyarea(self, observed=True, buffer=0.5):
         """ skyarea of the survey. """
+        import shapely
         list_of_geoms = self.fields["geometry"]
         if observed:
             list_of_geoms = list_of_geoms.loc[ self.data["fieldid"].unique() ]

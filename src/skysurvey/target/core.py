@@ -1132,7 +1132,6 @@ class Target( object ):
             if zmin is None:
                 zmin = 0
                 
-            zchecks = np.arange(zmin, zmax, step=1e-3)
             # get_ntargets is full sky. f_area corrects that.
             ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, as_type="float")
             size = int(ntarget_per_year * nyears * f_area)

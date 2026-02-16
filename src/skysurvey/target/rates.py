@@ -49,16 +49,10 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         return rng.choice(xx, size=size, p=pdf/pdf.sum())
 
     # 2D rates | this could happend if rates is an array.
-    if np.ndim(pdf) == 2:
-        if not flatten_ndim:
-            return [rng.choice(xx_eff, size=size, p=pdf_/pdf_.sum())
-                        for pdf_ in pdf]
-        
-        xx_eff_flat = np.full_like(pdf, xx_eff).reshape(-1)
-        pdf_flat = pdf.reshape(-1)
-        return rng.choice(xx_eff_flat, size=size, p=pdf_flat/pdf_flat.sum())
-        
-    raise ValueError(f"ndim of pdf should be 1 or 2, not {np.ndim(pdf)=}")
+    elif np.ndim(pdf)==2:
+        return [rng.choice(xx, size=size, p=pdf_/pdf_.sum()) for pdf_ in pdf]
+    else:
+        raise ValueError(f"ndim of pdf should be 1 or 2, not {np.ndim(pdf)=}")
 
 def get_rate(z, rate, **kwargs):
     """Get the (volumetric) rate as a function of redshift.
