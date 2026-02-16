@@ -458,8 +458,7 @@ class CompositeTransient( TransientCollection ):
             By default None.
         rate : float, callable, optional
             If a float is given, it is assumed to be the number of targets per
-            Gpc3, and `get_volumetric_rate()` is used. 
-            If a callable is given, it is supposed to be a function of z that
+            Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
 
             By default None.

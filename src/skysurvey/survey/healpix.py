@@ -284,14 +284,20 @@ class HealpixSurvey( BaseSurvey ):
         polygons = [geometry.Polygon(ang_.T) for ang_ in ang]
         return polygons
 
-    def get_skyarea(self, as_multipolygon=True):
+    def get_skyarea(self, as_multipolygon=True, buffer=0.01):
         """Get multipolygon (or list) of field geometries.
 
         Parameters
         ----------
         as_multipolygon: bool, optional
             If True, returns a multipolygon.
-            Otherwise, returns a list of polygons.
+            Otherwise, returns unary_union of polygons
+
+        buffer: float, None, optional
+            buffer (in deg) around the polygon. 
+            This helps joining edges and reduces the number of 
+            isolated sky-pixels which may artificially slow down 
+            computation
 
         Returns
         -------
@@ -301,9 +307,14 @@ class HealpixSurvey( BaseSurvey ):
         
         ps = self.get_polygons(observed_fields=True, as_vertices=False)
         if as_multipolygon:
-            return geometry.MultiPolygon(ps)
-
-        return ops.unary_union(ps)    
+            skyarea = geometry.MultiPolygon(ps)
+        else:
+            skyarea = ops.unary_union(ps)
+            
+        if buffer is not None:
+            skyarea = skyarea.buffer(buffer)
+            
+        return skyarea
     # ------- #
     #  core   #
     # ------- #

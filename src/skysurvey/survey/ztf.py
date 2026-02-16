@@ -72,6 +72,15 @@ class ZTF( GridSurvey ):
             
         return cls(data=data, level=level)
 
+    def get_skyarea(self, observed=True, buffer=0.5):
+        """ skyarea of the survey. """
+        import shapely
+        list_of_geoms = self.fields["geometry"]
+        if observed:
+            list_of_geoms = list_of_geoms.loc[ self.data["fieldid"].unique() ]
+            
+        return shapely.unary_union(list_of_geoms).buffer(buffer)
+
     def show_ztf(self, data=None, fieldstat=None, **kwargs):
         """Show the sky coverage.
 

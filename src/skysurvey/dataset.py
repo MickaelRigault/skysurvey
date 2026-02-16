@@ -119,6 +119,7 @@ class DataSet(object):
                                        incl_error=True,
                                        # client=None,
                                        phase_range=[-50, +200],
+                                       progress_bar=False,
                                        seed=None):
         """ loads a dataset (observed data) given targets and a survey
 
@@ -141,6 +142,9 @@ class DataSet(object):
             Rest-frame phase range to be used for simulating 
             the lightcurves. If None, no cut is applied on time
             range for the logs.
+        progress_bar: bool, optional
+            shall this display a progress bar associated to the generation of targets ?
+            (uses tqdm)
         seed : None, int, Generator, RandomState, optional
             = ignored if incl_error=False = 
             # docstring adapted from np.random.default_rng()
@@ -154,7 +158,8 @@ class DataSet(object):
         dataset:
             instance of a DataSet loaded from the given targets.
         """
-
+        if progress_bar:
+            from tqdm import tqdm
         # if input targets is a list, create a TemplateCollection
         if type(targets) in [list, tuple]:
             targets = TargetCollection(targets) 
@@ -217,7 +222,7 @@ class DataSet(object):
             
         bandflux = []
         targets_observed = targets_data_observed.index.unique()
-        for index_target in targets_observed:
+        for index_target in (tqdm(targets_observed) if progress_bar else targets_observed):
             # get the target model, that will be used to generate the flux
             # this model is set to the target parameters.
             model = targets.get_target_template(index=index_target, as_model=True, set_magabs=True)

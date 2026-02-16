@@ -203,8 +203,7 @@ class MultiTemplateTSTransient( TSTransient ):
         ----------
         rate: float, func or list of
             func: a function that takes as input an array or redshift "z"
-            float: number of targets per Gpc3, then skysurvey.target.rates.get_volumetric_rate() is used.
-            could be a lsit of these
+            float: number of targets per Gpc3. could be a list.
         """
         rate = np.atleast_1d(rate)
         if len(rate) == 1: # as usual
