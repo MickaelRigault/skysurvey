@@ -22,7 +22,8 @@ def radecmodel_to_skysurface(radecmodel, ntrial=2e5, frac=True):
     radecmodel : object
         A ModelDAG-compatible model that generates RA/Dec points.
     ntrial : int, optional
-        Number of points to sample from the model. Default is 1e4.
+        Number of points to sample from the model. Default is 2e5.
+        Tests suggest 2e5 is good at 0.01%.
     frac : bool, optional
         If True, return the area as a fraction of the total sky (4π steradians).
         If False, return the area in steradians. Default is True.
@@ -43,7 +44,7 @@ def radecmodel_to_skysurface(radecmodel, ntrial=2e5, frac=True):
     --------
     >>> from modeldag import ModelDAG
     >>> radecmodel = ...  # Your ModelDAG-compatible RA/Dec model
-    >>> area_frac = radecmodel_to_skysurface(radecmodel, ntrial=10000, frac=True)
+    >>> area_frac = radecmodel_to_skysurface(radecmodel, ntrial=1e5, frac=True)
     >>> print(f"Fraction of sky covered: {area_frac:.4f}")
     """
     from modeldag import ModelDAG
