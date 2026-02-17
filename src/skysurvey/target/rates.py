@@ -182,5 +182,6 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
             ntargets = (volume_zmax-volume_zmin) * rate
         else:
             ntargets = (volume_zmax-volume_zmin) * rate[:,None]
-        
-    return ntargets.astype(astype)
+
+    # squeeze() will be [float] => float
+    return ntargets.astype(astype).squeeze()
