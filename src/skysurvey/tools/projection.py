@@ -10,7 +10,7 @@ __all__ = ["project_to_radec", "spatialjoin_radec_to_fields" ]
 
 _DEG2RA = np.pi / 180 # compute once.
 
-def radecmodel_to_skysurface(radecmodel, ntrial=1e4, frac=True):
+def radecmodel_to_skysurface(radecmodel, ntrial=2e5, frac=True):
     """Compute the sky area covered by points drawn from a ModelDAG model in RA/Dec space.
 
     This function samples points from a ModelDAG model, projects them onto a unit sphere,
@@ -22,7 +22,8 @@ def radecmodel_to_skysurface(radecmodel, ntrial=1e4, frac=True):
     radecmodel : object
         A ModelDAG-compatible model that generates RA/Dec points.
     ntrial : int, optional
-        Number of points to sample from the model. Default is 1e4.
+        Number of points to sample from the model. Default is 2e5.
+        Tests suggest 2e5 is good at 0.01%.
     frac : bool, optional
         If True, return the area as a fraction of the total sky (4π steradians).
         If False, return the area in steradians. Default is True.
@@ -43,13 +44,14 @@ def radecmodel_to_skysurface(radecmodel, ntrial=1e4, frac=True):
     --------
     >>> from modeldag import ModelDAG
     >>> radecmodel = ...  # Your ModelDAG-compatible RA/Dec model
-    >>> area_frac = radecmodel_to_skysurface(radecmodel, ntrial=10000, frac=True)
+    >>> area_frac = radecmodel_to_skysurface(radecmodel, ntrial=1e5, frac=True)
     >>> print(f"Fraction of sky covered: {area_frac:.4f}")
     """
     from modeldag import ModelDAG
     import geopandas as gpd
     mdag = ModelDAG({"radec": radecmodel})
     data = mdag.draw( int(ntrial) )
+    
     # account for projection delta_ra*delta_sindec
     data["sin_dec_rad"] = np.sin(data["dec"]*_DEG2RA)
     data["ra_rad"] = data["ra"]*_DEG2RA

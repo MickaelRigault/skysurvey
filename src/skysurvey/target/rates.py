@@ -1,7 +1,6 @@
 import numpy as np
 from astropy.cosmology import Planck18
 
-
 def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
                   cosmology=Planck18, rng=None, **kwargs):
     """Draw random redshift following the given rate.
@@ -82,7 +81,6 @@ def get_rate(z, rate, **kwargs):
         
     return n_per_gpc3
     
-    
 def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, astype="int", **kwargs):
     """ get the total number of target expected in the given volume
 
@@ -135,7 +133,6 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
     
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
     
-
 def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell=False, astype="int", **kwargs):
     """ get the total number of target expected in the given volume
 
@@ -182,5 +179,6 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
             ntargets = (volume_zmax-volume_zmin) * rate
         else:
             ntargets = (volume_zmax-volume_zmin) * rate[:,None]
-        
-    return ntargets.astype(astype)
+
+    # squeeze() will be [float] => float
+    return ntargets.astype(astype).squeeze()
