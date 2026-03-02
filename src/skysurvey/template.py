@@ -12,7 +12,7 @@ __all__ = ["get_sncosmo_model", "Template"]
 
 def get_sncosmo_model(source="salt2", zero_before=True,
                       **params):
-    """ get the template (sncosmo.Model)
+    """ Get the template (sncosmo.Model).
 
     Parameters
     ----------
@@ -37,7 +37,7 @@ def get_sncosmo_model(source="salt2", zero_before=True,
     return model
 
 def sncosmoresult_to_pandas(result):
-    """ takes a sncosmo.Results (lc fit output) and converts it in pandas's objects.
+    """ Takes a sncosmo.Results (lc fit output) and converts it in pandas's objects.
 
     Parameters
     ----------
@@ -63,7 +63,7 @@ def sncosmoresult_to_pandas(result):
     return fit_res, fit_meta
 
 def parse_template(template):
-    """ read template or source """
+    """ Read template or source. """
     template = np.atleast_1d(template)
     if len(template)>1:
         return [parse_template(template_) for template_ in template]
@@ -100,7 +100,7 @@ class Template( object ):
     @classmethod
     def from_sncosmo(cls, source, **kwargs):
         """
-        loads the instance given the source name.
+        Loads the instance given the source name.
 
         Parameters
         ----------
@@ -265,7 +265,7 @@ class Template( object ):
     # -------- #
     # Plotter  #
     # -------- #
-    def show_spectum(self, time, lbdas, params={},
+    def show_spectrum(self, time, lbdas, params={},
                          ax=None, fig=None, **kwargs):
         """Show the spectrum at a given time.
 
@@ -303,6 +303,8 @@ class Template( object ):
 
         ax.plot(lbdas, spec, **kwargs)
 
+        return fig 
+    
     def show_lightcurve(self, band, params=None,
                             ax=None, fig=None, colors=None,
                             phase_range=None, npoints=500,
