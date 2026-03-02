@@ -303,7 +303,7 @@ class DataSet(object):
 
     @classmethod
     def read_from_directory(cls, dirname, **kwargs):
-        """ loads a directory containing the dataset, the survey and the targets
+        """ Loads a directory containing the dataset, the survey and the targets.
 
         = Not Implemented Yet = 
 
@@ -330,7 +330,7 @@ class DataSet(object):
     #  SETTER  #
     # -------- #
     def set_data(self, data):
-        """ lightcurve data as observed by the survey
+        """ Lightcurve data as observed by the survey.
 
         = It is unlikely you need to use that directly. =
 
@@ -352,7 +352,7 @@ class DataSet(object):
         self._obs_index = None
         
     def set_targets(self, targets):
-        """ set the targets
+        """ Set the targets.
 
         = It is unlikely you need to use that directly. =
 
@@ -397,7 +397,7 @@ class DataSet(object):
     # -------- #
     def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
                 detection=None, zp=None):
-        """ tools to access the data with additional tools 
+        """ Tools to access the data with additional tools.
 
         Parameters
         ----------
@@ -421,7 +421,7 @@ class DataSet(object):
             This follow the bool/None format:
             - detection=None: no selection
             - detection=False: only non-detected points
-            - detection=True: onlyu detected points
+            - detection=True: only detected points
 
         zp: float
             get the simulated data in the given zp system
@@ -464,7 +464,7 @@ class DataSet(object):
         return data
         
     def get_ndetection(self, phase_range=None, per_band=False):
-        """ get the number of detection for each lightcurves
+        """ Get the number of detection for each lightcurves.
 
         Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
 
@@ -493,18 +493,21 @@ class DataSet(object):
         return ndetection
 
     def get_target_lightcurve(self, index, detection=None, phase_range=None):
-        """ get the observation of the given target.
+        """ Get the observation of the given target.
         
         = short cut to self.get_data(index=index) = 
 
         Parameters
         ----------
+        index : int, optional
+            The index of the target whose light curve is to be taken. If None, a random index is chosen.
+            
         detection: bool, None
             should this be limited to (non)detected points only ? 
             This follow the bool/None format:
             - detection=None: no selection
             - detection=False: only non-detected points
-            - detection=True: onlyu detected points
+            - detection=True: only detected points
 
         phase_range: array
             min and max phases to be returned. Applied on phase (rest-frame).

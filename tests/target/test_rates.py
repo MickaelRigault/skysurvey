@@ -108,7 +108,7 @@ def test_draw_redshift_ndim2():
 
     # constant rate should provide the same thing as the number of target is given. 
     # hence, as long as the rate(z) is the same at a constant, this cancels out.
-    ntargets_1, ntargets_2 = draw_redshift(10_000, rate=[1, 2])
+    ntargets_1, ntargets_2 = draw_redshift(10_000, rate=[1, 2], rng = 2)
     kstest = ks_2samp(ntargets_1, ntargets_2)
     assert kstest.pvalue>0.1
     
