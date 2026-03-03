@@ -1,11 +1,11 @@
-""" This library concerns the data as observed """
+"""This library concerns the data as observed"""
 
 #
-import pandas
 import numpy as np
+import pandas
 
-from .tools import speedutils
 from .target.collection import TargetCollection
+from .tools import speedutils
 
 __all__ = ["DataSet"]
 
@@ -15,8 +15,9 @@ __all__ = ["DataSet"]
 #                    #
 # ================== #
 
+
 class DataSet(object):
-    """ A class for managing and realistic transient light curves given true data and survey observing logs.
+    """A class for managing and realistic transient light curves given true data and survey observing logs.
 
     This class provides methods to load, manipulate, and visualize light curve data
     based on target and survey information.
@@ -89,13 +90,13 @@ class DataSet(object):
     _realize_survey_kindtarget_lcs(targets, survey, template_prop={}, nfirst=None, incl_error=True, client=None, discard_bands=False, trim_observations=False, phase_range=None)
         Creates the light curve of the input single-kind targets as they would be observed by the survey.
     """
-    
+
     def __init__(self, data, targets=None, survey=None):
-        """ Initialize the DataSet class.
-        
-        The classmethod Dataset.from_targets_and_survey() should be favored 
+        """Initialize the DataSet class.
+
+        The classmethod Dataset.from_targets_and_survey() should be favored
         for loading the dataset.
-        
+
         Parameters
         ----------
         data : pandas.DataFrame
@@ -104,7 +105,7 @@ class DataSet(object):
             Target data corresponding to the true target parameters (as given by nature).
         survey : skysurvey.Survey or child of, optional
             Survey that has been used to generate the dataset (if known).
-       
+
         See also
         --------
         from_targets_and_survey: loads a dataset (observed data) given targets and survey
@@ -113,21 +114,25 @@ class DataSet(object):
         self.set_data(data)
         self.set_targets(targets)
         self.set_survey(survey)
-        
+
     @classmethod
-    def from_targets_and_survey(cls, targets, survey,
-                                       incl_error=True,
-                                       # client=None,
-                                       phase_range=[-50, +200],
-                                       progress_bar=False,
-                                       seed=None):
-        """ loads a dataset (observed data) given targets and a survey
+    def from_targets_and_survey(
+        cls,
+        targets,
+        survey,
+        incl_error=True,
+        # client=None,
+        phase_range=[-50, +200],
+        progress_bar=False,
+        seed=None,
+    ):
+        """loads a dataset (observed data) given targets and a survey
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
         survey to find which target has been observed with which field.
         Then simulate the targets lightcurves given the observing data (survey.data).
-        
-        
+
+
         Parameters
         ----------
         targets: skysurvey.Target, list, skysurvey.TargetCollection
@@ -139,17 +144,17 @@ class DataSet(object):
             Include error in the lightcurve.
             If False, the flux is the true model flux.
         phase_range: list, None, optional
-            Rest-frame phase range to be used for simulating 
+            Rest-frame phase range to be used for simulating
             the lightcurves. If None, no cut is applied on time
             range for the logs.
         progress_bar: bool, optional
             shall this display a progress bar associated to the generation of targets ?
             (uses tqdm)
         seed : None, int, Generator, RandomState, optional
-            = ignored if incl_error=False = 
+            = ignored if incl_error=False =
             # docstring adapted from np.random.default_rng()
-            If None, a fresh seed will be pulled. 
-            If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state. 
+            If None, a fresh seed will be pulled.
+            If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
             Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
             When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
 
@@ -162,78 +167,96 @@ class DataSet(object):
             from tqdm import tqdm
         # if input targets is a list, create a TemplateCollection
         if type(targets) in [list, tuple]:
-            targets = TargetCollection(targets) 
-        
+            targets = TargetCollection(targets)
+
         # fields in which target fall into
-        dfieldids_ = survey.radec_to_fieldid( targets.data[["ra", "dec"]] )
+        dfieldids_ = survey.radec_to_fieldid(targets.data[["ra", "dec"]])
 
         # make sure index of dfieldids_ corresponds to the input one.
         _data_index = targets.data.index.name
         if _data_index is None:
             _data_index = "index"
-        
+
         dfieldids_.index.name = _data_index
-        
+
         # merge target dataframe with matching fields.
         # note: pandas.merge conserves dtypes of fieldids, not pandas.join
         targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
-        target_fields = np.stack(targets_data[survey.fieldids.names].values, dtype="int")
+        target_fields = np.stack(
+            targets_data[survey.fieldids.names].values, dtype="int"
+        )
         #### IS THAT NECESSARY ? ####
         # =========== #
-        
-        survey_data = survey.data[ ["mjd", "band", "skynoise", "gain", "zp"] + survey.fieldids.names].copy()
+
+        survey_data = survey.data[
+            ["mjd", "band", "skynoise", "gain", "zp"] + survey.fieldids.names
+        ].copy()
         if survey_data.index.name is None:
             survey_data.index.name = "index_obs"
-        
-        field_names = survey.fieldids.names
-        gsurvey_indexed = survey_data.groupby(field_names, observed=True, group_keys = False)
 
-        # 
+        field_names = survey.fieldids.names
+        gsurvey_indexed = survey_data.groupby(
+            field_names, observed=True, group_keys=False
+        )
+
+        #
         # check which fields have been observed
         # to avoid looping over un-observed targets.
-        # 
+        #
         nobs = gsurvey_indexed.size()
         fields_observed = np.stack(nobs.index.values, dtype="int")
 
         # build boolean mask to see which "target" could have data
         # given the "field" (all field_names) that have been observed.
-        if (nfields:=len(field_names)) == 2:
+        if (nfields := len(field_names)) == 2:
             # speed tricks for matching pairs
-            is_target_observed = speedutils.isin_pair_elements(target_fields, fields_observed)
+            is_target_observed = speedutils.isin_pair_elements(
+                target_fields, fields_observed
+            )
         elif nfields == 1:
             is_target_observed = np.isin(target_fields, fields_observed)
         else:
-            raise NotImplementedError("more than 2 entries for {field_names=}. Not implemented.")
+            raise NotImplementedError(
+                "more than 2 entries for {field_names=}. Not implemented."
+            )
 
         # List of observed targets
         targets_data_observed = targets_data[is_target_observed]
-        
-        # 
+
+        #
         # for lop on targets:
-        # 
+        #
         # each lightcurve's flux and associated error are stored
         # inside `bandflux`. which is then converted into a unique
         # pandas.DataFrame, using the faster `eff_concat` trick.
         #
-        
+
         # make sure phase_range is an array to multiple by (1+z)
         if phase_range is not None:
             phase_range = np.asarray(phase_range)
-            
+
         bandflux = []
         targets_observed = targets_data_observed.index.unique()
-        for index_target in (tqdm(targets_observed) if progress_bar else targets_observed):
+        for index_target in (
+            tqdm(targets_observed) if progress_bar else targets_observed
+        ):
             # get the target model, that will be used to generate the flux
             # this model is set to the target parameters.
-            model = targets.get_target_template(index=index_target, as_model=True, set_magabs=True)
+            model = targets.get_target_template(
+                index=index_target, as_model=True, set_magabs=True
+            )
 
             # grab the target information (could be several rows)
             this_target = targets_data_observed.loc[[index_target]]
-            
+
             # logs associated to this target.
-            this_target_logs = pandas.concat([gsurvey_indexed.get_group(tuple(entry_))
-                                              for entry_ in this_target[field_names].values])
-            
+            this_target_logs = pandas.concat(
+                [
+                    gsurvey_indexed.get_group(tuple(entry_))
+                    for entry_ in this_target[field_names].values
+                ]
+            )
+
             # limit the logs to the given restframe phase range
             if phase_range is not None:
                 # to limit per phase:
@@ -241,39 +264,45 @@ class DataSet(object):
                 t0 = model.parameters[model.param_names.index("t0")]
                 redshift = model.parameters[model.param_names.index("z")]
                 # 2. create the mjd range to consider for this target.
-                this_mjd_range = t0 + phase_range*(1+redshift)
-                # 3. limit the logs to mjd matching this condition. 
-                used_logs = this_target_logs[ this_target_logs["mjd"].between(*this_mjd_range) ].copy()
+                this_mjd_range = t0 + phase_range * (1 + redshift)
+                # 3. limit the logs to mjd matching this condition.
+                used_logs = this_target_logs[
+                    this_target_logs["mjd"].between(*this_mjd_range)
+                ].copy()
             else:
                 used_logs = this_target_logs.copy()
 
             used_logs = used_logs.sort_values("mjd")
             # realise the flux lightcurves and its error
-            used_logs["flux"] = model.bandflux(used_logs['band'], used_logs['mjd'],
-                                               zp=used_logs['zp'], zpsys="ab")
-            used_logs["fluxerr"] = np.sqrt(used_logs['skynoise']**2 + \
-                                               np.abs(used_logs["flux"]) / used_logs['gain'])
+            used_logs["flux"] = model.bandflux(
+                used_logs["band"], used_logs["mjd"], zp=used_logs["zp"], zpsys="ab"
+            )
+            used_logs["fluxerr"] = np.sqrt(
+                used_logs["skynoise"] ** 2
+                + np.abs(used_logs["flux"]) / used_logs["gain"]
+            )
             # and store.
             bandflux.append(used_logs)
 
         # create a dataframe concatenating all lightcurves
-        lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))),
-                                    keys=targets_observed.values)
+        lcs = speedutils.eff_concat(
+            bandflux, int(np.sqrt(len(targets_observed))), keys=targets_observed.values
+        )
 
         lcs.index.set_names("index", level=0, inplace=True)
         # if incl_error, the true flux is converted into an observed flux
         if incl_error:
             rng = np.random.default_rng(seed)
             lcs["flux"] += rng.normal(loc=0, scale=lcs["fluxerr"])
-            
+
         return cls(lcs, targets=targets, survey=survey)
 
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
-        """ loads a stored dataset. 
+        """loads a stored dataset.
 
-        Only the observation data can be loaded this way, 
-        not the survey nor the targets (truth). 
+        Only the observation data can be loaded this way,
+        not the survey nor the targets (truth).
 
         Parameters
         ----------
@@ -284,7 +313,7 @@ class DataSet(object):
             survey that have been used to generate the dataset (if you know it)
 
         targets: skysurvey.Target (of child of), None
-            target data corresponding to the true target parameters 
+            target data corresponding to the true target parameters
             (as given by nature)
 
         **kwargs goes to pandas.read_parquet
@@ -303,26 +332,26 @@ class DataSet(object):
 
     @classmethod
     def read_from_directory(cls, dirname, **kwargs):
-        """ loads a directory containing the dataset, the survey and the targets
+        """loads a directory containing the dataset, the survey and the targets
 
-        = Not Implemented Yet = 
+        = Not Implemented Yet =
 
         Parameters
         ----------
         dirname: str
             path to the directory.
-            
+
         Returns
         -------
         class instance
-            
+
         See also
         --------
         from_targets_and_survey: loads a dataset (observed data) given targets and survey
         read_parquet: loads a stored dataset
         """
         raise NotImplementedError("read_from_directory is not yet available.")
-        
+
     # ============== #
     #   Method       #
     # ============== #
@@ -330,7 +359,7 @@ class DataSet(object):
     #  SETTER  #
     # -------- #
     def set_data(self, data):
-        """ lightcurve data as observed by the survey
+        """lightcurve data as observed by the survey
 
         = It is unlikely you need to use that directly. =
 
@@ -350,16 +379,16 @@ class DataSet(object):
         """
         self._data = data
         self._obs_index = None
-        
+
     def set_targets(self, targets):
-        """ set the targets
+        """set the targets
 
         = It is unlikely you need to use that directly. =
 
         Parameters
         ----------
         targets: skysurvey.Target (of child of), None
-            target data corresponding to the true target parameters 
+            target data corresponding to the true target parameters
             (as given by nature)
 
         Returns
@@ -373,7 +402,7 @@ class DataSet(object):
         self._targets = targets
 
     def set_survey(self, survey):
-        """ set the survey 
+        """set the survey
 
         = It is unlikely you need to use that directly. =
 
@@ -395,37 +424,45 @@ class DataSet(object):
     # -------- #
     #  GETTER  #
     # -------- #
-    def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
-                detection=None, zp=None):
-        """ tools to access the data with additional tools 
+    def get_data(
+        self,
+        add_phase=False,
+        phase_range=None,
+        index=None,
+        redshift_key="z",
+        detection=None,
+        zp=None,
+        join_bandday=False,
+        join_stats="first",
+    ):
+        """tools to access the data with additional tools
 
         Parameters
         ----------
         add_phase: bool
             should the phase information 'phase_obs' (obs-frame), 'phase' (rest-frame)
             be added to the dataframe assuming the input target's t0 and redshift ?
-
         phase_range: array
             min and max phases to be returned. Applied on phase (rest-frame).
             Setting this sets add_phase to True.
-
         index: pandas.Index, list, None
             select the index (targets id) you want.
-
         redshift_key: string
-            name of the redshift column in the dset.targets.data. 
+            name of the redshift column in the dset.targets.data.
              = ignored if add_phase is False =
-
         detection: bool, None
-            should this be limited to (non)detected points only ? 
+            should this be limited to (non)detected points only ?
             This follow the bool/None format:
             - detection=None: no selection
             - detection=False: only non-detected points
             - detection=True: onlyu detected points
-
         zp: float
             get the simulated data in the given zp system
-
+        join_bandday: bool
+            if there are multiple observations per band and day (int of mjd) for a given target,
+            should these be joined ? (see join_stat).
+        join_stats: str
+            join_bandday is True, how multiple observation should be considered ? (e.g., first).
         Returns
         -------
         pandas.DataFrame
@@ -439,17 +476,28 @@ class DataSet(object):
             data = self.data.copy()
             index = data.index.levels[0]
 
+        if join_bandday:
+            index_colnames = data.index.names
+            data["mjd_date"] = data["mjd"].astype("int")
+            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
+            if join_stats == "first":
+                data = gb_data.first().reset_index().set_index(index_colnames)
+            else:
+                raise NotImplementedError(
+                    f"{join_stat=} not implemented. Only first() is."
+                )
+
         if add_phase:
-            target_info = self.targets.data.loc[index][['t0', redshift_key]]
-    #        target_info.index = self._data_index # for merging
+            target_info = self.targets.data.loc[index][["t0", redshift_key]]
+            #        target_info.index = self._data_index # for merging
             data["phase_obs"] = data["mjd"] - target_info["t0"]
-            data["phase"] = data["phase_obs"]/(1+target_info[redshift_key])
+            data["phase"] = data["phase_obs"] / (1 + target_info[redshift_key])
 
         if phase_range is not None:
             data = data[data["phase"].between(*phase_range)]
 
         if detection is not None:
-            flag_detection = (data["flux"]/data["fluxerr"])>=5
+            flag_detection = (data["flux"] / data["fluxerr"]) >= 5
             if detection:
                 data = data[flag_detection]
             else:
@@ -460,11 +508,11 @@ class DataSet(object):
             data["flux"] *= coef
             data["fluxerr"] *= coef
             data["zp"] = zp
-            
+
         return data
-        
-    def get_ndetection(self, phase_range=None, per_band=False):
-        """ get the number of detection for each lightcurves
+
+    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False):
+        """get the number of detection for each lightcurves
 
         Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
 
@@ -472,35 +520,39 @@ class DataSet(object):
         ----------
         phase_range: array
             rest-frame phase range to be considered.
-
         per_band: bool
             should be computation be made per band ?
             if true it will then be per target *and* per band.
+        join_bandday: bool
+            if there are multiple observations per band and day (int of mjd) for a given target,
+            should these be joined ? (see join_stat).
 
         Returns
         -------
         pandas.Series
             the number of detected point per target (and per band if per_band=True)
         """
-        
-        data = self.get_data(phase_range=phase_range, detection=True)
+
+        data = self.get_data(
+            phase_range=phase_range, detection=True, join_bandday=join_bandday
+        )
         if per_band:
             groupby = [self._data_index, "band"]
         else:
             groupby = self._data_index
-        
+
         ndetection = data.groupby(groupby).size()
         return ndetection
 
     def get_target_lightcurve(self, index, detection=None, phase_range=None):
-        """ get the observation of the given target.
-        
-        = short cut to self.get_data(index=index) = 
+        """get the observation of the given target.
+
+        = short cut to self.get_data(index=index) =
 
         Parameters
         ----------
         detection: bool, None
-            should this be limited to (non)detected points only ? 
+            should this be limited to (non)detected points only ?
             This follow the bool/None format:
             - detection=None: no selection
             - detection=False: only non-detected points
@@ -515,22 +567,30 @@ class DataSet(object):
         pandas.DataFrame
             the lightcurve
         """
-        return self.get_data(index=index,
-                             phase_range=phase_range,
-                             detection=detection)
-        
+        return self.get_data(index=index, phase_range=phase_range, detection=detection)
+
     # -------- #
     #  PLOTTER #
     # -------- #
-    def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25,
-                                lc_prop={}, bands=None, show_truth=True,
-                                format_time=True, t0_format="mjd", 
-                                phase_window=None, **kwargs):
-        """ Plot the light curve of a target.
-    
+    def show_target_lightcurve(
+        self,
+        ax=None,
+        fig=None,
+        index=None,
+        zp=25,
+        lc_prop={},
+        bands=None,
+        show_truth=True,
+        format_time=True,
+        t0_format="mjd",
+        phase_window=None,
+        **kwargs,
+    ):
+        """Plot the light curve of a target.
+
         If `index` is None, a random index will be used. If `bands` is None,
         the target's observed band will be used.
-    
+
         Parameters
         ----------
         ax : matplotlib.axes.Axes, optional
@@ -565,18 +625,19 @@ class DataSet(object):
 
         **kwargs : dict
             Additional keyword arguments to pass to the plotting functions.
-    
+
         Returns
         -------
         matplotlib.figure.Figure
             The figure object containing the light curve plot.
         """
         from matplotlib.colors import to_rgba
+
         from .config import get_band_color
-        
+
         if format_time:
             from astropy.time import Time
-            
+
         if index is None:
             rng = np.random.default_rng()
             index = rng.choice(self.obs_index)
@@ -585,7 +646,7 @@ class DataSet(object):
         obs_ = self.get_target_lightcurve(index).copy()
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
-            phase_window = np.asarray(phase_window)+t0
+            phase_window = np.asarray(phase_window) + t0
             obs_ = obs_[obs_["mjd"].astype("float").between(*phase_window)]
 
         coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
@@ -600,20 +661,29 @@ class DataSet(object):
         if ax is None:
             if fig is None:
                 import matplotlib.pyplot as plt
-                fig = plt.figure(figsize=[7,4])
+
+                fig = plt.figure(figsize=[7, 4])
             ax = fig.add_subplot(111)
         else:
             fig = ax.figure
-        
+
         colors = get_band_color(bands)
         if show_truth:
-            fig = self.targets.show_lightcurve(bands, ax=ax, fig=fig, index=index, 
-                                            format_time=format_time, t0_format=t0_format, 
-                                            zp=zp, colors=colors,
-                                            zorder=2, 
-                                            **lc_prop)
+            fig = self.targets.show_lightcurve(
+                bands,
+                ax=ax,
+                fig=fig,
+                index=index,
+                format_time=format_time,
+                t0_format=t0_format,
+                zp=zp,
+                colors=colors,
+                zorder=2,
+                **lc_prop,
+            )
         elif format_time:
-            from matplotlib import dates as mdates        
+            from matplotlib import dates as mdates
+
             locator = mdates.AutoDateLocator()
             formatter = mdates.ConciseDateFormatter(locator)
             ax.xaxis.set_major_locator(locator)
@@ -621,28 +691,35 @@ class DataSet(object):
         else:
             ax.set_xlabel("time [in day]", fontsize="large")
 
-
         # loop over bands
         for band_, color_ in zip(bands, colors):
             if color_ is None:
                 ecolor = to_rgba("0.4", 0.2)
             else:
                 ecolor = to_rgba(color_, 0.2)
-                
+
             obs_band = obs_[obs_["band"] == band_]
-            times = obs_band["mjd"] if not format_time else Time(obs_band["mjd"], format=t0_format).datetime
-            ax.scatter(times, obs_band["flux_zp"],
-                       color=color_, zorder=4, **kwargs)
-            ax.errorbar(times, obs_band["flux_zp"],
-                        yerr= obs_band["fluxerr_zp"],
-                        ls="None", marker="None", ecolor=ecolor, 
-                        zorder=3,
-                        **kwargs)
+            times = (
+                obs_band["mjd"]
+                if not format_time
+                else Time(obs_band["mjd"], format=t0_format).datetime
+            )
+            ax.scatter(times, obs_band["flux_zp"], color=color_, zorder=4, **kwargs)
+            ax.errorbar(
+                times,
+                obs_band["flux_zp"],
+                yerr=obs_band["fluxerr_zp"],
+                ls="None",
+                marker="None",
+                ecolor=ecolor,
+                zorder=3,
+                **kwargs,
+            )
 
         return fig
-    
+
     # ============== #
-    #   Properties   # 
+    #   Properties   #
     # ============== #
     @property
     def data(self):
@@ -655,7 +732,7 @@ class DataSet(object):
         if not hasattr(self, "_hdata_index"):
             self._hdata_index = "index"
         return self._hdata_index
-    
+
     @property
     def targets(self):
         """Target data corresponding to the true target parameters."""
@@ -669,7 +746,7 @@ class DataSet(object):
     @property
     def obs_index(self):
         """Index of the observed target."""
-        if not hasattr(self,"_obs_index") or self._obs_index is None:
+        if not hasattr(self, "_obs_index") or self._obs_index is None:
             self._obs_index = self.data.index.get_level_values(0).unique().sort_values()
-            
+
         return self._obs_index
