@@ -319,9 +319,9 @@ def test_get_ndetection(dataset):
     with patch.object(dataset, "get_data") as mock_get:
 
         mock_get.return_value = dataset.data.iloc[:1]
-        dataset.get_ndetection()
+        dataset.get_ndetection(join_bandday=True)
 
-        mock_get.assert_called_once_with(phase_range=None, detection=True)
+        mock_get.assert_called_once_with(phase_range=None, detection=True, join_bandday=True)
 
 @pytest.fixture
 def dataset_ndetection(targets, survey):
