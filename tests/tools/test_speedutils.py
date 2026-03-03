@@ -15,7 +15,7 @@ def test_isin_pair_elements():
     assert np.array_equal(output, output_expected)
 
 # tests for the func chunk_dfs
-def test_chunk_dfs():
+def test_chunk_dfs_not_multiple_of_chunk_size():
     dfs = [pandas.DataFrame({"a": [i]}) for i in range(5)]
     chunk_size = 2
 
@@ -25,7 +25,7 @@ def test_chunk_dfs():
     assert sizes == [2, 2, 1]
     assert len(chunks) == 3
 
-def test_chunk_dfs_mutiple():
+def test_chunk_dfs_mutiple_of_chunk_size():
     dfs = [pandas.DataFrame({"a": [i]}) for i in range(4)]
     chunk_size = 2  
 
