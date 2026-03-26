@@ -3,6 +3,7 @@
 #
 import numpy as np
 import pandas
+import sncosmo
 
 from .target.collection import TargetCollection
 from .tools import speedutils
@@ -119,7 +120,8 @@ class DataSet(object):
 
     @classmethod
     def from_targets_and_survey(cls, targets, survey, incl_error=True, # client=None, 
-                                phase_range=[-50, +200], progress_bar=False, seed=None,):
+                                phase_range=[-50, +200], progress_bar=False, seed=None, 
+                                discard_bands=True):
         """Loads a dataset (observed data) given targets and a survey.
 
         This first matches the targets (given targets.data[["ra","dec"]]) with the
@@ -155,7 +157,10 @@ class DataSet(object):
             If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
             Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
             When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
-
+        
+        discard_bands : bool, optional
+            If True, discards the bands that includes wavelength for which the (observer-frame) target SED is not defined.
+            This prevents crashing the code due to an error from sncosmo.
         Returns
         -------
         dataset:
@@ -254,17 +259,26 @@ class DataSet(object):
             else:
                 used_logs = this_target_logs.copy()
 
-            used_logs = used_logs.sort_values("mjd")
-            # realise the flux lightcurves and its error
-            used_logs["flux"] = model.bandflux(
-                used_logs["band"], used_logs["mjd"], zp=used_logs["zp"], zpsys="ab"
+            if discard_bands == True:
+                bands = np.unique(used_logs['band'])
+                redshift = model.parameters[model.param_names.index("z")]
+                for band in bands:
+                    zmax = sncosmo.get_bandpass(band).minwave()/model.minwave()-1
+                    if redshift > zmax:
+                        used_logs = used_logs[used_logs['band'] != band]
+
+            if len(used_logs) > 0:            
+                used_logs = used_logs.sort_values("mjd")
+                # realise the flux lightcurves and its error
+                used_logs["flux"] = model.bandflux(
+                    used_logs["band"], used_logs["mjd"], zp=used_logs["zp"], zpsys="ab"
             )
-            used_logs["fluxerr"] = np.sqrt(
-                used_logs["skynoise"] ** 2
-                + np.abs(used_logs["flux"]) / used_logs["gain"]
-            )
-            # and store.
-            bandflux.append(used_logs)
+                used_logs["fluxerr"] = np.sqrt(
+                    used_logs["skynoise"] ** 2
+                    + np.abs(used_logs["flux"]) / used_logs["gain"]
+                )
+                # and store.
+                bandflux.append(used_logs)
 
         # create a dataframe concatenating all lightcurves
         lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))), keys=targets_observed.values)
