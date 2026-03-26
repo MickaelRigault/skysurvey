@@ -157,7 +157,10 @@ class DataSet(object):
             If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
             Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
             When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
-
+        
+        discard_bands : bool, optional
+            If True, discards the bands that includes wavelength for which the (observer-frame) target SED is not defined.
+            This prevents crashing the code due to an error from sncosmo.
         Returns
         -------
         dataset:
