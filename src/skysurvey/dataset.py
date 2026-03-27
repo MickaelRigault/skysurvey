@@ -259,7 +259,7 @@ class DataSet(object):
             else:
                 used_logs = this_target_logs.copy()
 
-            if discard_bands == True:
+            if discard_bands:
                 bands = np.unique(used_logs['band'])
                 redshift = model.parameters[model.param_names.index("z")]
                 for band in bands:

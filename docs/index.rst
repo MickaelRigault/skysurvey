@@ -276,6 +276,7 @@ Tutorials
    quickstart/index
    howto/index   
    advanced/index
+   analysisexamples/index
    transientclasses/index
    
 .. toctree::

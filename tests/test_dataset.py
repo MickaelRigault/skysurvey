@@ -30,9 +30,16 @@ class FakeModel:
         self.param_names = ["t0", "z"]
         self.parameters = [0., 1.]
     
+    def minwave(self):
+        return 3000.0
+    
+    def maxwave(self):
+        return 9000.0
+    
     def bandflux(self, band, mjd, **kwargs):
         return np.ones(len(mjd)) * 100.0
-    
+
+
 class FakeTargets:
     def __init__(self):
         self.data = pandas.DataFrame({
@@ -78,7 +85,7 @@ def survey():
     return FakeSurvey1D()
  
 def test_from_targets_and_survey(targets, survey):
-    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None)
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None, discard_bands=False)
 
     assert isinstance(dataset, DataSet)
     assert dataset.targets is targets
@@ -100,21 +107,21 @@ def test_from_targets_and_survey_triggers_target_collection(monkeypatch, survey)
             return FakeModel()
 
     monkeypatch.setattr("skysurvey.dataset.TargetCollection", DummyTargetCollection)
-    DataSet.from_targets_and_survey(targets=[1, 2], survey=survey)
+    DataSet.from_targets_and_survey(targets=[1, 2], survey=survey, discard_bands=False)
 
     assert "yes" in triggered
 
 def test_from_targets_and_survey_time_cut_on_logs(targets, survey):
     phase_range = [-1, +1]
 
-    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=phase_range)
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=phase_range, discard_bands=False)
 
     assert len(dataset.data) == 2
     assert set(dataset.data["mjd"]) == {0}
 
 def test_from_targets_and_survey_include_error(targets, survey):
-    dataset_without_error = DataSet.from_targets_and_survey(targets, survey, incl_error=False)
-    dataset_with_error = DataSet.from_targets_and_survey(targets, survey, incl_error=True, seed = 61)
+    dataset_without_error = DataSet.from_targets_and_survey(targets, survey, incl_error=False, discard_bands=False)
+    dataset_with_error = DataSet.from_targets_and_survey(targets, survey, incl_error=True, seed = 61, discard_bands=False)
 
     assert not np.allclose(dataset_without_error.data["flux"], dataset_with_error.data["flux"])
 
@@ -143,7 +150,7 @@ def test_from_targets_and_survey_2d_fields():
     survey = FakeSurvey2D()
 
     with patch("skysurvey.tools.speedutils.isin_pair_elements", return_value= np.array([True]*len(targets.data))) as mock:
-        DataSet.from_targets_and_survey(targets, survey)
+        DataSet.from_targets_and_survey(targets, survey, discard_bands=False)
 
         mock.assert_called_once()
 
@@ -173,13 +180,13 @@ def test_from_targets_and_survey_fields_not_implemented():
     survey = FakeSurvey3D()
 
     with pytest.raises(NotImplementedError):
-        DataSet.from_targets_and_survey(targets, survey)
+        DataSet.from_targets_and_survey(targets, survey, discard_bands=False)
 
 def test_from_targets_and_survey_progress_bar(targets, survey):
     with patch("tqdm.tqdm") as mock_tqdm:
         mock_tqdm.side_effect = lambda x, **kwargs: x
 
-        DataSet.from_targets_and_survey(targets, survey, progress_bar=True)
+        DataSet.from_targets_and_survey(targets, survey, progress_bar=True, discard_bands=False)
 
         mock_tqdm.assert_called_once()
 
@@ -187,7 +194,7 @@ def test_from_targets_and_survey_index_name_none(targets, survey):
     targets.data.index.name = None
     survey.data.index.name = None
 
-    dataset = DataSet.from_targets_and_survey(targets, survey)
+    dataset = DataSet.from_targets_and_survey(targets, survey, discard_bands=False)
 
     assert isinstance(dataset, DataSet)
     assert len(dataset.data) > 0
