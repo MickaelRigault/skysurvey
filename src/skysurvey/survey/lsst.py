@@ -36,9 +36,9 @@ def get_lsst_footprint():
 def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD", 
                                     "visitExposureTime", "filter", "skyBrightness", 
                                     "fiveSigmaDepth", "night", "numExposures", 
-                                    "observationId", "note"],  # note = pointing origin
+                                    "observationId"],  
               sql_where=None):
-    """ parse input opsim database and returns a dataframe
+    """ Parse input opsim database and returns a dataframe.
     
     Parameters
     ----------
@@ -58,16 +58,27 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
     import sqlite3
     connect = sqlite3.connect(filepath)
 
-    if sql_where is None:
-        sql_where = ""
-    else:
-        sql_where= f"WHERE {sql_where}"
+    # Detect which note column name this db uses, if any 
+    cursor = connect.execute("PRAGMA table_info(OBSERVATIONS)")
+    available_cols = {row[1] for row in cursor.fetchall()}
 
     if columns is None:
         sql_columns = "*"
     else:
-        sql_columns = ", ".join(np.atleast_1d(columns))
-    
+        cols = list(columns)
+        # Handle note column rename between opsim versions
+        if "note" in cols:
+            if "note" not in available_cols and "scheduler_note" in available_cols:
+                cols[cols.index("note")] = "scheduler_note"
+            elif "note" not in available_cols:
+                cols.remove("note") # if neither exist, just drop it
+        sql_columns = ", ".join(np.atleast_1d(cols))
+
+    if sql_where is None:
+        sql_where = ""
+    else:
+        sql_where = f"WHERE {sql_where}"
+
     df = pandas.read_sql_query(f'SELECT {sql_columns} FROM OBSERVATIONS {sql_where}', connect)
     return df
 
@@ -114,6 +125,7 @@ class LSST( Survey ):
              "zp": zp,
              "ra": df["fieldRA"].values, 
              "dec": df["fieldDec"].values, 
+             "observationId": df["observationId"].values,
             },
             index=df.index)
 
