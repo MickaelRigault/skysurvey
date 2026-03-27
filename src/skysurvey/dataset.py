@@ -261,10 +261,9 @@ class DataSet(object):
 
             if discard_bands:
                 bands = np.unique(used_logs['band'])
-                redshift = model.parameters[model.param_names.index("z")]
                 for band in bands:
-                    zmax = sncosmo.get_bandpass(band).minwave()/model.minwave()-1
-                    if redshift > zmax:
+                    bandpass = sncosmo.get_bandpass(band)
+                    if bandpass.minwave() < model.minwave() or bandpass.maxwave() > model.maxwave():
                         used_logs = used_logs[used_logs['band'] != band]
 
             if len(used_logs) > 0:            
