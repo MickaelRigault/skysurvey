@@ -6,7 +6,22 @@ import warnings
 __all__ = ["parse_simlib"]
 
 def parse_simlib(simlib):
-    """ """
+    """"
+    Parse a single snana simlib file.
+
+    Parameters
+    ----------
+    simlib: str
+        Path to the simlib file.
+       
+    Returns
+    -------
+    data: pandas.DataFrame
+        Concatenated DataFrame of all blocks.
+
+    metadata: pandas.DataFrame
+        DataFrame of metadata for each block.
+    """
     file_ = open(simlib, "r").read().splitlines()
     i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
     i_end = [ i for i, f_ in enumerate(file_) if f_.startswith("END_LIBID") ]
@@ -27,12 +42,26 @@ def parse_simlib(simlib):
     return data, metadata
 
 def parse_simlib_block(block):
-    """ """
+    """ 
+    Parse a single snana simlib block.
+
+    Parameters
+    ----------
+    block: list of str
+        Lines corresponding to a single block. If no 'READ' line or multiple 'READ' line, will raise a ValueError.
+
+    Returns
+    -------
+    dataframe: pandas.DataFrame
+    
+    meta: pandas.Series or None
+        Returns None if metadata parsing fails.
+    """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
     if len(read_start) == 0:
         raise ValueError("cannot parse input block. No 'READ' line found")
     if len(read_start) > 1:
-        raise ValueError(f"cannot parse input block. multiple 'READ' lines found {read_start}")
+        raise ValueError(f"cannot parse input block. Multiple 'READ' lines found {read_start}")
 
     # ok this is the line with READ on it.
     read_start = read_start[0]
@@ -73,7 +102,22 @@ def parse_simlib_block(block):
 
 ### DES ####
 def parse_simlib_des(simlib):
-    """ """
+    """"
+    Parse a single snana simlib file adapted for a DES simlib file.
+
+    Parameters
+    ----------
+    simlib: str
+        Path to the simlib file.
+       
+    Returns
+    -------
+    data: pandas.DataFrame
+        Concatenated DataFrame of all blocks.
+
+    metadata: pandas.DataFrame
+        DataFrame of metadata for each block.
+    """
     file_ = open(simlib, "r").read().splitlines()
     i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
     i_end = [ i for i, f_ in enumerate(file_) if f_.startswith("END_LIBID") ]
@@ -94,7 +138,21 @@ def parse_simlib_des(simlib):
     return data, metadata
 
 def parse_simlib_block_des(block):
-    """ """
+    """ 
+    Parse a single snana simlib block, adapted for DES simlib blocks.
+
+    Parameters
+    ----------
+    block: list of str
+        Lines corresponding to a single block.
+
+    Returns
+    -------
+    dataframe: pandas.DataFrame
+    
+    meta: pandas.Series or None
+        Returns None if metadata parsing fails.
+    """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
     if len(read_start) == 0:
         raise ValueError("cannot parse input block. No 'READ' line found")
@@ -136,5 +194,4 @@ def parse_simlib_block_des(block):
         warnings.warn(e)
         print(f"failed meta for {meta_block}")
         meta= None
-    return dataframe, meta
-            
+    return dataframe, meta     
