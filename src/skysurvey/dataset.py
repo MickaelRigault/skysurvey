@@ -256,26 +256,24 @@ class DataSet(object):
             else:
                 used_logs = this_target_logs.copy()
 
-            if discard_bands == True:
+            if discard_bands:
                 bands = np.unique(used_logs['band'])
-                redshift = model.parameters[model.param_names.index("z")]
                 for band in bands:
-                    zmax = sncosmo.get_bandpass(band).minwave()/model.minwave()-1
-                    if redshift > zmax:
+                    bandpass = sncosmo.get_bandpass(band)
+                    if bandpass.minwave() < model.minwave() or bandpass.maxwave() > model.maxwave():
                         used_logs = used_logs[used_logs['band'] != band]
-
-            if len(used_logs) > 0:            
-                used_logs = used_logs.sort_values("mjd")
-                # realise the flux lightcurves and its error
-                used_logs["flux"] = model.bandflux(
+            
+            used_logs = used_logs.sort_values("mjd")
+            # realise the flux lightcurves and its error
+            used_logs["flux"] = model.bandflux(
                     used_logs["band"], used_logs["mjd"], zp=used_logs["zp"], zpsys="ab"
             )
-                used_logs["fluxerr"] = np.sqrt(
+            used_logs["fluxerr"] = np.sqrt(
                     used_logs["skynoise"] ** 2
                     + np.abs(used_logs["flux"]) / used_logs["gain"]
                 )
                 # and store.
-                bandflux.append(used_logs)
+            bandflux.append(used_logs)
 
         # create a dataframe concatenating all lightcurves
         lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))), keys=targets_observed.values)
