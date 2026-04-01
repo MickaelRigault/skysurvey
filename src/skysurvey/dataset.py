@@ -4,6 +4,7 @@
 import numpy as np
 import pandas
 import sncosmo
+import warnings
 
 from .target.collection import TargetCollection
 from .tools import speedutils
@@ -634,6 +635,10 @@ class DataSet(object):
         coef = 10 ** (-(obs_["zp"] - zp) / 2.5)
         obs_["flux_zp"] = obs_["flux"] * coef
         obs_["fluxerr_zp"] = obs_["fluxerr"] * coef
+
+        if len(obs_) == 0:
+            warnings.warn(f"No detections for the SN index={index} (detections possibly outside phase_window).")
+            return None
 
         # Model
         if bands is None:

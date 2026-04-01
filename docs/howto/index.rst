@@ -8,6 +8,7 @@ list of short notebook illustrating some commun usage
   :caption: Tutorials
   
   draw_and_from_draw
+  load_lsst
   change_rate
   add_mwebv
   create_new_transient_class
