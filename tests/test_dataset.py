@@ -425,7 +425,7 @@ def test_show_target_lightcurve_axe_none_fig_not_none(dataset):
     assert result is fig
 
 def test_show_target_lightcurve_phase_window_not_none(dataset, monkeypatch):
-    fig = dataset.show_target_lightcurve(show_truth=False, format_time=False, phase_window=[-1, 1])
+    fig = dataset.show_target_lightcurve(index=0, show_truth=False, format_time=False, phase_window=[-1, 1])
 
     assert fig is not None
 
