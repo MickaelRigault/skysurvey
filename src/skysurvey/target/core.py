@@ -595,30 +595,25 @@ class Target( object ):
     # -------------- #
     #   Converts     #
     # -------------- #
-    def magabs_to_magobs(self, z, magabs, cosmology=None):
+    def magabs_to_magobs(self, z, magabs):
         """Convert absolute magnitude into observed magnitude.
 
         This is done given the (cosmological) redshift and a cosmology.
 
         Parameters
-        ----------
+        ---------- 
         z : float, array-like
             Cosmological redshift.
         magabs : float, array-like
             Absolute magnitude.
-        cosmology : astropy.Cosmology, optional
-            Cosmology to use. If None given, this will use the cosmology from
-            `self.cosmology` (`Planck18` by default). By default None.
 
         Returns
         -------
         array-like
             Array of observed magnitude (`distmod(z) + magabs`).
         """
-        if cosmology is None:
-            cosmology = self.cosmology
 
-        return self._magabs_to_magobs(z, magabs, cosmology=cosmology)
+        return self._magabs_to_magobs(z, magabs, cosmology=self.cosmology)
     
     @staticmethod
     def _magabs_to_magobs(z, magabs, cosmology):
@@ -1133,7 +1128,7 @@ class Target( object ):
                 zmin = 0
                 
             # get_ntargets is full sky. f_area corrects that.
-            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float")
+            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float", cosmology=self.cosmology)
             size = int(ntarget_per_year * nyears * f_area)
             
         # actually draw the data
@@ -1189,13 +1184,13 @@ class Target( object ):
             
         return self._kind
             
-    @classproperty
+    @property
     def cosmology(self):
         """The cosmology to use."""
         if not hasattr(self, "_cosmology") or self._cosmology is None:
-            self._cosmology = self._COSMOLOGY
+            self.set_cosmology( self._COSMOLOGY )
 
-        return self._COSMOLOGY
+        return self._cosmology
 
     # model
     @property
@@ -1301,7 +1296,7 @@ class Transient( Target ):
         if rate is None:
             rate = self.rate
             
-        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, **kwargs)
+        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, cosmology=self.cosmology, **kwargs)
     
     # ------- #
     #  GETTER #
