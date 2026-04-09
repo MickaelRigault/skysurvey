@@ -606,10 +606,10 @@ class Target( object ):
             Cosmological redshift.
         magabs : float, array-like
             Absolute magnitude.
-        cosmology : astropy.Cosmology, optional
-            Cosmology to use. If None given, this will use the cosmology from
-            `self.cosmology` (`Planck18` by default). By default None.
-
+        cosmology: astropy.Cosmology, None
+            specify the cosmology to use to convert observed- to absolute-magnitude.
+            If None, self.cosmology is used. 
+            *Careful* with specifying the cosmology, in a self consistant why.
         Returns
         -------
         array-like
@@ -617,7 +617,7 @@ class Target( object ):
         """
         if cosmology is None:
             cosmology = self.cosmology
-
+            
         return self._magabs_to_magobs(z, magabs, cosmology=cosmology)
     
     @staticmethod
@@ -1133,7 +1133,8 @@ class Target( object ):
                 zmin = 0
                 
             # get_ntargets is full sky. f_area corrects that.
-            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float")
+            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float",
+                                            cosmology=self.cosmology)
             size = int(ntarget_per_year * nyears * f_area)
             
         # actually draw the data
@@ -1189,13 +1190,13 @@ class Target( object ):
             
         return self._kind
             
-    @classproperty
+    @property
     def cosmology(self):
         """The cosmology to use."""
         if not hasattr(self, "_cosmology") or self._cosmology is None:
-            self._cosmology = self._COSMOLOGY
+            self.set_cosmology( self._COSMOLOGY )
 
-        return self._COSMOLOGY
+        return self._cosmology
 
     # model
     @property
@@ -1301,7 +1302,7 @@ class Transient( Target ):
         if rate is None:
             rate = self.rate
             
-        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, **kwargs)
+        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, cosmology=self.cosmology, **kwargs)
     
     # ------- #
     #  GETTER #
