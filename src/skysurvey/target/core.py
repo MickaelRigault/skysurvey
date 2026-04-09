@@ -595,25 +595,30 @@ class Target( object ):
     # -------------- #
     #   Converts     #
     # -------------- #
-    def magabs_to_magobs(self, z, magabs):
+    def magabs_to_magobs(self, z, magabs, cosmology=None):
         """Convert absolute magnitude into observed magnitude.
 
         This is done given the (cosmological) redshift and a cosmology.
 
         Parameters
-        ---------- 
+        ----------
         z : float, array-like
             Cosmological redshift.
         magabs : float, array-like
             Absolute magnitude.
-
+        cosmology: astropy.Cosmology, None
+            specify the cosmology to use to convert observed- to absolute-magnitude.
+            If None, self.cosmology is used. 
+            *Careful* with specifying the cosmology, in a self consistant why.
         Returns
         -------
         array-like
             Array of observed magnitude (`distmod(z) + magabs`).
         """
-
-        return self._magabs_to_magobs(z, magabs, cosmology=self.cosmology)
+        if cosmology is None:
+            cosmology = self.cosmology
+            
+        return self._magabs_to_magobs(z, magabs, cosmology=cosmology)
     
     @staticmethod
     def _magabs_to_magobs(z, magabs, cosmology):
@@ -1128,7 +1133,8 @@ class Target( object ):
                 zmin = 0
                 
             # get_ntargets is full sky. f_area corrects that.
-            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float", cosmology=self.cosmology)
+            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float",
+                                            cosmology=self.cosmology)
             size = int(ntarget_per_year * nyears * f_area)
             
         # actually draw the data
