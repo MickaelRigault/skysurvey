@@ -1,6 +1,6 @@
 
 survey.polygon
-==========
+==============
 
 .. currentmodule:: skysurvey.survey.polygon
 

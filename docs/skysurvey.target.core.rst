@@ -1,6 +1,6 @@
 
 target.core
-=======
+===========
 
 .. currentmodule:: skysurvey.target.core
 
