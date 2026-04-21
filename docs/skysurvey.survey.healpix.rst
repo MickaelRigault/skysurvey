@@ -1,6 +1,6 @@
 
 survey.healpix
-==========
+==============
 
 .. currentmodule:: skysurvey.survey.healpix
 
