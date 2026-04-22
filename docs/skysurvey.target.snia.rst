@@ -11,6 +11,8 @@ The Type Ia Supernovae is a pre-defined Transient class.
 
 It means the basic ``_MODEL`` functionality has been defined.
 
+See the corresponding documentation page in "List of transient classes" for more detail on this Transient class.
+
 
 .. code-block:: python
    :caption: The whole SNeIa code.
