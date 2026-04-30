@@ -2,16 +2,8 @@
 target.core
 ===========
 
-.. currentmodule:: skysurvey.target.core
-
-.. automodule:: skysurvey.target.core
-
-
-The basic Target and Transient object are defined in this module.
-Pre-defined transients (like SNIa) inherit from Transient and new object you want to define shall.
-
-
 .. automodule:: skysurvey.target.core
    :members:
    :undoc-members:
+   :exclude-members: _KIND, _TEMPLATE, _MODEL, _MAGSYS, _PEAK_ABSMAG_BAND, _AMPLITUDE_NAME, _COSMOLOGY, _RATE
    :show-inheritance:

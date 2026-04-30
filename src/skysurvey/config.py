@@ -1,3 +1,7 @@
+"""
+This module defines the default photometric band colors and a utility function to retrieve them.
+"""
+
 import numpy as np
 
 BAND_COLORS  = {"ztfr":"tab:red",

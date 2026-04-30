@@ -1,6 +1,9 @@
+"""
+This module defines the `Afterglow` transient class, modelling afterglows using afterglowpy 
+to generate the spectral time series template.
+"""
 
 import numpy as np
-
 import sncosmo
 try:
     import afterglowpy
@@ -9,9 +12,6 @@ except ImportError:
 
 
 from .core import Transient
-
-
-__all__ = ["Afterglow"]
 
 
 RNG = np.random.default_rng()
@@ -50,7 +50,8 @@ for phase in phases:
 template = sncosmo.Model(sncosmo.TimeSeriesSource(phases, wave, np.array(flux)))
 
 class Afterglow( Transient ):
-    """A class to model afterglows.
+    """
+    A class to model afterglows.
 
     Parameters
     ----------

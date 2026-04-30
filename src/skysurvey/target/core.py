@@ -1,6 +1,12 @@
+"""
+The basic `Target` and `Transient` object are defined in this module.
+Pre-defined transients (like SNIa) inherit from Transient and new object you want to define shall.
+"""
+
 import warnings
 import numpy as np
 import pandas
+
 from copy import deepcopy
 from tqdm import tqdm
 from astropy import cosmology, time
@@ -9,10 +15,9 @@ from astropy.utils.decorators import classproperty
 from ..tools.utils import parse_skyarea
 
 
-__all__ = ["Target", "Transient"]
-
 class Target( object ):
-    """ Base class for targets.
+    """ 
+    Base class for targets.
 
     This class provides a framework for representing astronomical targets,
     including their models, templates, and cosmological parameters.
@@ -25,12 +30,20 @@ class Target( object ):
         The template for the target, by default None
     _MODEL : dict, optional
         The model for the target, by default None
+    _MAGSYS : str
+        The photometric magnitude system. Defaults to "ab".
+    _PEAK_ABSMAG_BAND : str
+        The bandpass in which the peak absolute magnitude is defined. 
+        Defaults to "bessellb".
+    _AMPLITUDE_NAME : str
+        The name of the parameter used to scale the model flux. 
+        Defaults to "amplitude".
     _COSMOLOGY : astropy.cosmology, optional
         The cosmology to use, by default cosmology.Planck18
 
     See Also
     --------
-    from_setting: loads an instance given model parameters (dict)
+    ``from_setting``: loads an instance given model parameters (dict)
     """
 
     _KIND = "unknow"
@@ -68,6 +81,7 @@ class Target( object ):
         ----------
         setting : dict
             Dictionary containing the model parameters.
+
         **kwargs
             Additional keyword arguments.
 
@@ -88,11 +102,13 @@ class Target( object ):
 
         Parameters
         ----------
-        data : pandas.DataFrame
+        data : `pandas.DataFrame`
             DataFrame containing (at least) the template parameters.
-        template : str, `sncosmo.Source`, `sncosmo.Model` or skysurvey.Template, optional
+
+        template : str, `sncosmo.Source`, `sncosmo.Model` or ``skysurvey.Template``, optional
             The template source. If a string is given, it is assumed to be a
-            sncosmo model name. By default None.
+            `sncosmo` model name. By default None.
+
         model : dict, optional
             Defines how template parameters are drawn and how they are
             connected. The model will update the default `cls._MODEL` if any.
@@ -105,7 +121,7 @@ class Target( object ):
 
         See Also
         --------
-        from_draw: loads the instance from a random draw of targets given the model
+        ``from_draw``: loads the instance from a random draw of targets given the model
         """
         init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
         this = cls(**init_kwargs)
@@ -143,25 +159,32 @@ class Target( object ):
         size : int, optional
             Number of target you want to sample. If None, 1 is assumed.
             Ignored if `nyears` is given. By default None.
+
         model : dict, optional
             Defines how template parameters are drawn and how they are
             connected. The model will update the default `cls._MODEL` if any.
             If None, `cls._MODEL` is used as default. By default None.
+
         template : str, optional
             Name of the template (`sncosmo.Model(source)`). If None,
             `cls._TEMPLATE` is used as default. By default None.
+
         zmax : float, optional
             Maximum redshift to be simulated. By default None.
+
         tstart : float, str, optional
             Starting time of the simulation. If a string is given, it is
             converted to mjd. By default None.
+
         tstop : float, str, optional
             Ending time of the simulation. If a string is given, it is
             converted to mjd. If `tstart` and `nyears` are both given,
             `tstop` will be overwritten by `tstart + 365.25 * nyears`.
             By default None.
+
         zmin : float, optional
             Minimum redshift to be simulated. By default 0.
+
         nyears : float, optional
             If given, `nyears` will set:
 
@@ -178,6 +201,7 @@ class Target( object ):
             - None: full sky
 
             By default None.
+
         rate : float, callable, optional
             The transient rate.
             If a float is given, it is assumed to be the number of targets per
@@ -189,10 +213,12 @@ class Target( object ):
 
         cosmology: None, astropy.Cosmology, optional
             specify the cosmology to be used.
+
         set_amplitude: bool
             should the amplitude of the template be set at this stage ?
+
         **kwargs
-            Goes to `self.update_model_parameter()`.
+            Goes to ``self.update_model_parameter()``.
 
         Returns
         -------
@@ -201,7 +227,7 @@ class Target( object ):
 
         See Also
         --------
-        from_setting: loads an instance given model parameters (dict)
+        ``from_setting``: loads an instance given model parameters (dict)
         """
         init_kwargs, kwargs = cls._parse_init_kwargs_(**kwargs)
         this = cls(**init_kwargs)
@@ -241,7 +267,7 @@ class Target( object ):
 
     @classmethod
     def _parse_init_kwargs_(cls, **kwargs):
-        """ trick to add specific subclass kwargs into the init """
+        """ Trick to add specific subclass kwargs into the init. """
         # first kwargs/dict => init
         # second kwargs => rest (template)
         return {}, kwargs
@@ -270,15 +296,16 @@ class Target( object ):
 
         Parameters
         ----------
-        template : str, `sncosmo.Source`, `sncosmo.Model` or skysurvey.Template
-            This will reset `self.template` to the new template source.
+        template : str, `sncosmo.Source`, `sncosmo.Model` or ``skysurvey.Template``
+            This will reset ``self.template`` to the new template source.
+
         rate_update : bool, optional
             [description], by default False
 
         See Also
         --------
-        from_draw: load the instance by a random draw generation.
-        from_setting: loads an instance given model parameters
+        ``from_draw``: load the instance by a random draw generation.
+        ``from_setting``: loads an instance given model parameters
         """
         from ..template import parse_template
         self._template = parse_template(template)
@@ -295,26 +322,30 @@ class Target( object ):
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target. If None, the default
             `sncosmo.Model` parameters will be used. By default None.
+
         as_model : bool, optional
             should this return the sncosmo.Model (True) or the 
             skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
-        data: pandas.DataFrame, None, optional
+
+        data: `pandas.DataFrame`, None, optional
             which data should be used to set the parameter of the template. Ignored if index is None.
+
         set_magabs: bool, optional
             should the peal magnitude of the template be set to magabs ?
+
         **kwargs
-            Goes to `seld.template.get()` and passed to `sncosmo.Model`.
+            Goes to ``self.template.get()`` and passed to `sncosmo.Model`.
 
         Returns
         -------
-        skysurvey.Template or sncosmo.Model
+        ``skysurvey.Template`` or `sncosmo.Model`
             An instance of the template (or its associated `sncosmo.Model`).
-            (see as_model)
+            (see ``as_model``)
 
         See Also
         --------
-        get_target_template: get a template set to the target parameters.
-        get_template_parameters: get the template parameters for the given target
+        ``get_target_template``: get a template set to the target parameters.
+        ``get_template_parameters``: get the template parameters for the given target
         """
         
         if data is None:
@@ -354,22 +385,24 @@ class Target( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+
         as_model : bool, optional
-            should this return the sncosmo.Model (True) or the 
-            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+            should this return the `sncosmo.Model` (True) or the 
+            ``skysurvey.Template`` (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
+
         **kwargs
-            Goes to `seld.template.get()` and passed to `sncosmo.Model`.
+            Goes to ``self.template.get()`` and passed to `sncosmo.Model`.
 
         Returns
         -------
-        skysurvey.Template or sncosmo.Model
+        ``skysurvey.Template`` or `sncosmo.Model`
             An instance of the template (or its associated `sncosmo.Model`).
             (see as_model)
 
         See Also
         --------
-        get_template: get a template instance (sncosmo.Model)
-        get_template_parameters: get the template parameters for the given target
+        ``get_template``: get a template instance (`sncosmo.Model`)
+        ``get_template_parameters``: get the template parameters for the given target
         """
         return self.get_template(index=index, as_model=as_model, **kwargs)
     
@@ -384,26 +417,31 @@ class Target( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+
         band : str or list_like
             Name(s) of Bandpass(es) in registry.
+
         phase : float or list_like
             Phase in day.
+
         zp : float or list_like, optional
             If given, zeropoint to scale flux to (must also supply `zpsys`).
             If not given, flux is not scaled. By default None.
+
         zpsys : str or list_like, optional
             Name of a magnitude system in the registry, specifying the system
             that `zp` is in. By default None.
+
         restframe : bool, optional
             Is phase given in restframe? By default True.
 
         Returns
         -------
-        float or `~numpy.ndarray`
+        float or `numpy.ndarray`
             Flux in photons / s /cm^2, unless `zp` and `zpsys` are given, in
             which case flux is scaled so that it corresponds to the requested
             zeropoint. Return value is `float` if all input parameters are
-            scalars, `~numpy.ndarray` otherwise.
+            scalars, `numpy.ndarray` otherwise.
         """
         sncosmo_model = self.get_target_template(index).sncosmo_model
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
@@ -417,10 +455,12 @@ class Target( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+
         band : str or list_like
             Name(s) of Bandpass(es) in registry.
+
         magsys : str or list_like, optional
-            Name(s) of `~sncosmo.MagSystem` in registry. By default "ab".
+            Name(s) of `sncosmo.MagSystem` in registry. By default "ab".
 
         Returns
         -------
@@ -438,21 +478,25 @@ class Target( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+
         band : str or list_like
             Name(s) of Bandpass(es) in registry.
+
         phase : float or list_like
             Phase in day.
+
         magsys : str or list_like, optional
-            Name(s) of `~sncosmo.MagSystem` in registry. By default "ab".
+            Name(s) of `sncosmo.MagSystem` in registry. By default "ab".
+
         restframe : bool, optional
             Is phase given in restframe? By default True.
 
         Returns
         -------
-        float or `~numpy.ndarray`
+        float or `numpy.ndarray`
             Magnitude for each item in time, band, magsys. The return value is
             a float if all parameters are not interables. The return value is
-            an `~numpy.ndarray` if any are interable.
+            an `numpy.ndarray` if any are interable.
         """
         sncosmo_model = self.get_template(index=index, set_magabs=True, as_model=True)
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
@@ -472,17 +516,20 @@ class Target( object ):
         ----------
         index : int
             Index of a target (see `self.data.index`).
+
         name : str
             Name of the entry to change.
+
         values : list, array
             New values for this entry.
+
         as_dataframe : bool, optional
             Should this return the created new dataframe (True) or a new
             instance (False). By default False.
 
         Returns
         -------
-        Target or DataFrame
+        `Target` or DataFrame
             The cloned target or the new dataframe.
         """
         dd = self.data.loc[index].to_frame().T
@@ -507,18 +554,18 @@ class Target( object ):
         Parameters
         ----------
         index : int, optional
-            Index of a target (see `self.data.index`) to get the template
+            Index of a target (see ``self.data.index``) to get the template
             parameters from that target only. By default None.
 
         Returns
         -------
-        pandas.DataFrame or pandas.Series
+        `pandas.DataFrame` or `pandas.Series`
             The template parameters.
 
         See Also
         --------
-        template_parameter: parameters of the template (sncosmo.Model) | argument
-        get_template: get a template instance (sncosmo.Model)
+        ``template_parameter``: parameters of the template (`sncosmo.Model`) | argument
+        ``get_template``: get a template instance (`sncosmo.Model`)
         """
         if data is None:
             data = self.data
@@ -535,7 +582,7 @@ class Target( object ):
 
         Returns
         -------
-        pandas.Index
+        `pandas.Index`
             The template columns.
         """
         if data is None:
@@ -557,13 +604,15 @@ class Target( object ):
             this formula and will update `x` assuming `x_true` for the
             original `x` and `x_err` for the given `x` drawn here. You can
             refeer to the original `x` using `'@x_true'` in the func kwargs.
+
         data : None, optional
             Original dataframe to be noisified. If None `self.data` is used.
             By default None.
 
         Returns
         -------
-        Target or DataFrame
+        `Target` or DataFrame
+
             - `self` if data is None
             - `DataFrame` otherwise.
 
@@ -604,12 +653,15 @@ class Target( object ):
         ----------
         z : float, array-like
             Cosmological redshift.
+
         magabs : float, array-like
             Absolute magnitude.
-        cosmology: astropy.Cosmology, None
+
+        cosmology: `astropy.Cosmology`, None
             specify the cosmology to use to convert observed- to absolute-magnitude.
             If None, self.cosmology is used. 
             *Careful* with specifying the cosmology, in a self consistant why.
+
         Returns
         -------
         array-like
@@ -630,9 +682,11 @@ class Target( object ):
         ----------
         z : float, array-like
             Cosmological redshift.
+
         magabs : float, array-like
             Absolute magnitude.
-        cosmology : astropy.Cosmology
+
+        cosmology : `astropy.Cosmology`
             Cosmology to use.
 
         Returns
@@ -657,8 +711,9 @@ class Target( object ):
 
         Parameters
         ----------
-        model : dict or ModelDAG
-            Model that will be used to draw the Target parameter.
+        model : dict or `ModelDAG`
+            Model that will be used to draw the `Target` parameter.
+
         rate_update : bool, optional
             Should this check for rate options and feedin `rate=self.rate`?
             By default True.
@@ -669,8 +724,8 @@ class Target( object ):
 
         See Also
         --------
-        from_setting: loads an instance given model parameters (dict)
-        from_draw: loads and draw random data.
+        ``from_setting``: loads an instance given model parameters (dict)
+        ``from_draw``: loads and draw random data.
         """
         from modeldag import ModelDAG
         if type( model ) is dict:
@@ -686,8 +741,9 @@ class Target( object ):
 
         Parameters
         ----------
-        data : pandas.DataFrame
+        data : `pandas.DataFrame`
             DataFrame containing (at least) the template parameters.
+
         incl_template : bool, optional
             If data does not contain the template column should this add it?
             By default True.
@@ -725,8 +781,8 @@ class Target( object ):
 
         See Also
         --------
-        update_model: change the current model (not just the one you get)
-        get_model_parameter: access the model parameters.
+        ``update_model``: change the current model (not just the one you get)
+        ``get_model_parameter``: access the model parameters.
         """
         return self.model.get_model(**kwargs)
 
@@ -737,10 +793,13 @@ class Target( object ):
         ----------
         entry : str
             Name of the variable as given by the model dict.
+
         key : str
             Name of the parameters.
+
         default : any, optional
             Value returned if the parameter is not found. By default None.
+
         model : modelDAG, optional
             Get the parameter of this model instead of `self.model`.
             Use with caution. By default None.
@@ -775,6 +834,7 @@ class Target( object ):
         ----------
         rate_update : bool, optional
             [description], by default True
+
         **kwargs
             Will update any model entry (or create a new one at the end).
 
@@ -799,27 +859,33 @@ class Target( object ):
     def add_effect(self, effect, model=None, data=None, overwrite=False, **kwargs):
         """Add an effect to the target affecting how spectra or lightcurve are generated.
 
-        This changes the template, using `self.template.add_effect()`, and
-        changes the target's model if `effect.model` is set.
+        This changes the template, using ``self.template.add_effect()``, and
+        changes the target's model if ``effect.model`` is set.
 
         Parameters
         ----------
-        effect : dict, skysurvey.effect.Effect
+        effect : dict, ``skysurvey.effect.Effect``
             Effect that should be used to change the target.
-            e.g. `mw_ebv = skysurvey.effect.Effect.from_name('mw')`
+            e.g. ``mw_ebv = skysurvey.effect.Effect.from_name('mw')``
             These format are accepted:
 
-            - dict: `{effect: sncosmo.Effect, "name": str, "frame": str, (model: optionel)}`
-            - skysurvey.effect.Effect
+            - dict: ``{effect: sncosmo.Effect, "name": str, "frame": str, (model: optionel)}``
+            - ``skysurvey.effect.Effect``
+
         model : dict, optional
-            Defines how the data will be drawn. This updates `self.model`.
+            Defines how the data will be drawn. This updates ``self.model``.
             By default None.
-        data : pandas.DataFrame, optional
+
+        data : `pandas.DataFrame`, optional
             Value that will be added to the data to capture the effect (if any).
             If data and model are given, model is not used. By default None.
+
         overwrite : bool, optional
             [description], by default False
-        **kwargs goes to self.data.merge(data, **kwargs) if data is given. Ignored otherwise.
+
+        **kwargs:
+            goes to ``self.data.merge(data, **kwargs)`` if data is given. Ignored otherwise.
+
         Returns
         -------
         None
@@ -868,32 +934,43 @@ class Target( object ):
         ----------
         xkey : str
             The key for the x-axis data.
+
         ykey : str
             The key for the y-axis data.
+
         ckey : str, optional
             The key for the color-axis data. By default None.
-        ax : matplotlib.axes.Axes, optional
+
+        ax : `matplotlib.axes.Axes`, optional
             The axes on which to plot. By default None.
-        fig : matplotlib.figure.Figure, optional
+
+        fig : `matplotlib.figure.Figure`, optional
             The figure on which to plot. By default None.
+
         index : int, optional
             The index of the data to plot. By default None.
-        data : pandas.DataFrame, optional
+
+        data : `pandas.DataFrame`, optional
             The data to plot. By default None.
+
         colorbar : bool, optional
             Whether to show a colorbar. By default True.
+
         bins : int, optional
             The number of bins to use for the histogram. By default None.
+
         bcolor : str, optional
             The color of the bins. By default "0.6".
+
         err_suffix : str, optional
             The suffix for the error columns. By default "_err".
+
         **kwargs
             Additional keyword arguments to pass to `ax.scatter`.
 
         Returns
         -------
-        matplotlib.figure.Figure
+        `matplotlib.figure.Figure`
             The figure containing the plot.
         """
         import matplotlib.pyplot as plt
@@ -963,23 +1040,28 @@ class Target( object ):
                  verbose=False,
                  set_amplitude=False,
                  **kwargs):
-        """Draw the parameter model (using `self.model.draw()`).
+        """Draw the parameter model (using ``self.model.draw()``).
 
         Parameters
         ----------
         size : int, optional
             Number of target you want to draw. Ignored is `nyears` is not
             None. By default None.
+
         zmax : float, optional
             Maximum redshift to be simulated. By default None.
+
         zmin : int, optional
             Minimum redshift to be simulated. By default 0.
+
         tstart : float, optional
             Starting time of the simulation. By default None.
+
         tstop : float, optional
             Ending time of the simulation. If `tstart` and `nyears` are both
             given, `tstop` will be overwritten by `tstart + 365.25 * nyears`.
             By default None.
+
         nyears : float, optional
             If given, `nyears` will set:
 
@@ -988,6 +1070,7 @@ class Target( object ):
             - `tstop`: `tstart + 365.25 * nyears`
 
             By default None.
+
         skyarea : None, str, geometry, optional
             Sky area to be considered.
 
@@ -996,13 +1079,16 @@ class Target( object ):
             - None: full sky
 
             By default None.
+
         inplace : bool, optional
             Sets `self.data` to the newly drawn dataframe. By default False.
+
         model : [type], optional
             [description]. By default None.
             
         set_amplitude: bool
             should the template amplitude be computed.
+
         Returns
         -------
         DataFrame
@@ -1166,18 +1252,21 @@ class Target( object ):
 
     @classproperty
     def amplitude_name(self):
+        """The name of the amplitude parameter."""
         if not hasattr(self, "_amplitude_name"):
             self._amplitude_name = self._AMPLITUDE_NAME
         return self._amplitude_name
 
     @classproperty
     def peak_absmag_band(self):
+        """The band used to set the peak absolute magnitude."""
         if not hasattr(self, "_peak_absmag_band"):
             self._peak_absmag_band = self._PEAK_ABSMAG_BAND
         return self._peak_absmag_band
     
     @classproperty
     def magsys(self):
+        """The magnitude system used for the peak absolute magnitude."""
         if not hasattr(self, "_magsys"):
             self._magsys = self._MAGSYS
         return self._magsys
@@ -1241,7 +1330,8 @@ class Target( object ):
 
     
 class Transient( Target ):
-    """A transient target.
+    """
+    A transient target.
 
     This class inherits from `Target` and adds a rate parameter.
 
@@ -1279,19 +1369,24 @@ class Transient( Target ):
         ----------
         zmax : float
             Maximum redshift.
+
         zmin : float, optional
             Minimum redshift. By default 0.
+
         zstep : float, optional
             Redshift step. By default 1e-4.
+
         size : int, optional
             Number of redshifts to draw. By default None.
+
         rate : float, callable, optional
             The transient rate. If None, `self.rate` is used. By default None.
             If a float is given, it is assumed to be the number of targets per
             Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
+
         **kwargs
-            Additional keyword arguments to pass to `draw_redshift`.
+            Additional keyword arguments to pass to ``draw_redshift``.
 
         Returns
         -------
@@ -1314,11 +1409,14 @@ class Transient( Target ):
         ----------
         z : float
             Redshift.
+
         rate : float, callable, optional
             If None, `self.rate` is used.
+
             If a float is given, it is assumed to be the number of targets per
             Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
+
         **kwargs
             Goes to the rate function (if a function, not a number).
 
@@ -1329,7 +1427,7 @@ class Transient( Target ):
 
         See Also
         --------
-        draw_redshift: draws redshifts from rate distribution.
+        ``draw_redshift``: draws redshifts from rate distribution.
         """
         from .rates import get_rate
         if rate is None:
@@ -1347,18 +1445,25 @@ class Transient( Target ):
         ----------
         band : str, list
             Name of the band (should be known by sncosmo) or list of.
+
         times : float, list
             Time of the observations.
+
         sncosmo_model : sncosmo.Model, optional
             The sncosmo model to use. By default None.
+
         index : int, optional
             The index of the target. By default None.
+
         in_mag : bool, optional
             If True, the lightcurve is returned in magnitude. By default False.
+
         zp : float, optional
             The zeropoint to use. By default 25.
+            
         zpsys : str, optional
             The zeropoint system to use. By default "ab".
+
         **kwargs
             Additional keyword arguments to pass to `self.template.get_lightcurve`.
 
@@ -1390,25 +1495,29 @@ class Transient( Target ):
         time : float or list_like
             Time(s) in days. If `None` (default), the times corresponding to
             the native phases of the model are used.
+
         lbdas : float or list_like
             Wavelength(s) in Angstroms. If `None` (default), the native
             wavelengths of the model are used.
+
         as_phase : bool, optional
             Is the given time a phase? (`as_phase=True`) or a actual time
             (False). By default True.
+
         sncosmo_model : [type], optional
             [description]. By default None.
+
         index : [type], optional
             [description]. By default None.
 
         Returns
         -------
-        flux : float or `~numpy.ndarray`
+        flux : float or `numpy.ndarray`
             Spectral flux density values in ergs / s / cm^2 / Angstrom.
 
         See Also
         --------
-        get_lightcurve: get the transient lightcurve
+        ``get_lightcurve``: get the transient lightcurve
         """
         prop = {}
         # get the template            
@@ -1439,38 +1548,52 @@ class Transient( Target ):
         ----------
         band : str
             The band to show.
+
         index : int
             The index of the target.
+
         params : dict, optional
             Parameters to pass to `get_target_template`. By default None.
-        ax : matplotlib.axes.Axes, optional
+
+        ax : `matplotlib.axes.Axes`, optional
             The axes to show the lightcurve on. By default None.
-        fig : matplotlib.figure.Figure, optional
+
+        fig : `matplotlib.figure.Figure`, optional
             The figure to show the lightcurve on. By default None.
+
         colors : list, optional
             The colors to use for the lightcurve. By default None.
+
         phase_range : list, optional
             The phase range to show. By default None.
+
         npoints : int, optional
             The number of points to show. By default 500.
+
         zp : float, optional
             The zero point to use. By default 25.
+
         zpsys : str, optional
             The zero point system to use. By default "ab".
+
         format_time : bool, optional
             Whether to format the time. By default True.
+
         t0_format : str, optional
             The format of the time. By default "mjd".
+
         in_mag : bool, optional
             Whether to show the magnitude. By default False.
+
         invert_mag : bool, optional
             Whether to invert the magnitude. By default True.
+
         **kwargs
-            Additional keyword arguments to pass to `template.show_lightcurve`.
+            Additional keyword arguments to pass to ``template.show_lightcurve``.
 
         Returns
         -------
-        matplotlib.figure.Figure
+        `matplotlib.figure.Figure`
             The figure containing the plot.
         """
         # get the template

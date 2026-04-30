@@ -1,27 +1,31 @@
+"""
+This module defines the `ZTF` survey class, including ZTF field geometry at different levels (quadrant, CCD, field) 
+and tools to the load observing logs.
+"""
+
 import pandas
 
 from .basesurvey import GridSurvey
 from ztffields.fields import Fields
 
-__all__ = ["ZTF"]
 
 class ZTF( GridSurvey ):
+    """
+    A class to model the `ZTF` survey.
 
-    
+
+    Parameters
+    ----------
+    data: `pandas.DataFrame`
+        observing data.
+
+    level: str
+        level of the ZTF fields (quadrant, ccd, field).
+
+    **kwargs goes to ``GridSurvey.__init__``
+    """
     def __init__(self, data=None, level="quadrant", **kwargs):
-        """ 
-        Initialize the ZTF class.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            observing data.
-
-        level: str
-            level of the ZTF fields (quadrant, ccd, field).
-
-        **kwargs goes to GridSurvey.__init__
-        """
+        """ Initialize the ZTF class."""
         
         footprint = Fields.get_contours(level=level,
                                         as_polygon=True,
@@ -36,7 +40,10 @@ class ZTF( GridSurvey ):
         """ 
         Load the ZTF survey from the logs.
 
-        **kwargs goes to from_pointings
+        Parameters
+        ----------
+        **kwargs
+            goes to ``from_pointings``
 
         Returns
         -------
@@ -57,7 +64,7 @@ class ZTF( GridSurvey ):
 
         Parameters
         ----------
-        data: pandas.DataFrame or dict
+        data: `pandas.DataFrame` or dict
             observing data, must contain the rakey and deckey columns.
 
         level: str
@@ -73,7 +80,25 @@ class ZTF( GridSurvey ):
         return cls(data=data, level=level)
 
     def get_skyarea(self, observed=True, buffer=0.5):
-        """ skyarea of the survey. """
+        """ 
+        Compute the total sky area covered by the survey fields.
+
+        Parameters
+        ----------
+        observed : bool, optional
+            If True, only fields present in the observation log are included. If False, the area is calculated using all fields 
+            defined in the survey. Default is True.
+
+        buffer : float, optional
+            Size of the padding (in degrees) to apply around the combined 
+            geometry. This helps smooth overlaps and fill small gaps between 
+            neighboring fields. Default is 0.5.
+
+        Returns
+        -------
+        `shapely.geometry.base.BaseGeometry`
+            A shapely geometry (Polygon or MultiPolygon) representing the combined sky coverage.
+        """
         import shapely
         list_of_geoms = self.fields["geometry"]
         if observed:
@@ -86,18 +111,20 @@ class ZTF( GridSurvey ):
 
         Parameters
         ----------
-        data: pandas.DataFrame, optional
+        data: `pandas.DataFrame`, optional
             Data to be considered to get the field statistics.
             fieldstat will be derived from that (main grid only) groupby(fieldid).size().
             Ignored is fieldstat is given.
-        fieldstat: pandas.Series, optional
+
+        fieldstat: `pandas.Series`, optional
             Field statistics.
+
         **kwargs
-            Goes to ztffields.skyplot_fields.
+            Goes to ``ztffields.skyplot_fields``.
 
         Returns
         -------
-        matplotlib.figure
+        `matplotlib.figure`
         """
         import ztffields
         if fieldstat is None:

@@ -2,13 +2,8 @@
 target.kilonova
 ===============
 
-.. currentmodule:: skysurvey.target.kilonova
-
-.. automodule:: skysurvey.target.kilonova
-
-The Kilonovae is a pre-defined Transient class. See the corresponding documentation page in "List of transient classes" for more detail on this Transient class.
-
 .. automodule:: skysurvey.target.kilonova
    :members:
    :undoc-members:
+   :exclude-members: _PACKAGE_PATH, _KILONOVA_MODEL, _KIND, _TEMPLATE, _RATE, _MODEL
    :show-inheritance:

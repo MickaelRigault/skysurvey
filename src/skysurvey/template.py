@@ -1,4 +1,7 @@
-""" core template tools """
+"""
+This module provides core template tools, and defines the `Template`, `GridTemplate`, and `TemplateCollection` classes,
+which wrap `sncosmo.Model` objects to generate and fit lightcurves and spectra.
+"""
 
 import os
 import warnings
@@ -8,25 +11,24 @@ import sncosmo
 
 from astropy.utils.decorators import classproperty
 
-__all__ = ["get_sncosmo_model", "Template"]
 
 def get_sncosmo_model(source="salt2", zero_before=True,
                       **params):
-    """ Get the template (sncosmo.Model).
+    """ Get the template (`sncosmo.Model`).
 
     Parameters
     ----------
-    source : `~sncosmo.Source` or str
+    source : `sncosmo.Source` or str
         The model for the spectral evolution of the source. If a string
-        is given, it is used to retrieve a `~sncosmo.Source` from
+        is given, it is used to retrieve a `sncosmo.Source` from
         the registry.
 
-    **kwargs goes to model.set() to change the parameter's model
+    **kwargs goes to `model.set()` to change the parameter's model
 
     Returns
     -------
     `sncosmo.Model`
-        the sncosmo.Model template
+        the `sncosmo.Model` template
     """
     modelprop = dict(source=source)
     model = sncosmo.Model(**modelprop)
@@ -37,16 +39,16 @@ def get_sncosmo_model(source="salt2", zero_before=True,
     return model
 
 def sncosmoresult_to_pandas(result):
-    """ Takes a sncosmo.Results (lc fit output) and converts it in pandas's objects.
+    """ Takes a `sncosmo.Results` (lc fit output) and converts it in pandas's objects.
 
     Parameters
     ----------
-    result: sncosmo.Result
+    result: `sncosmo.Result`
         output of sncosmo's lightcurve fit function.
 
     Returns
     -------
-    pandas.DataFrame, pandas.Series
+    `pandas.DataFrame`, `pandas.Series`
         results (value, errors, covariances) and metadata (chi2, etc.)
     """
     error = pandas.Series( dict(result.get("errors") ), name="error")
@@ -63,7 +65,19 @@ def sncosmoresult_to_pandas(result):
     return fit_res, fit_meta
 
 def parse_template(template):
-    """ Read template or source. """
+    """ Parse a template or source into a ``skysurvey.Template`` instance.
+
+    Parameters
+    ----------
+    template : str, `sncosmo.Source`, `sncosmo.Model`, or ``skysurvey.Template``
+        The template to parse. If a string is given, it is assumed to be
+        a `sncosmo` model name.
+
+    Returns
+    -------
+    ``skysurvey.Template`` or list of ``skysurvey.Template``
+        The parsed template(s).
+    """
     template = np.atleast_1d(template)
     if len(template)>1:
         return [parse_template(template_) for template_ in template]
@@ -80,21 +94,24 @@ def parse_template(template):
         template = Template.from_sncosmo(template) # let's build a skysurvey.Template
     
     return template
+
 # =============== #
 #                 #
 #  Template       #
 #                 #
 # =============== #
 class Template( object ):
+    """
+    A class to model templates. 
+
+    Parameters
+    ----------
+    `sncosmo_model`: `sncosmo.Model`
+        The `sncosmo` model.
+    """
 
     def __init__(self, sncosmo_model):
-        """Initialize the Template class.
-
-        Parameters
-        ----------
-        sncosmo_model: sncosmo.Model
-            The sncosmo model.
-        """
+        """Initialize the Template class."""
         self._sncosmo_model = sncosmo_model
 
     @classmethod
@@ -104,13 +121,13 @@ class Template( object ):
 
         Parameters
         ----------
-        source : `~sncosmo.Source` or str
+        source : `sncosmo.Source` or str
             The model for the spectral evolution of the source. If a string
-            is given, it is used to retrieve a `~sncosmo.Source` from
+            is given, it is used to retrieve a `sncosmo.Source` from
             the registry.
 
-
-        **kwargs goes to ``get_sncosmo_model(source, **kwargs)``
+        **kwargs
+            goes to ``get_sncosmo_model(source, **kwargs)``
 
         Returns
         -------
@@ -130,14 +147,14 @@ class Template( object ):
     #  Effect  #
     # -------- #
     def add_effect(self, effects):
-        """ add effects to the sncosmo model
+        """ Add effects to the sncosmo model.
 
         Parameters
         ----------
-        effects: `skysurvey.effect`, list
-            effect to be applied to the sncosmo model
+        effects: ``skysurvey.effect``, list
+            effect to be applied to the `sncosmo` model
             It could be a list of effects.
-            (see skysurvey.effect.from_sncosmo, if you have a sncosmo.PropagationEffect, name and frame)
+            (see ``skysurvey.effect.from_sncosmo``, if you have a `sncosmo.PropagationEffect`, name and frame)
 
         Returns
         -------
@@ -150,12 +167,12 @@ class Template( object ):
     #  GETTER  #
     # -------- #
     def get(self, **kwargs):
-        """ return a copy of the model.
-        You can set new parameter to this copy using kwargs
+        """ Return a copy of the model.
+        You can set new parameter to this copy using kwargs.
 
         Returns
         -------
-        sncosmo.Model
+        `sncosmo.Model`
         """
         from copy import deepcopy
         model = deepcopy(self.sncosmo_model)
@@ -173,18 +190,24 @@ class Template( object ):
         ----------
         band: str or list
             Band or list of bands.
+
         times: array
             Array of times.
-        sncosmo_model: sncosmo.Model, optional
+
+        sncosmo_model: `sncosmo.Model`, optional
             The sncosmo model to use. If None, the instance's model is used.
+
         in_mag: bool, optional
             If True, return the lightcurve in magnitude.
+
         zp: float, optional
             Zero point for the flux.
+
         zpsys: str, optional
             Zero point system.
+
         **kwargs
-            Goes to self.get() to set the model parameters.
+            Goes to ``self.get()`` to set the model parameters.
 
         Returns
         -------
@@ -216,9 +239,9 @@ class Template( object ):
         return np.squeeze(values) if squeeze else values
 
     def get_spectrum(self, time, lbdas, sncosmo_model=None, as_phase=True, **kwargs):
-        """ get the spectrum at phase (time) for the given wavelength
+        """ Get the spectrum at phase (time) for the given wavelength.
 
-        (based in sncosmo_model.flux(time, lbda)
+        (based in `sncosmo_model.flux(time, lbda)`
 
         Parameters
         ----------
@@ -236,12 +259,12 @@ class Template( object ):
 
         Returns
         -------
-        flux : float or `~numpy.ndarray`
+        flux : float or `numpy.ndarray`
             Spectral flux density values in ergs / s / cm^2 / Angstrom.
 
         See also
         --------
-        get_lightcurve: get the transient lightcurve
+        :func:`get_lightcurve`: get the transient lightcurve
         """
         if sncosmo_model is None:
             sncosmo_model = self.get(**kwargs)
@@ -273,20 +296,25 @@ class Template( object ):
         ----------
         time: float
             Time (in phase).
+
         lbdas: array
             Wavelengths.
+
         params: dict, optional
             Parameters for the model.
-        ax: matplotlib.axes, optional
+
+        ax: `matplotlib.axes`, optional
             The axes to plot on.
-        fig: matplotlib.figure, optional
+
+        fig: `matplotlib.figure`, optional
             The figure to plot on.
+
         **kwargs
-            Goes to ax.plot().
+            Goes to `ax.plot()`.
 
         Returns
         -------
-        matplotlib.figure
+        `matplotlib.figure`
         """
         spec = self.get_spectrum(time, lbdas, **params)
 
@@ -317,36 +345,49 @@ class Template( object ):
         ----------
         band: str or list
             Band or list of bands.
+
         params: dict, optional
             Parameters for the model.
-        ax: matplotlib.axes, optional
+
+        ax: `matplotlib.axes`, optional
             The axes to plot on.
-        fig: matplotlib.figure, optional
+
+        fig: `matplotlib.figure`, optional
             The figure to plot on.
+
         colors: list, optional
             List of colors for the bands.
+
         phase_range: list, optional
             Phase range to plot.
+
         npoints: int, optional
             Number of points to plot.
+
         zp: float, optional
             Zero point for the flux.
+
         zpsys: str, optional
             Zero point system.
+
         format_time: bool, optional
             If True, format the time axis.
+
         t0_format: str, optional
             Format of the t0.
+
         in_mag: bool, optional
             If True, plot in magnitude.
+
         invert_mag: bool, optional
             If True, invert the magnitude axis.
+
         **kwargs
-            Goes to ax.plot().
+            Goes to `ax.plot()`.
 
         Returns
         -------
-        matplotlib.figure
+        `matplotlib.figure`
         """
         from .config import get_band_color
         # get the sncosmo_model
@@ -443,20 +484,25 @@ class Template( object ):
         ----------
         data: pandas.DataFrame
             The data to fit.
+
         guessparams: dict, optional
             Guess parameters for the fit.
+
         fixedparams: dict, optional
             Fixed parameters for the fit.
+
         vparam_names: list, optional
             List of parameters to vary.
+
         bounds: dict, optional
             Bounds for the parameters.
+
         **kwargs
-            Goes to sncosmo.fit_lc().
+            Goes to `sncosmo.fit_lc()`.
 
         Returns
         -------
-        pandas.DataFrame, pandas.Series
+        `pandas.DataFrame`, `pandas.Series`
             The results of the fit.
         """
 
@@ -485,18 +531,21 @@ class Template( object ):
 
         Parameters
         ----------
-        data: pandas.DataFrame or astropy.table.Table
+        data: `pandas.DataFrame` or `astropy.table.Table`
             The data to fit.
-        sncosmo_model: sncosmo.Model
+
+        sncosmo_model: `sncosmo.Model`
             The model to use for the fit.
+
         *args
-            Goes to sncosmo.fit_lc().
+            Goes to `sncosmo.fit_lc()`.
+
         **kwargs
-            Goes to sncosmo.fit_lc().
+            Goes to `sncosmo.fit_lc()`.
 
         Returns
         -------
-        pandas.DataFrame, pandas.Series
+        `pandas.DataFrame`, `pandas.Series`
             The results of the fit.
         """
         if type(data) is pandas.DataFrame: # sncosmo format
@@ -513,13 +562,12 @@ class Template( object ):
     # sncosmo_model
     @property
     def source(self):
-        """The sncosmo source."""
+        """The `sncosmo` source."""
         return self.sncosmo_model.source
 
     @property
     def sncosmo_model(self):
-        """ hiden sncosmo_model model to check what's inside.
-        """
+        """Hiden `sncosmo_model` model to check what's inside."""
         return self._sncosmo_model
 
     @property
@@ -540,11 +588,37 @@ class Template( object ):
 
 
 class GridTemplate( Template ):
+    """
+    A class to model `Gridtemplates`.
+
+    Parameters
+    ----------
+    sncosmo_model: `sncosmo.Model`
+        The `sncosmo` model.
+
+    _GRID_OF : str
+        The class type that populates this grid (e.g., a specific Source or Target class). Defaults to None.
+    """
 
     _GRID_OF = None
 
     @staticmethod
     def _read_single_file(filename, sncosmo_source):
+        """Load a single template from a file.
+
+        Parameters
+        ----------
+        filename : str
+            Path to the file.
+
+        sncosmo_source : `sncosmo.Source`
+            The `sncosmo` source class used to load the file.
+
+        Returns
+        -------
+        ``skysurvey.Template``
+            The loaded template.
+        """
         source = sncosmo_source.from_filename(filename)
         return Template.from_sncosmo(source)
 
@@ -556,14 +630,16 @@ class GridTemplate( Template ):
         ----------
         filenames: list
             List of filenames.
+
         refindex: int, optional
             Reference index for the grid.
-        grid_of: sncosmo.Source, optional
+
+        grid_of: `sncosmo.Source`, optional
             The source to use for the grid.
 
         Returns
         -------
-        GridTemplate
+        `GridTemplate`
         """
         if grid_of is None:
             grid_of = cls.grid_of
@@ -585,7 +661,7 @@ class GridTemplate( Template ):
 
         Parameters
         ----------
-        datafile: pandas.DataFrame
+        datafile: `pandas.DataFrame`
             The grid datafile.
         """
         self._grid_datafile = datafile
@@ -596,7 +672,7 @@ class GridTemplate( Template ):
 
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: `pandas.DataFrame`
             The grid data.
         """
         self._grid_data = data
@@ -606,14 +682,15 @@ class GridTemplate( Template ):
     #  handle Elements  #
     # ================= #
     def get(self, grid_element,  **kwargs):
-        """Return a sncosmo model for the template's source name (self.source).
+        """Return a `sncosmo` model for the template's source name (``self.source``).
 
         Parameters
         ----------
         grid_element: tuple
             The grid element to get.
+
         **kwargs
-            Goes to Template.get().
+            Goes to ``Template.get()``.
 
         Returns
         -------
@@ -630,18 +707,25 @@ class GridTemplate( Template ):
         ----------
         grid_element: tuple
             The grid element to get.
+
         band: str or list
             Band or list of bands.
+
         times: array
             Array of times.
-        sncosmo_model: sncosmo.Model, optional
+
+        sncosmo_model: `sncosmo.Model`, optional
             The sncosmo model to use. If None, the instance's model is used.
+
         params: dict, optional
             Parameters for the model.
+
         in_mag: bool, optional
             If True, return the lightcurve in magnitude.
+
         zp: float, optional
             Zero point for the flux.
+
         zpsys: str, optional
             Zero point system.
 
@@ -669,24 +753,30 @@ class GridTemplate( Template ):
 
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: `pandas.DataFrame`
             The data to fit.
+
         grid_element: tuple
             The grid element to use.
+
         guessparams: dict, optional
             Guess parameters for the fit.
+
         fixedparams: dict, optional
             Fixed parameters for the fit.
+
         vparam_names: list, optional
             List of parameters to vary.
+
         bounds: dict, optional
             Bounds for the parameters.
+
         **kwargs
-            Goes to sncosmo.fit_lc().
+            Goes to `sncosmo.fit_lc()`.
 
         Returns
         -------
-        pandas.DataFrame, pandas.Series
+        `pandas.DataFrame`, `pandas.Series`
             The results of the fit.
         """
         # let's put it inside guesses to goes to self.get()
@@ -710,38 +800,52 @@ class GridTemplate( Template ):
         ----------
         band: str or list
             Band or list of bands.
+
         grid_element: tuple
             The grid element to use.
+
         params: dict, optional
             Parameters for the model.
-        ax: matplotlib.axes, optional
+
+        ax: `matplotlib.axes`, optional
             The axes to plot on.
-        fig: matplotlib.figure, optional
+
+        fig: `matplotlib.figure`, optional
             The figure to plot on.
+
         colors: list, optional
             List of colors for the bands.
+
         phase_range: list, optional
             Phase range to plot.
+
         npoints: int, optional
             Number of points to plot.
+
         zp: float, optional
             Zero point for the flux.
+
         zpsys: str, optional
             Zero point system.
+
         format_time: bool, optional
             If True, format the time axis.
+
         t0_format: str, optional
             Format of the t0.
+
         in_mag: bool, optional
             If True, plot in magnitude.
+
         invert_mag: bool, optional
             If True, invert the magnitude axis.
+
         **kwargs
-            Goes to ax.plot().
+            Goes to `ax.plot()`.
 
         Returns
         -------
-        matplotlib.figure
+        `matplotlib.figure`
         """
         params["grid_element"]= grid_element
         props = locals()
@@ -785,20 +889,23 @@ class GridTemplate( Template ):
 
     @classproperty
     def grid_of(cls):
+        """The sncosmo source class used to build the grid templates."""
         if not hasattr(cls,"_grid_of"):
             return cls._GRID_OF
         return cls._grid_of
 
     
 class TemplateCollection( object ):
+    """
+    A class to model collections of templates. 
+    
+    Parameters
+    ----------
+    templates: list
+        List of templates.
+    """
     def __init__(self, templates):
-        """Initialize the TemplateCollection class.
-
-        Parameters
-        ----------
-        templates: list
-            List of templates.
-        """
+        """Initialize the TemplateCollection class."""
         self._templates = templates
 
     def __iter__(self):
@@ -807,16 +914,16 @@ class TemplateCollection( object ):
         
     @classmethod
     def from_sncosmo(cls, templates):
-        """Load the instance from a list of sncosmo sources.
+        """Load the instance from a list of `sncosmo` sources.
 
         Parameters
         ----------
         templates: list
-            List of sncosmo sources.
+            List of `sncosmo` sources.
 
         Returns
         -------
-        TemplateCollection
+        `TemplateCollection`
         """
         templates = [Template.from_sncosmo(template) for template in np.atleast_1d(templates)]
         return cls(templates)
@@ -832,7 +939,7 @@ class TemplateCollection( object ):
 
         Returns
         -------
-        TemplateCollection
+        `TemplateCollection`
         """
         templates = parse_template(templates)
         return cls(templates)
@@ -844,10 +951,13 @@ class TemplateCollection( object ):
         ----------
         which: str
             The method to call.
+
         margs: list, optional
             List of arguments for the method.
+
         allow_call: bool, optional
             If True, call the method.
+
         **kwargs
             Goes to the method.
 
@@ -873,10 +983,13 @@ class TemplateCollection( object ):
         ----------
         which: str
             The method to call.
+
         margs: list, optional
             List of arguments for the method.
+
         allow_call: bool, optional
             If True, call the method.
+
         **kwargs
             Goes to the method.
 
@@ -933,6 +1046,7 @@ class TemplateCollection( object ):
         ----------
         ref_index: int, optional
             The index of the template to get.
+
         **kwargs
             Goes to the template's get method.
 
@@ -955,20 +1069,27 @@ class TemplateCollection( object ):
         ----------
         band: str or list
             Band or list of bands.
+
         times: array
             Array of times.
+
         index: int, optional
             The index of the template to use.
+
         sncosmo_model: sncosmo.Model, optional
             The sncosmo model to use. If None, the instance's model is used.
+
         in_mag: bool, optional
             If True, return the lightcurve in magnitude.
+
         zp: float, optional
             Zero point for the flux.
+
         zpsys: str, optional
             Zero point system.
+
         **kwargs
-            Goes to the template's get_lightcurve method.
+            Goes to the template's ``get_lightcurve`` method.
 
         Returns
         -------
@@ -1016,7 +1137,7 @@ class TemplateCollection( object ):
     # = unique of not
     @property
     def effect_parameters(self):
-        """The effect parameters of the templates."""
+        """The effect parameters of all templates in the collection."""
 
     @property
     def template_parameters(self):

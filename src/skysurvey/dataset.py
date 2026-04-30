@@ -1,6 +1,9 @@
-"""This library concerns the data as observed"""
+"""
+This module concerns the data as observed.
+DataSet joins information for a Transient (list of true data) and a Survey (what has been observed when).
+It generates real lightcurves observations.
+"""
 
-#
 import numpy as np
 import pandas
 import sncosmo
@@ -9,7 +12,6 @@ import warnings
 from .target.collection import TargetCollection
 from .tools import speedutils
 
-__all__ = ["DataSet"]
 
 # ================== #
 #                    #
@@ -19,102 +21,33 @@ __all__ = ["DataSet"]
 
 
 class DataSet(object):
-    """A class for managing and realistic transient light curves given true data and survey observing logs.
+    """
+    A class for managing and realistic transient light curves given true data and survey observing logs.
 
     This class provides methods to load, manipulate, and visualize light curve data
     based on target and survey information.
 
+    The classmethod ``DataSet.from_targets_and_survey()`` should be favored for loading the dataset.
+
     Parameters
     ----------
-    data : pandas.DataFrame
+    data : `pandas.DataFrame`
         Multi-index dataframe corresponding to the concatenation of all targets observations.
 
-    targets : skysurvey.Target or child of, optional
+    targets : ``skysurvey.Target`` or child of, optional
         Target data corresponding to the true target parameters (as given by nature).
 
-    survey : skysurvey.Survey or child of, optional
+    survey : ``skysurvey.Survey`` or child of, optional
         Survey that has been used to generate the dataset (if known).
-
-    Attributes
-    ----------
-    data : pandas.DataFrame
-        Light curve data as observed by the survey.
-
-    targets : skysurvey.Target or child of
-        Target data corresponding to the true target parameters.
-
-    survey : skysurvey.Survey or child of
-        Survey used to generate the dataset.
-
-    obs_index : pandas.Index
-        Index of the observed targets.
 
     See Also
     --------
-    from_targets_and_survey : Loads a dataset (observed data) given targets and survey.
-    read_parquet : Loads a stored dataset.
-
-    Methods
-    -------
-    from_targets_and_survey(targets, survey, client=None, incl_error=True, **kwargs)
-        Loads a dataset given targets and a survey.
-
-    read_parquet(parquetfile, survey=None, targets=None, **kwargs)
-        Loads a stored dataset from a parquet file.
-
-    read_from_directory(dirname, **kwargs)
-        Loads a directory containing the dataset, the survey, and the targets.
-
-    set_data(data)
-        Sets the light curve data.
-
-    set_targets(targets)
-        Sets the targets.
-
-    set_survey(survey)
-        Sets the survey.
-
-    get_data(add_phase=False, phase_range=None, index=None, redshift_key="z", detection=None, zp=None)
-        Accesses the data with additional tools.
-
-    get_ndetection(phase_range=None, per_band=False)
-        Gets the number of detections for each light curve.
-
-    get_target_lightcurve(index, detection=None, phase_range=None)
-        Gets the observation of the given target.
-
-    show_target_lightcurve(ax=None, fig=None, index=None, zp=25, lc_prop={}, bands=None, show_truth=True, format_time=True, t0_format="mjd", phase_window=None, **kwargs)
-        Plots the light curve of a target.
-
-    realize_survey_target_lcs(targets, survey, template_prop={}, nfirst=None, incl_error=True, client=None, discard_bands=False, trim_observations=False, phase_range=None)
-        Creates the light curve of the input targets as they would be observed by the survey.
-
-    _realize_survey_kindtarget_lcs(targets, survey, template_prop={}, nfirst=None, incl_error=True, client=None, discard_bands=False, trim_observations=False, phase_range=None)
-        Creates the light curve of the input single-kind targets as they would be observed by the survey.
+    :func:`from_targets_and_survey` : Loads a dataset (observed data) given targets and survey.
+    :func:`read_parquet` : Loads a stored dataset.
     """
 
     def __init__(self, data, targets=None, survey=None):
-        """Initialize the DataSet class.
-
-        The classmethod Dataset.from_targets_and_survey() should be favored
-        for loading the dataset.
-
-        Parameters
-        ----------
-        data : pandas.DataFrame
-            Multi-index dataframe corresponding to the concatenation of all targets observations.
-
-        targets : skysurvey.Target or child of, optional
-            Target data corresponding to the true target parameters (as given by nature).
-
-        survey : skysurvey.Survey or child of, optional
-            Survey that has been used to generate the dataset (if known).
-
-        See also
-        --------
-        from_targets_and_survey: loads a dataset (observed data) given targets and survey
-        read_parquet: loads a stored dataset
-        """
+        """Initialize the DataSet class."""
         self.set_data(data)
         self.set_targets(targets)
         self.set_survey(survey)
@@ -125,18 +58,18 @@ class DataSet(object):
                                 discard_bands=True):
         """Loads a dataset (observed data) given targets and a survey.
 
-        This first matches the targets (given targets.data[["ra","dec"]]) with the
+        This first matches the targets (given ``targets.data[['ra','dec']]``) with the
         survey to find which target has been observed with which field.
-        Then simulate the targets lightcurves given the observing data (survey.data).
+        Then simulate the targets lightcurves given the observing data (``survey.data``).
 
 
         Parameters
         ----------
-        targets: skysurvey.Target, list, skysurvey.TargetCollection
+        targets: ``skysurvey.Target``, list, ``skysurvey.TargetCollection``
             Target data corresponding to the true target parameters
             (as given by nature). Could be a list
 
-        survey: skysurvey.Survey (or child of)
+        survey: ``skysurvey.Survey`` (or child of)
             Sky observation (what was observed when with which situation).
 
         incl_error: bool, optional
@@ -153,19 +86,20 @@ class DataSet(object):
 
         seed : None, int, Generator, RandomState, optional
             = ignored if incl_error=False =
-            # docstring adapted from np.random.default_rng()
+            (docstring adapted from ``np.random.default_rng``)
             If None, a fresh seed will be pulled.
-            If an ``int``, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
+            If an `int`, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
             Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
             When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
         
         discard_bands : bool, optional
             If True, discards the bands that includes wavelength for which the (observer-frame) target SED is not defined.
-            This prevents crashing the code due to an error from sncosmo.
+            This prevents crashing the code due to an error from `sncosmo`.
+
         Returns
         -------
-        dataset:
-            instance of a DataSet loaded from the given targets.
+        dataset
+            instance of a `DataSet` loaded from the given targets.
         """
         if progress_bar:
             from tqdm import tqdm
@@ -302,14 +236,14 @@ class DataSet(object):
         parquetfile: str
             path to the parquet file containing the dataset (pandas.DataFrame)
 
-        survey: skysurvey.Survey (or child of), None
+        survey: ``skysurvey.Survey`` (or child of), None
             survey that have been used to generate the dataset (if you know it)
 
-        targets: skysurvey.Target (of child of), None
+        targets: ``skysurvey.Target`` (of child of), None
             target data corresponding to the true target parameters
             (as given by nature)
 
-        **kwargs goes to pandas.read_parquet
+        **kwargs goes to `pandas.read_parquet`
 
         Returns
         -------
@@ -318,7 +252,7 @@ class DataSet(object):
 
         See also
         --------
-        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
         """
         data = pandas.read_parquet(parquetfile, **kwargs)
         return cls(data, survey=survey, targets=targets)
@@ -340,8 +274,8 @@ class DataSet(object):
 
         See also
         --------
-        from_targets_and_survey: loads a dataset (observed data) given targets and survey
-        read_parquet: loads a stored dataset
+        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
+        :func:`read_parquet`: loads a stored dataset
         """
         raise NotImplementedError("read_from_directory is not yet available.")
 
@@ -358,7 +292,7 @@ class DataSet(object):
 
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: `pandas.DataFrame`
             multi-index dataframe ((id, observation index))
             corresponding the concat of all targets observations
 
@@ -368,7 +302,7 @@ class DataSet(object):
 
         See also
         --------
-        read_parquet: loads a stored dataset
+        :func:`read_parquet`: loads a stored dataset
         """
         self._data = data
         self._obs_index = None
@@ -380,7 +314,7 @@ class DataSet(object):
 
         Parameters
         ----------
-        targets: skysurvey.Target (of child of), None
+        targets: ``skysurvey.Target`` (of child of), None
             target data corresponding to the true target parameters
             (as given by nature)
 
@@ -390,7 +324,7 @@ class DataSet(object):
 
         See also
         --------
-        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
         """
         self._targets = targets
 
@@ -401,7 +335,7 @@ class DataSet(object):
 
         Parameters
         ----------
-        survey: skysurvey.Survey (or child of), None
+        survey: ``skysurvey.Survey`` (or child of), None
             survey that have been used to generate the dataset (if you know it)
 
         Returns
@@ -410,7 +344,7 @@ class DataSet(object):
 
         See also
         --------
-        from_targets_and_survey: loads a dataset (observed data) given targets and survey
+        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
         """
         self._survey = survey
 
@@ -431,7 +365,7 @@ class DataSet(object):
             min and max phases to be returned. Applied on phase (rest-frame).
             Setting this sets add_phase to True.
 
-        index: pandas.Index, list, None
+        index: `pandas.Index`, list, None
             select the index (targets id) you want.
 
         redshift_key: string
@@ -441,6 +375,7 @@ class DataSet(object):
         detection: bool, None
             should this be limited to (non)detected points only ?
             This follow the bool/None format:
+
             - detection=None: no selection
             - detection=False: only non-detected points
             - detection=True: only detected points
@@ -457,7 +392,7 @@ class DataSet(object):
 
         Returns
         -------
-        pandas.DataFrame
+        `pandas.DataFrame`
         """
         if phase_range is not None:
             add_phase = True
@@ -504,9 +439,9 @@ class DataSet(object):
         return data
 
     def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False):
-        """get the number of detection for each lightcurves
+        """Get the number of detection for each lightcurves.
 
-        Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
+        Basically computes the number of datapoints with (flux/fluxerr)>detlimit).
 
         Parameters
         ----------
@@ -523,7 +458,7 @@ class DataSet(object):
 
         Returns
         -------
-        pandas.Series
+        `pandas.Series`
             the number of detected point per target (and per band if per_band=True)
         """
 
@@ -549,6 +484,7 @@ class DataSet(object):
         detection: bool, None
             should this be limited to (non)detected points only ?
             This follow the bool/None format:
+            
             - detection=None: no selection
             - detection=False: only non-detected points
             - detection=True: only detected points
@@ -559,7 +495,7 @@ class DataSet(object):
 
         Returns
         -------
-        pandas.DataFrame
+        `pandas.DataFrame`
             the lightcurve
         """
         return self.get_data(index=index, phase_range=phase_range, detection=detection)
@@ -576,10 +512,10 @@ class DataSet(object):
 
         Parameters
         ----------
-        ax : matplotlib.axes.Axes, optional
+        ax : `matplotlib.axes.Axes`, optional
             The axes on which to plot the light curve. If None, a new figure and axes will be created.
 
-        fig : matplotlib.figure.Figure, optional
+        fig : `matplotlib.figure.Figure`, optional
             The figure on which to plot the light curve. If None, a new figure will be created.
 
         index : int, optional
@@ -611,7 +547,7 @@ class DataSet(object):
 
         Returns
         -------
-        matplotlib.figure.Figure
+        `matplotlib.figure.Figure`
             The figure object containing the light curve plot.
         """
         from matplotlib.colors import to_rgba

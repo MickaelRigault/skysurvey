@@ -1,5 +1,5 @@
 Install skysurvey
-==============
+=================
 
 skysurvey is available to install via the `Python Package Index`_.
 

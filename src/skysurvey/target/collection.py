@@ -1,3 +1,7 @@
+"""
+This module defines collection objects for grouping and operating on multiple targets or transients simultaneously.
+"""
+
 import pandas
 import warnings
 import numpy as np
@@ -6,16 +10,35 @@ from ..template import Template
 from .timeserie import TSTransient
 from .core import Target, Transient
 
-__all__ = ["TargetCollection"]
-
 
 def targets_from_collection(transientcollection):
-    """Get targets from a transient collection."""
+    """Get targets from a transient collection.
+    """
     raise NotImplementedError
     
 
 def broadcast_mapping(value, ntargets):
-    """Broadcast a value to a given number of targets."""
+    """Broadcast a value to a given number of targets.
+    
+    Parameters
+    ----------
+    value : array or scalar
+        Input value to broadcast. If the input has more than one
+        dimension, broadcasting is applied along the first axis.
+
+    ntargets : int
+        Number of targets to broadcast the value to.
+
+    Returns
+    -------
+    ndarray
+        Broadcasted array of shape:
+
+        - (ntargets,) if `value` is 1D or scalar
+        - (ntargets, N) if `value` is 2D or higher, where N is the
+          size of the last dimension of `value`.
+
+    """
     value = np.atleast_1d(value)
     if np.ndim(value)>1:
         # squeeze drop useless dimensions.
@@ -27,10 +50,14 @@ def broadcast_mapping(value, ntargets):
 
 
 class TargetCollection( object ):
-    """A collection of targets.
+    """
+    A collection of targets.
 
     Parameters
     ----------
+    targets : list, optional
+        A list of targets. The default is None.
+
     _COLLECTION_OF : type, optional
         The type of target in the collection. The default is `Target`.
     _TEMPLATES : list, optional
@@ -40,13 +67,7 @@ class TargetCollection( object ):
     _TEMPLATES = []
     
     def __init__(self, targets=None):
-        """Initialize the TargetCollection.
-
-        Parameters
-        ----------
-        targets : list, optional
-            A list of targets. The default is None.
-        """
+        """Initialize the TargetCollection."""
         self.set_targets(targets)
 
     def as_targets(self):
@@ -107,19 +128,22 @@ class TargetCollection( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
+            
         as_model : bool, optional
-            should this return the sncosmo.Model (True) or the 
-            skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
+            should this return the `sncosmo.Model` (True) or the 
+            skysurvey.Template (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
+
         set_magabs: bool, optional
             should the peal magnitude of the template be set to magabs ?
+
         **kwargs
             Goes to `seld.template.get()` and passed to `sncosmo.Model`.
 
         Returns
         -------
-        skysurvey.Template or sncosmo.Model
+        ``skysurvey.Template`` or `sncosmo.Model`
             An instance of the template (or its associated `sncosmo.Model`).
-            (see as_model)
+            (see ``as_model``)
         """
 
         data_index = self.data.loc[index]
@@ -187,38 +211,52 @@ class TargetCollection( object ):
         ----------
         band : str
             The band to show.
+
         index : int
             The index of the target.
+
         params : dict, optional
-            Parameters to pass to `get_target_template`. The default is {}.
-        ax : matplotlib.axes.Axes, optional
+            Parameters to pass to ``get_target_template``. The default is {}.
+
+        ax : `matplotlib.axes.Axes`, optional
             The axes to plot on. The default is None.
-        fig : matplotlib.figure.Figure, optional
+
+        fig : `matplotlib.figure.Figure`, optional
             The figure to plot on. The default is None.
+
         colors : list, optional
             A list of colors to use. The default is None.
+
         time_range : list, optional
             The time range to plot. The default is [-20, 50].
+
         npoints : int, optional
             The number of points to plot. The default is 500.
+
         zp : float, optional
             The zero point to use. The default is 25.
+
         zpsys : str, optional
             The zero point system to use. The default is "ab".
+
         format_time : bool, optional
             Whether to format the time axis. The default is True.
+
         t0_format : str, optional
             The format of the time axis. The default is "mjd".
+
         in_mag : bool, optional
             Whether to plot in magnitudes. The default is False.
+
         invert_mag : bool, optional
             Whether to invert the magnitude axis. The default is True.
+
         **kwargs
-            Additional keyword arguments to pass to `template.show_lightcurve`.
+            Additional keyword arguments to pass to ``template.show_lightcurve``.
 
         Returns
         -------
-        matplotlib.figure.Figure
+        `matplotlib.figure.Figure`
             The figure containing the plot.
         """
 
@@ -305,10 +343,14 @@ class TargetCollection( object ):
         return self._template_names
     
 class TransientCollection( TargetCollection ):
-    """A collection of transients.
+    """
+    A collection of transients.
 
     Parameters
     ----------
+    targets : list, optional
+        A list of targets. The default is None.
+
     _COLLECTION_OF : type, optional
         The type of transient in the collection. The default is `Transient`.
     """
@@ -341,7 +383,7 @@ class TransientCollection( TargetCollection ):
         """Draw the transients in the collection.
 
 
-        rng : None, int, (Bit)Generator, optional
+        rng : None, int, `(Bit)Generator`, optional
             = ignored if size is None =
             seed for the random number generator.
             (doc adapted from numpy's `np.random.default_rng` docstring. 
@@ -384,10 +426,14 @@ class TransientCollection( TargetCollection ):
         return data
 
 class CompositeTransient( TransientCollection ):
-    """A composite transient.
+    """
+    A composite transient.
 
     Parameters
     ----------
+    targets : list, optional
+        A list of targets. The default is None.
+
     _COLLECTION_OF : type, optional
         The type of transient in the collection. The default is `Transient`.
     _KIND : str, optional
@@ -421,25 +467,32 @@ class CompositeTransient( TransientCollection ):
         size : int, optional
             Number of target you want to sample. If None, 1 is assumed.
             Ignored if `nyears` is given. By default None.
+
         model : dict, optional
             Defines how template parameters are drawn and how they are
             connected. The model will update the default `cls._MODEL` if any.
             If None, `cls._MODEL` is used as default. By default None.
+
         templates : str, optional
             Name of the template (`sncosmo.Model(source)`). If None,
             `cls._TEMPLATE` is used as default. By default None.
+
         zmax : float, optional
             Maximum redshift to be simulated. By default None.
+
         tstart : float, str, optional
             Starting time of the simulation. If a string is given, it is
             converted to mjd. By default None.
+
         tstop : float, str, optional
             Ending time of the simulation. If a string is given, it is
             converted to mjd. If `tstart` and `nyears` are both given,
             `tstop` will be overwritten by `tstart + 365.25 * nyears`.
             By default None.
+
         zmin : float, optional
             Minimum redshift to be simulated. By default 0.
+
         nyears : float, optional
             If given, `nyears` will set:
 
@@ -469,12 +522,12 @@ class CompositeTransient( TransientCollection ):
 
         Returns
         -------
-        CompositeTransient
+        `CompositeTransient`
             The loaded instance.
 
         See Also
         --------
-        from_setting: loads an instance given model parameters (dict)
+        ``from_setting``: loads an instance given model parameters (dict)
         """
         this = cls()
     
@@ -539,10 +592,14 @@ class CompositeTransient( TransientCollection ):
     
     
 class TSTransientCollection( TransientCollection ):
-    """A collection of time-series transients.
+    """
+    A collection of time-series transients.
 
     Parameters
     ----------
+    targets : list, optional
+        A list of targets. The default is None.
+
     _COLLECTION_OF : type, optional
         The type of transient in the collection. The default is `TSTransient`.
     """

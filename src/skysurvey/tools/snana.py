@@ -1,13 +1,14 @@
-""" module to help SNANA users """
+"""
+This module provides utilities to help `SNANA` users.
+"""
+
 import numpy as np
 import pandas
 import warnings
 
-__all__ = ["parse_simlib"]
 
 def parse_simlib(simlib):
-    """"
-    Parse a single snana simlib file.
+    """ Parse a single snana simlib file.
 
     Parameters
     ----------
@@ -16,10 +17,10 @@ def parse_simlib(simlib):
        
     Returns
     -------
-    data: pandas.DataFrame
+    data: `pandas.DataFrame`
         Concatenated DataFrame of all blocks.
 
-    metadata: pandas.DataFrame
+    metadata: `pandas.DataFrame`
         DataFrame of metadata for each block.
     """
     file_ = open(simlib, "r").read().splitlines()
@@ -42,8 +43,7 @@ def parse_simlib(simlib):
     return data, metadata
 
 def parse_simlib_block(block):
-    """ 
-    Parse a single snana simlib block.
+    """ Parse a single snana simlib block.
 
     Parameters
     ----------
@@ -52,9 +52,9 @@ def parse_simlib_block(block):
 
     Returns
     -------
-    dataframe: pandas.DataFrame
+    dataframe: `pandas.DataFrame`
     
-    meta: pandas.Series or None
+    meta: `pandas.Series` or None
         Returns None if metadata parsing fails.
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
@@ -102,8 +102,7 @@ def parse_simlib_block(block):
 
 ### DES ####
 def parse_simlib_des(simlib):
-    """"
-    Parse a single snana simlib file adapted for a DES simlib file.
+    """ Parse a single snana simlib file adapted for a DES simlib file.
 
     Parameters
     ----------
@@ -112,10 +111,10 @@ def parse_simlib_des(simlib):
        
     Returns
     -------
-    data: pandas.DataFrame
+    data: `pandas.DataFrame`
         Concatenated DataFrame of all blocks.
 
-    metadata: pandas.DataFrame
+    metadata: `pandas.DataFrame`
         DataFrame of metadata for each block.
     """
     file_ = open(simlib, "r").read().splitlines()
@@ -138,8 +137,7 @@ def parse_simlib_des(simlib):
     return data, metadata
 
 def parse_simlib_block_des(block):
-    """ 
-    Parse a single snana simlib block, adapted for DES simlib blocks.
+    """  Parse a single snana simlib block, adapted for DES simlib blocks.
 
     Parameters
     ----------
@@ -148,9 +146,9 @@ def parse_simlib_block_des(block):
 
     Returns
     -------
-    dataframe: pandas.DataFrame
+    dataframe: `pandas.DataFrame`
     
-    meta: pandas.Series or None
+    meta: `pandas.Series` or None
         Returns None if metadata parsing fails.
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
