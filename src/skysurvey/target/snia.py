@@ -39,7 +39,7 @@ The `SNeIa` is defined as such:
                               "as":["ra","dec"]}
                         )
 
-Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude) are also defined.
+Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude) are also defined:
 """
 import numpy as np
 from scipy import stats
