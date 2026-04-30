@@ -1,13 +1,8 @@
 target.collection
 =================
 
-.. currentmodule:: skysurvey.target.collection
-
-.. automodule:: skysurvey.target.collection
-
-This module defines collection objects for grouping and operating on multiple targets or transients simultaneously.
-
 .. automodule:: skysurvey.target.collection
    :members:
    :undoc-members:
+   :exclude-members: _COLLECTION_OF, _TEMPLATES, _KIND, _RATE, _MAGABS
    :show-inheritance:

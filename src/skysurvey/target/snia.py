@@ -1,11 +1,51 @@
+"""
+This module provides the `SNeIa` class, a pre-defined Transient class.
 
+It means the basic ``_MODEL`` functionality has been defined.
+
+See the corresponding documentation page in "List of transient classes" for more detail on this Transient class.
+
+The `SNeIa` is defined as such:
+
+.. code-block:: python
+   :caption: The SNeIa class.
+
+   class SNeIa( Transient ):
+   _KIND = "SNIa"
+   _TEMPLATE_SOURCE = "salt2"
+   _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
+   _MODEL = dict( redshift ={"param":{"zmax":0.2}, "as":"z"},
+                              
+                   x1={"model":"nicolas2021"}, 
+                   
+                   c={"model":"intrinsic_and_dust"},
+
+                   t0={"model":"uniform", 
+                       "param":{"mjd_range":[59000, 59000+365*4]} },
+                       
+                   magabs={"model":"tripp1998",
+                           "input":["x1","c"]
+                          },
+                           
+                   magobs={"model":"magabs_to_magobs",
+                         "input":["z", "magabs"]},
+
+                   x0={"model":"magobs_to_x0",
+                       "input":["magobs"]},
+                       
+                   radec={"model":"random",
+                          "param":dict(ra_range=[0, 360],
+			               dec_range=[-30, 90]),
+                          "as":["ra","dec"]}
+                    )
+
+Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude) are also defined.
+"""
 import numpy as np
 from scipy import stats
 from .core import Transient
 
 from ..tools.utils import random_radec
-
-__all__ = ["SNeIa"]
 
 RNG = np.random.default_rng()
 
@@ -28,10 +68,13 @@ class SNeIaColor( object ):
         ----------
         size : int
             The number of random variates to draw.
+
         a : float, optional
             The alpha parameter of the alpha function. The default is 3.63.
+
         loc : float, optional
             The location parameter of the alpha function. The default is -0.416.
+
         scale : float, optional
             The scale parameter of the alpha function. The default is 1.62.
 
@@ -54,10 +97,13 @@ class SNeIaColor( object ):
             The x-axis of the color distribution. It should be a string with
             the format "min:max:step". The default is "-0.3:1:0.01".
             This is evaluated as `np.r_[xx]`.
+
         cint : float, optional
             The mean of the intrinsic color distribution. The default is -0.05.
+
         sigmalow : float, optional
             The standard deviation for the bluer tails. The default is 0.03.
+
         sigmahigh : float, optional
             The standard deviation for the redder tails. The default is 0.1.
 
@@ -88,11 +134,14 @@ class SNeIaColor( object ):
             The x-axis of the color distribution. It should be a string with
             the format "min:max:step". The default is "-0.3:1:0.01".
             This is evaluated as `np.r_[xx]`.
+
         cint : float, optional
             The mean of the intrinsic color distribution. The default is -0.075.
+
         sigmaint : float, optional
             The standard deviation of the intrinsic color distribution.
             The default is 0.05.
+
         tau : float, optional
             The decay constant of the dust distribution. The default is 0.14.
 
@@ -133,17 +182,23 @@ class SNeIaStretch( object ):
             array given the pdf that will be estimated for it. If a string is
             given, it is evaluated as `np.r_[xx]`. The default is
             "-4:4:0.005".
+
         mu1 : float, optional
             The mean of the first gaussian. The default is 0.33.
+
         sigma1 : float, optional
             The standard deviation of the first gaussian. The default is 0.64.
+
         mu2 : float, optional
             The mean of the second gaussian. The default is -1.50.
+
         sigma2 : float, optional
             The standard deviation of the second gaussian. The default is 0.58.
+
         a : float, optional
             The relative influence of both modes (1 or 2) in the delayed
             environment. `a>0.5` means more mode 1. The default is 0.45.
+
         fprompt : float, optional
             The fraction of prompt SNe Ia. This is ignored if `redshift` is
             given. The default is 0.5.
@@ -179,21 +234,27 @@ class SNeIaMagnitude( object ):
         ----------
         x1 : array
             The lightcurve stretch. `x1` and `c` must have the same size.
+
         c : array
             The lightcurve color. `x1` and `c` must have the same size.
+
         mabs : float, optional
             The average absolute magnitude at `c=0` and `x1=0`. The default is
             -19.3.
+
         sigmaint : float, optional
             The scale of the normal grey scatter (on `mabs`). The default is
             0.10.
+
         alpha : float, optional
             The stretch linear law coefficient. The default is -0.14.
+
         beta : float, optional
             The color linear law coeeficient. The default is 3.15.
+
         rng: None, int, Generator
             Random number generator seed. 
-            (docstring extracted from np.random.default_rng(), see this for complete documentation).
+            (docstring extracted from `np.random.default_rng()`, see this for complete documentation).
             If None, then fresh, unpredictable entropy will be pulled from the OS. 
             If an ``int``, then the seed will start from this.
             If passed a `Generator`, it will be returned unaltered.
@@ -220,21 +281,28 @@ class SNeIaMagnitude( object ):
         ----------
         x1 : array
             The lightcurve stretch. `x1` and `c` must have the same size.
+
         c : array
             The lightcurve color. `x1` and `c` must have the same size.
+
         isup : array
             An array of 0 or 1, flagging which target has `+gamma/2` (1) or
             `-gamma/2` (0).
+
         mabs : float, optional
             The average absolute magnitude at `c=0` and `x1=0`. The default is
             -19.3.
+
         sigmaint : float, optional
             The scale of the normal grey scatter (on `mabs`). The default is
             0.10.
+
         alpha : float, optional
             The stretch linear law coefficient. The default is -0.14.
+
         beta : float, optional
             The color linear law coefficient. The default is 3.15.
+
         gamma : float, optional
             The step's amplitude. The default is 0.1.
 
@@ -260,22 +328,30 @@ class SNeIaMagnitude( object ):
         ----------
         x1 : array
             The lightcurve stretch. `x1` and `c` must have the same size.
+
         c : array
             The lightcurve color. `x1` and `c` must have the same size.
+
         hostmass : array
             The host stellar mass.
+
         mabs : float, optional
             The average absolute magnitude at `c=0` and `x1=0`. The default is
             -19.3.
+
         sigmaint : float, optional
             The scale of the normal grey scatter (on `mabs`). The default is
             0.10.
+
         alpha : float, optional
             The stretch linear law coefficient. The default is -0.14.
+
         beta : float, optional
             The color linear law coeeficient. The default is 3.15.
+
         gamma : float, optional
             The step's amplitude. The default is 0.1.
+
         split : float, optional
             The host mass boundary between low-mass and high-mass hosts.
             The default is 10.
@@ -298,7 +374,8 @@ class SNeIaMagnitude( object ):
 
 
 class SNeIa( Transient ):
-    """A class to model SNe Ia.
+    """
+    A class to model SNe Ia.
 
     Parameters
     ----------
@@ -308,6 +385,8 @@ class SNeIa( Transient ):
         The template to use. The default is "salt2".
     _RATE : float, optional
         The rate of SNe Ia. The default is 2.35 * 10**4.
+    _AMPLITUDE_NAME : str, optional
+        The name of the amplitude. The default is "x0"
     _MODEL : dict, optional
         The model to use. The default is a dictionary with the following
         keys:

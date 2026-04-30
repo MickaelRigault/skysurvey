@@ -1,5 +1,5 @@
 survey
-=====
+======
 
 .. currentmodule:: skysurvey.survey
 
@@ -12,6 +12,7 @@ survey
     skysurvey.survey.healpix
     skysurvey.survey.lsst
     skysurvey.survey.polygon 
+    skysurvey.survey.roman
     skysurvey.survey.snls   
     skysurvey.survey.ztf
 

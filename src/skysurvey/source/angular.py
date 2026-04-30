@@ -1,33 +1,41 @@
+"""
+This module defines `AngularTimeSeriesSource`, a `sncosmo` source class for spectral time series models.
+"""
+
 import numpy as np
 from scipy.interpolate import RectBivariateSpline as Spline2d
 import sncosmo
 
-__all__ = ["AngularTimeSeriesSource"]
 
 class AngularTimeSeriesSource(sncosmo.Source):
-    r""" A single-component spectral time series model.
-        The spectral flux density of this model is given by
-        .. math::
-        F(t, \lambda) = A \\times M(t, \lambda, \cos_\theta)
-        where _M_ is the flux defined on a grid in phase and wavelength
-        and _A_ (amplitude) is the single free parameter of the model. The
-        amplitude _A_ is a simple unitless scaling factor applied to
-        whatever flux values are used to initialize the
-        ``TimeSeriesSource``. Therefore, the _A_ parameter has no
-        intrinsic meaning. It can only be interpreted in conjunction with
-        the model values. Thus, it is meaningless to compare the _A_
-        parameter between two different ``TimeSeriesSource`` instances with
-        different model data.
+    r"""
+    A single-component spectral time series model.
+    
+    The spectral flux density of this model is given by
+    
+    .. math::
+
+        F(t, \lambda) = A \times M(t, \lambda, \cos\theta)
+
+    where :math:`M` is the flux defined on a grid in phase and wavelength
+    and :math:`A` (amplitude) is the single free parameter of the model. The
+    amplitude :math:`A` is a simple unitless scaling factor applied to
+    whatever flux values are used to initialize the
+    ``TimeSeriesSource``. Therefore, the :math:`A` parameter has no
+    intrinsic meaning. It can only be interpreted in conjunction with
+    the model values. Thus, it is meaningless to compare the :math:`A`
+    parameter between two different ``TimeSeriesSource`` instances with
+    different model data.
 
     Parameters
     ----------
-    phase : `~numpy.ndarray`
+    phase : `numpy.ndarray`
         Phases in days.
 
-    wave : `~numpy.ndarray`
+    wave : `numpy.ndarray`
         Wavelengths in Angstroms.
 
-    flux : `~numpy.ndarray`
+    flux : `numpy.ndarray`
         Model spectral flux density in arbitrary units.
         Must have shape `(num_phases)`.
 
@@ -41,15 +49,14 @@ class AngularTimeSeriesSource(sncosmo.Source):
         default is False, in which case the flux at such phases will be equal
         to the flux at the maximum phase (``flux[-1, :]`` in the input array).
 
-    cos_theta : `~numpy.ndarray`
+    cos_theta : `numpy.ndarray`
         cosine of viewing angle
 
     name : str, optional
-        Name of the model. Default is `None`.
+        Name of the model. Default is None.
 
     version : str, optional
-        Version of the model. Default is `None`.
-
+        Version of the model. Default is None.
     """
 
     _param_names = ['amplitude', 'theta']
@@ -58,7 +65,7 @@ class AngularTimeSeriesSource(sncosmo.Source):
     def __init__(self, phase, wave, cos_theta, flux,
                      zero_before=False, zero_after=False, name=None,
                      version=None):
-
+        """ Initialize the AngularTimeSeriesSource class."""
         self.name = name
         self.version = version
         self._phase = phase
@@ -72,6 +79,7 @@ class AngularTimeSeriesSource(sncosmo.Source):
         self._set_theta()
 
     def _set_theta(self):
+        """ Update the internal 2D interpolation grid based on the current theta parameter. """
         logflux_ = np.zeros(self._flux_array.shape[:2])
         
         for k in range(len(self._phase)):
@@ -84,6 +92,22 @@ class AngularTimeSeriesSource(sncosmo.Source):
         self._current_theta = self._parameters[1]
         
     def _flux(self, phase, wave):
+        """
+        Compute the spectral flux density at given phase and wavelength.
+
+        Parameters
+        ----------
+        phase : `numpy.ndarray`
+            Array of phases.
+
+        wave : `numpy.ndarray`
+            Array of wavelengths.
+
+        Returns
+        -------
+        flux : `numpy.ndarray`
+            The interpolated flux density, scaled by amplitude.
+        """
         if self._current_theta != self._parameters[1]:
             self._set_theta()
             

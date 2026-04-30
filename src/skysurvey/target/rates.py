@@ -1,4 +1,9 @@
+"""
+This module provides utility functions for drawing and computing volumetric rates and redshift distributions.
+"""
+
 import numpy as np
+
 from astropy.cosmology import Planck18
 
 def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
@@ -9,27 +14,34 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     ----------
     size : int
         Number of target to draw.
+
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
+
     zmin : float, optional
         Minimum redshift. The default is 0.
+
     zmax : float, optional
         Maximum redshift. The default is 2.
+
     zstep : float, optional
         Sampling of the redshift. The default is 1e-5.
-    cosmology: astropy.Cosmology, optional
+
+    cosmology: `astropy.Cosmology`, optional
         Cosmology to use to compute volume, as the rate are "volumetric rates".
-    rng : None, int, (Bit)Generator, optional
+
+    rng : None, int, `(Bit)Generator`, optional
         seed for the random number generator.
         (doc adapted from numpy's `np.random.default_rng` docstring. 
         See that documentation for details.)
         If None, an unpredictable entropy will be pulled from the OS.
         If an ``int``, (>0), it will set the initial `BitGenerator` state.
         If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+
     **kwargs
-        Goes to `get_ntargets_per_shell()` -> `get_rate()`.
+        Goes to :func:`get_ntargets_per_shell()` -> :func:`get_rate()`.
 
     Returns
     -------
@@ -60,10 +72,12 @@ def get_rate(z, rate, **kwargs):
     ----------
     z : array
         Array of redshifts.
+
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
+
     **kwargs
         Rate options if rate is a function. 
         ignored otherwise.
@@ -82,28 +96,36 @@ def get_rate(z, rate, **kwargs):
     return n_per_gpc3
     
 def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, astype="int", **kwargs):
-    """ get the total number of target expected in the given volume
+    """ Get the total number of target expected in the given volume.
 
     Parameters
     ----------
     zmax : float
         outter redshift of the volume.
+
     rate : float, array or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
         If an array is given, if array broacasts with shell size, then it 
-        multiplies shell, if not than an axes is added and pdf is (rates.shape, nbins)
+        multiplies shell, if not than an axes is added and pdf is (rates.shape, nbins).
+
     zmin: float
         inner redshift of the volume.
-    cosmology : astropy.Cosmology, optional
-        Cosmology used to get the comiving_volume. The default is
+
+    cosmology : `astropy.Cosmology`, optional
+        Cosmology used to get the comoving_volume. The default is
         `Planck18`.
+
     zstep: float
         binning of the redshift used for the computation.
+
     astype: bool
         type of the returned number of target per shell.
-    **kwargs goes to get_rate()
+
+    **kwargs:
+        goes to :func:`get_rate()`
+
     Returns
     -------
     zbins: array
@@ -134,25 +156,31 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
     
 def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell=False, astype="int", **kwargs):
-    """ get the total number of target expected in the given volume
+    """ Get the total number of target expected in the given volume.
 
     Parameters
     ----------
     zmax : float
         outter redshift of the volume.
+
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
+
     zmin: float
         inner redshift of the volume.
-    cosmology : astropy.Cosmology, optional
-        Cosmology used to get the comiving_volume. The default is
+
+    cosmology : `astropy.Cosmology`, optional
+        Cosmology used to get the comoving_volume. The default is
         `Planck18`.
+
     zstep: float
         binning of the redshift used for the computation.
+
     force_shell: bool
         If the input rate is a constant, should this force the use of shell computation ?
+        
     astype: bool
         type of the returned value.
 

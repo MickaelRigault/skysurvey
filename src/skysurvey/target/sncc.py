@@ -1,29 +1,38 @@
-import numpy as np
+"""
+This module provides Core-Collapse (CC) Supernovae classes. See the corresponding documentation page in "List of transient classes" 
+for more detail on those Transient class.
+"""
 
+import numpy as np
 
 from .timeserie import MultiTemplateTSTransient
 from ..source import get_sncosmo_sourcenames
-
-
-__all__ = ["SNeII", "SNeIIn", "SNeIIb",
-           "SNeIb", "SNeIc", "SNeIcBL"]
-
 
 CC_RATE = 1.0e5 # Perley+2020
     
 # https://sncosmo.readthedocs.io/en/stable/source-list.html
 
 class VincenziModels( object ):
-    """Default parametrization for the TimeSeriesSources based on Vincenzi et al. 2019.
+    """
+    Default parametrization for the `TimeSeriesSources` based on Vincenzi et al. 2019. (Reference: https://ui.adsabs.harvard.edu/abs/2019MNRAS.489.5802V)
 
-    These are stored in sncosmo.
+    These are stored in `sncosmo`.
 
     Parameters
     ----------
     object : class
-        The parent class of the VincenziModels class.
+        The parent class of the `VincenziModels` class.
 
-    Reference: https://ui.adsabs.harvard.edu/abs/2019MNRAS.489.5802V
+    _KIND : str or None
+        The specific supernova type (e.g., 'II', 'IIP', 'Ib'). Used to 
+        identify the corresponding ``v19-*-corr`` template in sncosmo.
+    _TEMPLATES : str
+        The template selection mode. For Vincenzi models, this is set to 
+        `"complex"` to handle the variety of templates associated with 
+        each supernova sub-type.
+    _RATE : float
+        The volumetric rate of the transient. Defaults to `np.nan`. 
+        Users should provide a rate (typically in units of :math:`Gpc^{-3} yr^{-1}`).
     """
     _KIND = None
     # takes the v19-*-corr corresponding to the given _KIND
@@ -38,7 +47,12 @@ class VincenziModels( object ):
 
     @property
     def template(self):
-        """ # TO DO
+        """ List of `sncosmo` source names for the Vincenzi models.
+
+        Returns
+        -------
+        list of str
+            The `sncosmo` source names matching the Vincenzi 2019 templates.
         """
         if not hasattr(self,"_template") or self._template is None:
             template_list = get_sncosmo_sourcenames(self._KIND,
@@ -49,17 +63,23 @@ class VincenziModels( object ):
         return self._template
 
 class SnanaModels( VincenziModels ):
-    """ Same as VincenziModels but matching different naming convention in sncosmo
+    """
+    Same as `VincenziModels` but matching different naming convention in `sncosmo`.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SnanaModels class.
+        The parent class of the `SnanaModels` class.
     """
     
     @property
     def template(self):
-        """ # TO DO
+        """ List of sncosmo source names using the `SNANA` naming convention.
+
+        Returns
+        -------
+        list of str
+            The `sncosmo` source names matching the `SNANA` templates.
         """
         if not hasattr(self,"_template") or self._template is None:
             template_list = get_sncosmo_sourcenames(self._KIND,
@@ -81,14 +101,27 @@ class SnanaModels( VincenziModels ):
 
 
 class SNeII( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe II model from Vincenzi et al. 2019.
+    r"""
+    SNe II model from Vincenzi et al. 2019.
+
+    This model combines IIL and IIP types.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeII class.
+        The parent class of the `SNeII` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeII class.
+        The parent class of the `SNeII` class.
+
+    _KIND : str
+        The transient type identifier: ``"SN II"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.649`, 
+        consistent with the Type II fraction from Perley et al. 2020.
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-17.48, 0.7)``, based on BTS z < 0.05.
     """
     _KIND = "SN II"
     # change the absolute magnitude parameters
@@ -99,33 +132,53 @@ class SNeII( VincenziModels, MultiTemplateTSTransient ):
     _MAGABS = (-17.48, 0.7) # MR from BTS z<0.05
     
 class SNeIIn( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe IIn model from Vincenzi et al. 2019.
+    r"""
+    SNe IIn model from Vincenzi et al. 2019.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeIIn class.
+        The parent class of the `SNeIIn` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeIIn class.
+        The parent class of the `SNeIIn` class.
+
+    _KIND : str
+        The transient type identifier: ``"SN IIn"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.047`, 
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-18.0, 0.8)``, based on BTS z < 0.05.
     """    
     _KIND = "SN IIn"
     _RATE = CC_RATE * 0.047
-#    _MAGABS = (-17.7, 1.1) # Table 1 of Vincenzi19
+    #_MAGABS = (-17.7, 1.1) # Table 1 of Vincenzi19
     _MAGABS = (-18.0, 0.8) # MR from BTS z<0.05
         
 class SNeIIb( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe IIb model from Vincenzi et al. 2019.
+    r"""
+    SNe IIb model from Vincenzi et al. 2019.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeIIb class.
+        The parent class of the `SNeIIb` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeIIb class.
+        The parent class of the `SNeIIb` class.
+    
+    _KIND : str
+        The transient type identifier: ``"SN IIb"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.109`, 
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-17.45, 0.6)``, based on BTS z < 0.05.
     """    
     _KIND = "SN IIb"
     _RATE = CC_RATE * 0.109
-#    _MAGABS = (-16.7, 2.0) # Table 1 of Vincenzi19
+    #_MAGABS = (-16.7, 2.0) # Table 1 of Vincenzi19
     _MAGABS = (-17.45, 0.6) # MR from BTS z<0.05
     
 # =============== #
@@ -134,14 +187,24 @@ class SNeIIb( VincenziModels, MultiTemplateTSTransient ):
 #                 #
 # =============== #
 class SNeIb( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe Ib model from Vincenzi et al. 2019.
+    r"""
+    SNe Ib model from Vincenzi et al. 2019.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeIb class.
+        The parent class of the `SNeIb` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeIb class.
+        The parent class of the `SNeIb` class.
+    
+    _KIND : str
+        The transient type identifier: ``"SN Ib"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.108`, 
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-17.35, 0.53)``, based on BTS z < 0.05.
     """    
     _KIND = "SN Ib"
     _RATE = CC_RATE * 0.108
@@ -150,14 +213,24 @@ class SNeIb( VincenziModels, MultiTemplateTSTransient ):
     _MAGABS = (-17.35, 0.53) # MR from BTS z<0.05
     
 class SNeIc( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe Ic model from Vincenzi et al. 2019.
+    r"""
+    SNe Ic model from Vincenzi et al. 2019.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeIc class.
+        The parent class of the `SNeIc` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeIc class.
+        The parent class of the `SNeIc` class.
+    
+    _KIND : str
+        The transient type identifier: ``"SN Ic"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.075`, 
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-17.50, 0.7)``, based on BTS z < 0.05.
     """    
     _KIND = "SN Ic"
     _RATE = CC_RATE * 0.075
@@ -165,14 +238,24 @@ class SNeIc( VincenziModels, MultiTemplateTSTransient ):
     _MAGABS = (-17.50, 0.7) # MR from BTS z<0.05
 
 class SNeIcBL( VincenziModels, MultiTemplateTSTransient ):
-    """ SNe Ic-BL model from Vincenzi et al. 2019.
+    r"""
+    SNe Ic-BL model from Vincenzi et al. 2019.
 
     Parameters
     ----------
     VincenziModels : class
-        The parent class of the SNeIcBL class.
+        The parent class of the `SNeIcBL` class.
+
     MultiTemplateTSTransient : class
-        The parent class of the SNeIcBL class.
+        The parent class of the `SNeIcBL` class.
+
+    _KIND : str
+        The transient type identifier: ``"SN Ic-BL"``.
+    _RATE : float
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.097`, joining rates from SNe Ic-BL and SNe Ic-pec.
+    _MAGABS : tuple
+        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        Defaults to ``(-18.12, 0.9)``, based on BTS z < 0.05.
     """    
     _KIND = "SN Ic-BL"
     _RATE = CC_RATE * 0.097 # joining Ic-BL & Ic-pec    

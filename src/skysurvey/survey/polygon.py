@@ -1,4 +1,6 @@
-""" Survey with Polygon vertices based on Shapely. """
+"""
+This module defines the `PolygonSurvey` class, a survey type where fields are represented as shapely polygons projected onto the sky.
+"""
 
 import pandas
 import numpy as np
@@ -9,8 +11,6 @@ import warnings
 from .core import BaseSurvey
 from ..tools.projection import spatialjoin_radec_to_fields, parse_fields, project_to_radec
 
-__all__ = ["PolygonSurvey"] 
-
     
 # ================== #
 #                    #
@@ -18,20 +18,25 @@ __all__ = ["PolygonSurvey"]
 #                    #
 # ================== #
 class PolygonSurvey( BaseSurvey ):
+    """ The `PolygonSurvey` class.
+
+    Parameters
+    ----------
+    data: `pandas.DataFrame`
+        observing data.
+
+    fields: `geopandas.GeoDataFrame`
+        field definitions.
+    
+    _DEFAULT_FIELDS : `geopandas.GeoDataFrame` or None
+        The default field definitions for this survey type. 
+        Subclasses should override this to provide specific survey grids.
+    """
     _DEFAULT_FIELDS = None
     
     def __init__(self, data=None, fields=None):
         """ 
-        Initialize the PolygonSurvey class.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            observing data.
-
-        fields: geopandas.GeoDataFrame
-            field definitions.
-        """
+        Initialize the PolygonSurvey class."""
         if fields is None:
             if self._DEFAULT_FIELDS is None:
                 raise NotImplementedError("No default fields known for this class. No fields given")
@@ -47,13 +52,13 @@ class PolygonSurvey( BaseSurvey ):
 
         Parameters
         ----------
-        data: pandas.DataFrame or dict
+        data: `pandas.DataFrame` or dict
             observing data, must contain the rakey and deckey columns.
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
-        moc: mocpy.MOC
+        moc: `mocpy.MOC`
             MOC representation of the observing camera
 
         rakey: str
@@ -64,7 +69,7 @@ class PolygonSurvey( BaseSurvey ):
 
         Returns
         -------
-        PolygonSurvey
+        `PolygonSurvey`
         """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data).copy()
@@ -109,14 +114,14 @@ class PolygonSurvey( BaseSurvey ):
         skynoise_range: list or array
             min and max skynoise for the random drawing.
 
-        fields: geopandas.GeoDataFrame
+        fields: `geopandas.GeoDataFrame`
             field definitions.
 
-        **kwargs goes to the draw_random() method
+        **kwargs goes to the ``draw_random()`` method
 
         Returns
         -------
-        PolygonSurvey
+        `PolygonSurvey`
         """
         this = cls(fields=fields)
         this.draw_random(size,  bands,  
@@ -138,7 +143,7 @@ class PolygonSurvey( BaseSurvey ):
 
         Returns
         -------
-        geopandas.GeoDataFrame
+        `geopandas.GeoDataFrame`
         """
         if observed:
             if len(self.fieldids.names)==1: # Index
@@ -179,17 +184,22 @@ class PolygonSurvey( BaseSurvey ):
         ----------
         nside: int
             Healpix nside.
+
         pass_data: bool, optional
             Should the returned survey have the full data of just the fieldid matching?
+
         backend: str, optional
             Which backend to use to merge the data (speed issue):
-            - polars (fastest): requires polars installed -> converted to pandas at the end
-            - pandas (classic): the normal way
-            - dask (lazy): as persisted dask.dataframe is returned
+
+            - `polars` (fastest): requires polars installed -> converted to pandas at the end
+            - `pandas` (classic): the normal way
+            - `dask` (lazy): as persisted dask.dataframe is returned
+
         polars_to_pandas: bool, optional
             = ignored if backend != 'polars' =
             Should the dataframe be converted into a pandas.DataFrame or say a polars.DataFrame
             (using the to_pandas() option).
+
         use_pyarrow_extension_array: bool, optional
             = ignored in backend != 'polars' or polars_to_pandas is not True = 
             Should the pandas dataframe be based on numpy array (slow to load but faster then)
@@ -198,7 +208,7 @@ class PolygonSurvey( BaseSurvey ):
             
         Returns
         -------
-        HealpixSurvey
+        `HealpixSurvey`
         """
         from .healpix import HealpixSurvey
         hpsurvey = HealpixSurvey(nside)
@@ -283,15 +293,16 @@ class PolygonSurvey( BaseSurvey ):
 
         Parameters
         ----------
-        radec: pandas.DataFrame or 2d array
+        radec: `pandas.DataFrame` or 2d array
             Coordinates in degree.
+
         observed_fields: bool, optional
             Should this be limited to fields actually observed?
-            This is ignored is self.data is None.
+            This is ignored is ``self.data`` is None.
 
         Returns
         -------
-        pandas.DataFrame
+        `pandas.DataFrame`
         """
         if type(radec) in [np.ndarray, list, tuple]:
             inshape = np.shape(radec)
@@ -347,11 +358,11 @@ class PolygonSurvey( BaseSurvey ):
         fieldids: list
             list of fieldids to draw from.
 
-        **kwargs goes to _draw_random
+        **kwargs goes to ``_draw_random``
 
         Returns
         -------
-        PolygonSurvey or None
+        `PolygonSurvey` or None
         """
         if fieldids is None:
             fieldids = self.fieldids
@@ -378,28 +389,37 @@ class PolygonSurvey( BaseSurvey ):
         ----------
         stat: str, optional
             Statistic to plot.
+
         column: str, optional
             Column to use for the statistic.
+
         title: str, optional
             Title of the plot.
+
         data: pandas.DataFrame, optional
             Data to plot.
+
         origin: float, optional
             Origin of the ra coordinates.
+
         vmin, vmax: float, optional
             Min and max values for the colorbar.
+
         cmap: str, optional
             Colormap to use.
+
         autoscale: bool, optional
             If True, autoscale the plot.
+
         grid: bool, optional
             If True, show the grid.
+
         **kwargs
-            Goes to matplotlib.collections.PolyCollection.
+            Goes to `matplotlib.collections.PolyCollection`.
 
         Returns
         -------
-        matplotlib.figure
+        `matplotlib.figure`
         """
         import matplotlib.pyplot as plt
         from matplotlib.collections import PolyCollection
@@ -459,12 +479,12 @@ class PolygonSurvey( BaseSurvey ):
 
         Parameters
         ----------
-        fields: geopandas.GeoDataFrame
+        fields: `geopandas.GeoDataFrame`
             field definitions.
 
         Returns
         -------
-        geopandas.GeoDataFrame
+        `geopandas.GeoDataFrame`
         """
         return parse_fields(fields)
     
@@ -501,7 +521,7 @@ class PolygonSurvey( BaseSurvey ):
         zp_range: list or array
             min and max zp for the random drawing.
 
-        rng : None, int, (Bit)Generator, optional
+        rng : None, int, `(Bit)Generator`, optional
             seed for the random number generator.
             (doc adapted from numpy's `np.random.default_rng` docstring. 
             See that documentation for details.)
@@ -512,7 +532,7 @@ class PolygonSurvey( BaseSurvey ):
 
         Returns
         -------
-        pandas.DataFrame
+        `pandas.DataFrame`
         """
         rng = np.random.default_rng()
         # np.resize(1, 2) -> [1,1]
