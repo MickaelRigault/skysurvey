@@ -11,33 +11,33 @@ The `SNeIa` is defined as such:
    :caption: The SNeIa class.
 
    class SNeIa( Transient ):
-   _KIND = "SNIa"
-   _TEMPLATE_SOURCE = "salt2"
-   _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
-   _MODEL = dict( redshift ={"param":{"zmax":0.2}, "as":"z"},
-                              
-                   x1={"model":"nicolas2021"}, 
-                   
-                   c={"model":"intrinsic_and_dust"},
-
-                   t0={"model":"uniform", 
-                       "param":{"mjd_range":[59000, 59000+365*4]} },
+       _KIND = "SNIa"
+       _TEMPLATE_SOURCE = "salt2"
+       _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
+       _MODEL = dict( redshift ={"param":{"zmax":0.2}, "as":"z"},
+                                  
+                       x1={"model":"nicolas2021"}, 
                        
-                   magabs={"model":"tripp1998",
-                           "input":["x1","c"]
-                          },
+                       c={"model":"intrinsic_and_dust"},
+
+                       t0={"model":"uniform", 
+                           "param":{"mjd_range":[59000, 59000+365*4]} },
                            
-                   magobs={"model":"magabs_to_magobs",
-                         "input":["z", "magabs"]},
+                       magabs={"model":"tripp1998",
+                               "input":["x1","c"]
+                              },
+                               
+                       magobs={"model":"magabs_to_magobs",
+                               "input":["z", "magabs"]},
 
-                   x0={"model":"magobs_to_x0",
-                       "input":["magobs"]},
-                       
-                   radec={"model":"random",
-                          "param":dict(ra_range=[0, 360],
-			               dec_range=[-30, 90]),
-                          "as":["ra","dec"]}
-                    )
+                       x0={"model":"magobs_to_x0",
+                           "input":["magobs"]},
+                           
+                       radec={"model":"random",
+                              "param":dict(ra_range=[0, 360],
+                              dec_range=[-30, 90]),
+                              "as":["ra","dec"]}
+                        )
 
 Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude) are also defined.
 """
