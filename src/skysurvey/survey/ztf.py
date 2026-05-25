@@ -81,6 +81,11 @@ class ZTF( GridSurvey ):
             
         return shapely.unary_union(list_of_geoms).buffer(buffer)
 
+
+    def show(self, *args, **kwargs):
+        """ shortcut to show_ztf() """
+        return self.show_ztf(*args, **kwargs)
+    
     def show_ztf(self, data=None, fieldstat=None, **kwargs):
         """Show the sky coverage.
 

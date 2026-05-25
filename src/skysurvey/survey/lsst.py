@@ -115,7 +115,7 @@ class LSST( Survey ):
         """
         from ..tools.utils import get_skynoise_from_maglimit
         
-        df = read_opsim(filepath, sql_where=sql_where, **kwargs)
+        df = read_opsim(filepath, sql_where=sql_where)
         
         simdata = pandas.DataFrame(
             {"skynoise": df["fiveSigmaDepth"].apply(get_skynoise_from_maglimit, zp=zp).values,
@@ -129,5 +129,5 @@ class LSST( Survey ):
             },
             index=df.index)
 
-        return cls.from_pointings(simdata, backend=backend)
+        return cls.from_pointings(simdata, backend=backend, **kwargs)
         
