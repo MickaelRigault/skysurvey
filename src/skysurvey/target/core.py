@@ -1225,7 +1225,7 @@ class Target( object ):
             size = int(ntarget_per_year * nyears * f_area)
             
         # actually draw the data
-        kwargs.update(updated_kwargs)
+        kwargs.update(**updated_kwargs)
         data = drawn_model.draw(size=size, **kwargs)
         
         # patch the missing `amplitude` back to .data
@@ -1241,7 +1241,7 @@ class Target( object ):
         # shall data be attached to the object?
         if inplace:
             # lower precision
-            data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
+            # data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
             self.set_data(data)
             # since this is inplace, let's update stored model kwargs
             
@@ -1330,7 +1330,12 @@ class Target( object ):
         """The effect parameters of the template."""
         return self.template.effect_parameters  
 
-
+    def uniform(self, low=0.0, high=1.0, size=None, rng=None):
+        return np.random.default_rng(rng).uniform(low, high, size)
+    
+    def normal(self, loc=0.0, scale=1.0, size=None, rng=None):
+        return np.random.default_rng(rng).normal(loc, scale, size)
+    
     
 class Transient( Target ):
     """
@@ -1365,7 +1370,7 @@ class Transient( Target ):
         else:
             self._rate = float(float_or_func)
 
-    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, rate=None, **kwargs):
+    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, rate=None, rng=None, **kwargs):
         """Draw redshift based on the rate (see `get_rate()`).
 
         Parameters
@@ -1400,7 +1405,7 @@ class Transient( Target ):
         if rate is None:
             rate = self.rate
             
-        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, cosmology=self.cosmology, **kwargs)
+        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, cosmology=self.cosmology, rng=rng, **kwargs)
     
     # ------- #
     #  GETTER #
