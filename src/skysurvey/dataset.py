@@ -418,7 +418,7 @@ class DataSet(object):
     #  GETTER  #
     # -------- #
     def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
-                detection=None, zp=None, join_bandday=False, join_stats="first"):
+                detection=None, zp=None, join_bandday=False, join_how="first"):
         """ Tools to access the data with additional tools.
 
         Parameters
@@ -450,9 +450,9 @@ class DataSet(object):
 
         join_bandday: bool
             if there are multiple observations per band and day (int of mjd) for a given target,
-            should these be joined ? (see join_stat).
+            should these be joined ? (see join_how).
 
-        join_stats: str
+        join_how: str
             join_bandday is True, how multiple observation should be considered ? (e.g., first).
 
         Returns
@@ -471,14 +471,26 @@ class DataSet(object):
         if join_bandday:
             index_colnames = data.index.names
             data["mjd_date"] = data["mjd"].astype("int")
-            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
-            if join_stats == "first":
-                data = gb_data.first().reset_index().set_index(index_colnames)
+            # make sure variance column exists as the variance add/mean/sum etc.
+            if "fluxvar" not in data.columns:
+                data["fluxvar"] = data["fluxerr"]**2
+                fluxvar_to_be_removed = True
             else:
-                raise NotImplementedError(
-                    f"{join_stats=} not implemented. Only first() is."
-                )
+                fluxvar_to_be_removed = False
+                
+            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
+            try:
+                data = getattr(gb_data, join_how)().reset_index().set_index(index_colnames)
+            except:
+                raise NotImplementedError(f"{join_how=} not implemented.")
 
+            if join_how in ["mean", "sum"]: 
+                # overwrite fluxerr to respect the statistics
+                data["fluxerr"] = np.sqrt(data["fluxvar"])
+
+            if fluxvar_to_be_removed:
+                _ = data.pop("fluxvar")
+            
         if add_phase:
             target_info = self.targets.data.loc[index][["t0", redshift_key]]
             #        target_info.index = self._data_index # for merging
@@ -503,7 +515,7 @@ class DataSet(object):
 
         return data
 
-    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False):
+    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False, join_how="firt"):
         """get the number of detection for each lightcurves
 
         Basically computes the number of datapoints with (flux/fluxerr)>detlimit)
@@ -519,7 +531,11 @@ class DataSet(object):
 
         join_bandday: bool
             if there are multiple observations per band and day (int of mjd) for a given target,
-            should these be joined ? (see join_stat).
+            should these be joined ? (see join_how).
+
+        join_how: string
+            specify how the bandday should be joined. 
+            = ignored if join_bandday is False =
 
         Returns
         -------
@@ -527,7 +543,9 @@ class DataSet(object):
             the number of detected point per target (and per band if per_band=True)
         """
 
-        data = self.get_data(phase_range=phase_range, detection=True, join_bandday=join_bandday)
+        data = self.get_data(phase_range=phase_range, detection=True,
+                                 join_bandday=join_bandday,
+                                 join_how=join_how)
         if per_band:
             groupby = [self._data_index, "band"]
         else:

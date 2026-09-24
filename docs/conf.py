@@ -28,7 +28,7 @@ extensions = [
     "nbsphinx",
     'sphinx_copybutton'
     ]
-    
+
 # Enable math support in MyST Markdown / notebooks
 myst_enable_extensions = [
     "amsmath",     # allows \begin{equation} ... \end{equation}
@@ -50,7 +50,7 @@ intersphinx_mapping = {
     #'emcee': ('https://emcee.readthedocs.io/en/latest', None),
 }
 
-    
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 

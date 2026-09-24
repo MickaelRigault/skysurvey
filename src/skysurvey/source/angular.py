@@ -64,6 +64,13 @@ class AngularTimeSeriesSource(sncosmo.Source):
         self._phase = phase
         self._wave = wave
         self._cos_theta = cos_theta
+
+        # fix issue of <=0 flux model.
+        flux = flux.copy()
+        flux[flux < 0] = 0
+        flux /= flux.max()
+        flux[flux == 0] = 1e-10
+
         self._flux_array = flux
         self._parameters = np.array([1., 0.])
         self._current_theta = 0.
@@ -73,28 +80,27 @@ class AngularTimeSeriesSource(sncosmo.Source):
 
     def _set_theta(self):
         logflux_ = np.zeros(self._flux_array.shape[:2])
-        
+
         for k in range(len(self._phase)):
-            adding = 1e-10 # Here we add 1e-10 to avoid problems with null values
-            f_tmp = Spline2d(self._wave, self._cos_theta, np.log(self._flux_array[k]+adding),
+            f_tmp = Spline2d(self._wave, self._cos_theta, np.log(self._flux_array[k]),
                              kx=1, ky=1)
             logflux_[k] = f_tmp(self._wave, np.cos(self._parameters[1]*np.pi/180)).T
 
         self._model_flux = Spline2d(self._phase, self._wave, logflux_, kx=1, ky=1)
         self._current_theta = self._parameters[1]
-        
+
     def _flux(self, phase, wave):
         if self._current_theta != self._parameters[1]:
             self._set_theta()
-            
+
         f = self._parameters[0] * (np.exp(self._model_flux(phase, wave)))
-        
+
         if self._zero_before:
             mask = np.atleast_1d(phase) < self.minphase()
             f[mask, :] = 0.
-            
+
         if self._zero_after:
             mask = np.atleast_1d(phase) > self.maxphase()
             f[mask, :] = 0.
-            
+
         return f
