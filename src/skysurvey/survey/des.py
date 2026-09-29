@@ -1,13 +1,13 @@
+"""
+This module defines the `DES` and `DESWide` survey classes and utilities functions for the DECam footprint and the DES fields.
+"""
 
 import pandas
 import geopandas
 import numpy as np
 
 from ztffields.projection import project_to_radec
-
 from .basesurvey import Survey, GridSurvey
-
-__all__ = ["DES"]
 
 
 # ============= #
@@ -29,7 +29,7 @@ def get_des_footprint(incl_focus=False, coef=(6.53,6.12)):
 
     Returns
     -------
-    shapely.geometry.MultiPolygon
+    `shapely.geometry.MultiPolygon`
     """
     from shapely import geometry
     from shapely.ops import unary_union
@@ -63,7 +63,7 @@ def get_des_footprint(incl_focus=False, coef=(6.53,6.12)):
 
 
 def get_des_field_coordinates(fieldid_name="fieldid"):
-    """ get the radec location of the DES shallow (8) and deep (2) fields
+    """ Get the radec location of the DES shallow (8) and deep (2) fields.
 
     Parameters
     ----------
@@ -72,7 +72,7 @@ def get_des_field_coordinates(fieldid_name="fieldid"):
 
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
     """
     if fieldid_name is None:
         fieldid_name = "fieldid"
@@ -93,7 +93,7 @@ def get_des_field_coordinates(fieldid_name="fieldid"):
     return data
 
 def get_des_fields(origin=180, incl_focus=False, fieldid_name=None):
-    """ get the DES fields as a geopandas.GeoDataFrame
+    """ Get the DES fields as a geopandas.GeoDataFrame.
 
     Parameters
     ----------
@@ -108,7 +108,7 @@ def get_des_fields(origin=180, incl_focus=False, fieldid_name=None):
 
     Returns
     -------
-    geopandas.GeoDataFrame
+    `geopandas.GeoDataFrame`
     """
     footprint = get_des_footprint(incl_focus=incl_focus)
     radec = get_des_field_coordinates(fieldid_name=fieldid_name)    
@@ -122,9 +122,45 @@ def get_des_fields(origin=180, incl_focus=False, fieldid_name=None):
 # ============= #
 
 class DES( GridSurvey ):
+    """The DES grid-based survey with predefined fields and DECam footprint.
+    
+    Parameters
+    ----------
+    data: `pandas.DataFrame`
+        observing data.
+
+    fields: geodataframe
+        field definitions.
+
+    footprint: `shapely.geometry`
+        footprint in the sky of the observing camera. 
+
+    _DEFAULT_FIELDS : `geopandas.GeoDataFrame`
+        The standard DES field definitions loaded via :func:`get_des_fields`.
+    _FOOTPRINT : `shapely.geometry.Polygon`
+        The DECam camera footprint loaded via :func:`get_des_footprint`.  
+    """
+
     _DEFAULT_FIELDS = get_des_fields(fieldid_name="FIELD")
     _FOOTPRINT = get_des_footprint()
     
 class DESWide( Survey ):
+    """The DES wide-field survey with the DECam footprint.
+    
+    Parameters
+    ----------
+    footprint: `shapely.geometry`
+        footprint in the sky of the observing camera
+
+    nside : int
+        healpix nside parameter
+
+    data: `pandas.DataFrame`
+        observing data.
+
+    _FOOTPRINT : `shapely.geometry.Polygon`
+        The DECam camera footprint loaded via :func:`get_des_footprint`.
+    """
+
     _FOOTPRINT = get_des_footprint()
 

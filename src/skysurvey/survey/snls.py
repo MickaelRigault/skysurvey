@@ -1,11 +1,13 @@
+"""
+This module defines the `SNLS` survey class, including the SNLS field coordinates, MegaCam footprint, and tools
+to load the observing logs.
+"""
+
 import numpy as np
 import pandas
 import sncosmo
 
 from .basesurvey import GridSurvey
-
-__all__ = ["SNLS"]
-
 
 
 FIELDID = {'D1': {'ra': 36.450190, 'dec': -4.45065},
@@ -14,7 +16,7 @@ FIELDID = {'D1': {'ra': 36.450190, 'dec': -4.45065},
            'D4': {'ra': 333.89903, 'dec': -17.71961}}
 
 def get_snls_field_coordinates(fieldid_name="fieldid"):
-    """ get the radec location of the 4 SNLS fields
+    """ Get the radec location of the 4 SNLS fields.
 
     Parameters
     ----------
@@ -23,7 +25,7 @@ def get_snls_field_coordinates(fieldid_name="fieldid"):
 
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
     """
     
     data = pandas.DataFrame(FIELDID).T
@@ -31,18 +33,18 @@ def get_snls_field_coordinates(fieldid_name="fieldid"):
     return data
 
 def get_snls_footprint():
-    """ returns a 1-degree side square footprint
+    """ Returns a 1-degree side square footprint.
 
     Returns
     -------
-    shapely.geometry.Polygon
+    `shapely.geometry.Polygon`
     """
     from shapely import geometry
     footprint = geometry.box(-0.5, -0.5, 0.5, 0.5)
     return footprint
 
 def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
-    """ load and parse data from the input url 
+    """ Load and parse data from the input url.
     
     Parameters
     ----------
@@ -51,7 +53,7 @@ def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
 
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
     """
     data_snls = pandas.read_csv(url)
     # merge RA, Dec as one of the four fields
@@ -67,7 +69,7 @@ def get_weblogs(url="https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"):
     return data_snls
 
 def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacampsf", at_radius=13.):
-    """ register snls band passes to sncosmo assuming a single radius 
+    """ Register snls band passes to sncosmo assuming a single radius.
 
     Parameters
     ----------
@@ -99,18 +101,18 @@ def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacamp
     
     
 class SNLS( GridSurvey ):
+    """ A class to model the `SNLS` survey.
     
+    Parameters
+    ----------
+    data: `pandas.DataFrame`
+        observing data.
+
+    **kwargs:
+        goes to ``GridSurvey.__init__``
+    """
     def __init__(self, data=None, **kwargs):
-        """ 
-        Initialize the SNLS class.
-
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            observing data.
-
-        **kwargs goes to GridSurvey.__init__
-        """
+        """ Initialize the SNLS class."""
         footprint = get_snls_footprint()
         fields = self._parse_fields(get_snls_field_coordinates(), footprint)
         
@@ -120,7 +122,7 @@ class SNLS( GridSurvey ):
 
     @classmethod
     def from_logs(cls, logpath=None, **kwargs):
-        """ loads the data from the observing logs. 
+        """ Loads the data from the observing logs. 
 
         If None provided, this uses:
         https://supernovae.in2p3.fr/snls5/snls_obslogs.csv
@@ -132,7 +134,7 @@ class SNLS( GridSurvey ):
             If None, the official snls webpage is used:
             https://supernovae.in2p3.fr/snls5/snls_obslogs.csv
             
-        **kwargs goes to GridSurvey.__init__
+        **kwargs goes to ``GridSurvey.__init__``
 
         Returns
         -------
@@ -150,15 +152,15 @@ class SNLS( GridSurvey ):
     
     @classmethod
     def from_pointings(cls, data, **kwargs):
-        """ loads from observing log data 
+        """ Loads from observing log data. 
 
         Parameters
         ----------
-        data: pandas.DataFrame, dict
+        data: `pandas.DataFrame`, dict
             observing logs, must contains: 
             ['zp', 'fieldid', 'gain', 'skynoise', 'mjd', 'band']
 
-        **kwargs goes to GridSurvey.__init__
+        **kwargs goes to ``GridSurvey.__init__``
 
         Returns
         -------
@@ -166,12 +168,9 @@ class SNLS( GridSurvey ):
 
         See also:
         ---------
-        from_logs(): loads the data from input file (or web).
+        :func:`from_logs()`: loads the data from input file (or web).
         """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data)
             
         return cls(data=data, **kwargs)
-
-            
-        

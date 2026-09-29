@@ -1,12 +1,13 @@
-""" This is the code to model kilonova """
+"""
+This module provides the `Kilonovae` class, a pre-defined Transient class. See the corresponding documentation page in "List of transient classes" 
+for more detail on this Transient class.
+"""
 
 import numpy as np
-
 import sncosmo
+
 from .core import Transient
 from ..tools.utils import random_radec
-
-__all__ = ["Kilonova"]
 
 RNG = np.random.default_rng()
 
@@ -24,13 +25,16 @@ def read_possis_file(filename):
 
     Returns
     -------
-    phase : `~numpy.ndarray`
+    phase : `numpy.ndarray`
         Phases in days.
-    wave : `~numpy.ndarray`
+
+    wave : `numpy.ndarray`
         Wavelengths in Angstroms.
-    cos_theta : `~numpy.ndarray`
+
+    cos_theta : `numpy.ndarray`
         Cosine of viewing angle.
-    flux : `~numpy.ndarray`
+
+    flux : `numpy.ndarray`
         Model spectral flux density in arbitrary units. Must have shape
         `(num_phases)`.
     """
@@ -61,7 +65,19 @@ def read_possis_file(filename):
     return phase, wave, cos_theta, flux
 
 def get_kilonova_model(filename=None):
-    """Get a kilonova model from a POSSIS file."""
+    """
+    Get a kilonova model from a POSSIS file.
+
+    Parameters
+    ----------
+    filename : str, optional
+        Path to the POSSIS file. If None, it loads the default data file: ``nsns_nph1.0e+06_mejdyn0.020_mejwind0.130_phi30.txt``.
+
+    Returns
+    -------
+    `sncosmo.Model`
+        The initialized kilonova model with an angular-dependent source.
+    """
     from ..source.angular import AngularTimeSeriesSource
     if filename is None:
         import os
@@ -82,7 +98,8 @@ def get_kilonova_model(filename=None):
 
 _KILONOVA_MODEL = get_kilonova_model()
 class Kilonova( Transient ):
-    """A class to model kilonovae.
+    """
+    A class to model kilonovae.
 
     Parameters
     ----------

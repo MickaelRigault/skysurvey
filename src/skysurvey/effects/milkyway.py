@@ -1,12 +1,14 @@
+"""
+This module provides utilities and model for Milky Way dust extinction.
+"""
 
 from astropy.coordinates import SkyCoord
 
-__all__ = ["mwebv_model"]
 
 def get_mwebv(ra, dec, which="planck"):
     """ Get the Milky Way E(B-V) extinction parameter for input coordinates.
 
-    This is based on dustmaps. 
+    This is based on `dustmaps`. 
     If this is the first time you use it, you may have to download the maps 
     first (instructions will be given).
     
@@ -15,10 +17,10 @@ def get_mwebv(ra, dec, which="planck"):
     ra, dec: float, array
         Coordinates.
 
-    which: string
+    which: str
         Name of the dustmap to use.
-        - planck: Planck (2013)
-        - sfd: Schlegel, Finkbeiner & Davis (1998)
+        - `planck`: Planck (2013)
+        - `sfd`: Schlegel, Finkbeiner & Davis (1998)
 
     Returns
     -------

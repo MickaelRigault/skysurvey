@@ -1,13 +1,17 @@
+"""
+This module defines the `LSST` survey class and utilities for loading and parsing LSST OpSim observation databases.
+"""
+
 import numpy as np
 from .basesurvey import Survey
 import pandas
 
 def get_lsst_footprint():
-    """ A (3 5 5 5 3) ccd structure centered on 0 with a 9.6 deg2 area
+    """ Get the LSST footprint, a (3 5 5 5 3) ccd structure centered on 0 with a 9.6 deg**2 area.
 
     Returns
     -------
-    shapely.geometry.Polygon
+    `shapely.geometry.Polygon`
     """
     from shapely import geometry
     lowleft = 0
@@ -53,7 +57,7 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
 
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
     """
     import sqlite3
     connect = sqlite3.connect(filepath)
@@ -84,11 +88,27 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
 
 
 class LSST( Survey ):
+    """ A class to model the `LSST` survey. 
+    
+    Parameters
+    ----------
+    footprint: `shapely.geometry`
+        footprint in the sky of the observing camera
+
+    nside : int
+        healpix nside parameter
+
+    data: `pandas.DataFrame`
+        observing data.
+
+    _FOOTPRINT : `shapely.geometry.Polygon`
+        The LSST camera footprint loaded via :func:`get_lsst_footprint`.
+    """
     _FOOTPRINT = get_lsst_footprint()
 
     @classmethod
     def from_opsim(cls, filepath, sql_where=None, zp=30, backend="pandas", **kwargs):
-        """ load a LSST survey object from an opsim db path.
+        """ Load a LSST survey object from an opsim db path.
 
         Parameters
         ----------
@@ -103,11 +123,12 @@ class LSST( Survey ):
 
         backend: str
             backend used to merge the data:
-            - polars (fastest): requires polars installed -> converted to pandas at the end
-            - pandas (classic): the normal way
-            - dask (lazy): as persisted dask.dataframe is returned
 
-        **kwargs goes to read_opsim(): columns
+            - `polars` (fastest): requires polars installed -> converted to pandas at the end
+            - `pandas` (classic): the normal way
+            - `dask` (lazy): as persisted dask.dataframe is returned
+
+        **kwargs goes to ``read_opsim()``: columns
 
         Returns
         -------

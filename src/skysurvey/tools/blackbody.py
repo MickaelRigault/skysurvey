@@ -1,4 +1,6 @@
-""" module containing black-body related functions """
+"""
+This module contains black-body related functions.
+"""
 
 # Units
 import numpy as np
@@ -15,7 +17,7 @@ _flam_units = u.erg / (u.cm**2 * u.s * u.AA)
 def get_blackbody_transient_source(phase, temperature, amplitude,
                                        lbda="1_000:10_000:1000j",
                                        zero_before=True, name="bb_transient"):
-    """ Get an evolving blackbody sncosmo.TimeSeriesSource.
+    """ Get an evolving blackbody `sncosmo.TimeSeriesSource`.
 
     Parameters
     ----------
@@ -31,7 +33,7 @@ def get_blackbody_transient_source(phase, temperature, amplitude,
 
     lbda: str or array-like
         Wavelength in Angstrom. 
-        If str, it is assumed to by a np.r_ format. Default is "1_000:10_000:1000j".
+        If str, it is assumed to by a `np.r_` format. Default is "1_000:10_000:1000j".
 
     zero_before: bool
         If True, flux is zero before the first phase; otherwise the first flux value is used. Default is True.
@@ -41,7 +43,7 @@ def get_blackbody_transient_source(phase, temperature, amplitude,
 
     Returns
     -------
-    sncosmo.TimeSeriesSource
+    `sncosmo.TimeSeriesSource`
     """
     from sncosmo import TimeSeriesSource
     if type(lbda) is str: # assumed r_ input
@@ -57,15 +59,15 @@ def get_blackbody_transient_flux(lbda, temperature, amplitude, normed=True):
     
     Parameters
     ----------
-    lbda:  number, array-like, or astropy.units.Quantity
+    lbda:  number, array-like, or `astropy.units.Quantity`
         Wavelength.
         If not a Quantity, it is assumed to be in Angstrom.
 
-    temperature : number, array-like, or astropy.units.Quantity
+    temperature : number, array-like, or `astropy.units.Quantity`
         Blackbody temperature.
         If not a Quantity, it is assumed to be in Kelvin.
 
-    amplitude: number, array-like, or astropy.units.Quantity
+    amplitude: number, array-like, or `astropy.units.Quantity`
         Amplitude of the blackbody.
         If array-like, must have the same length as temperature.
 
@@ -77,7 +79,7 @@ def get_blackbody_transient_flux(lbda, temperature, amplitude, normed=True):
     -------
     2d-array
         Blackbody monochromatic flux normed, and scaled by its amplitude. If normed is True, returns a dimensionless array normalized 
-        to peak flux. If normed is False, returns a astropy.units.Quantity in :math:`erg \\; cm^{-2} s^{-1} \\AA^{-1} sr^{-1}`.
+        to peak flux. If normed is False, returns a `astropy.units.Quantity` in :math:`erg \\; cm^{-2} s^{-1} \\AA^{-1} sr^{-1}`.
     """
     normed_blackbody = blackbody_lambda(lbda, temperature=np.atleast_1d(temperature)[:,None],
                                        normed=normed)
@@ -98,17 +100,17 @@ def blackbody_nu(freq, temperature):
 
     Parameters
     ----------
-    freq : number, array-like, or astropy.units.Quantity
+    freq : number, array-like, or `astropy.units.Quantity`
         Frequency, wavelength, or wave number. 
         If not a Quantity, it is assumed to be in Hertz.
 
-    temperature : number or astropy.units.Quantity
+    temperature : number or `astropy.units.Quantity`
         Blackbody temperature.
         If not a Quantity, it is assumed to be in Kelvin.
 
     Returns
     -------
-    flux : astropy.units.Quantity
+    flux : `astropy.units.Quantity`
         Blackbody monochromatic flux in :math:`erg \\; cm^{-2} s^{-1} Hz^{-1} sr^{-1}`.
 
     Raises
@@ -141,11 +143,11 @@ def blackbody_lambda(lbda, temperature, normed=True):
 
     Parameters
     ----------
-    lbda: number, array-like, or astropy.units.Quantity
+    lbda: number, array-like, or `astropy.units.Quantity`
         Wavelength. 
         If not a Quantity, it is assumed to be in Angstrom.
 
-    temperature: number or astropy.units.Quantity
+    temperature: number or `astropy.units.Quantity`
         Blackbody temperature. 
         If not a Quantity, it is assumed to be in Kelvin.
 
@@ -155,7 +157,7 @@ def blackbody_lambda(lbda, temperature, normed=True):
         
     Returns
     -------
-    flux: ndarray or astropy.units.Quantity
+    flux: ndarray or `astropy.units.Quantity`
         Blackbody monochromatic flux. If normed is True, returns a dimensionless array normalized 
         to peak flux. If normed is False, returns a astropy.units.Quantity in :math:`erg \\; cm^{-2} s^{-1} \\AA^{-1} sr^{-1}`.
 
@@ -183,13 +185,13 @@ def get_wein_lbdamax(temperature):
 
     Parameters
     ----------
-    temperature: number or astropy.units.Quantity
+    temperature: number or `astropy.units.Quantity`
         Blackbody temperature. 
         If not a Quantity, it is assumed to be in Kelvin.
        
     Returns
     -------
-    lbda: astropy.units.Quantity
+    lbda: `astropy.units.Quantity`
         Wavelength of maximum emission, in Angstrom.
     """
     if not hasattr(temperature, 'unit'): # assumed Kelvin

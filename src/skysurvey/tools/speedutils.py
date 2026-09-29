@@ -1,3 +1,7 @@
+"""
+This module provides utility functions for efficient DataFrame concatenation and array pair matching.
+"""
+
 import itertools
 import pandas
 import numpy as np
@@ -18,7 +22,7 @@ def isin_pair_elements(elements, test_elements):
     Returns
     -------
     isin: ndarray, bool
-        Boolean array. True if the corresponding pair in elements is present in test_elements, False otherwise.
+        Boolean array. True if the corresponding pair in elements is present in `test_elements`, False otherwise.
     """
     elements_combined = (elements[:, 0] << 16) | elements[:, 1]
     test_elements_combined = (test_elements[:, 0] << 16) | test_elements[:, 1]
@@ -32,7 +36,7 @@ def chunk_dfs(dfs, chunk_size):
 
     Parameters
     ----------
-    dfs: iterable of pandas.DataFrame
+    dfs: iterable of `pandas.DataFrame`
         Iterable yielding DataFrames to be grouped into chunks.
 
     chunk_size: int
@@ -40,10 +44,10 @@ def chunk_dfs(dfs, chunk_size):
 
     Yields
     -------
-    chunk : list of pandas.DataFrame
+    chunk : list of `pandas.DataFrame`
         List of DataFrames in the current chunk.
     size : int
-        Number of DataFrames in the chunk (may be smaller than chunk_size for the last chunk).  
+        Number of DataFrames in the chunk (may be smaller than `chunk_size` for the last chunk).  
     """
     dfs_out = []
     for df in dfs:
@@ -57,19 +61,19 @@ def chunk_dfs(dfs, chunk_size):
 
 def concat_chunk(dfs, **kwargs):
     """
-    Concatenate a chunk of DataFrames using pandas.concat.
+    Concatenate a chunk of DataFrames using `pandas.concat`.
     
     Parameters
     ----------
-    dfs: iterable of pandas.DataFrame
+    dfs: iterable of `pandas.DataFrame`
         DataFrames to concatenate.
 
     **kwargs
-        Additional keyword arguments passed to pandas.concat.
+        Additional keyword arguments passed to `pandas.concat`.
 
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
         Concatenated DataFrame.
     """
     return pandas.concat((df for df in dfs), **kwargs)
@@ -80,22 +84,22 @@ def eff_concat(dfs, chunk_size, keys=None, **kwargs):
     
     Parameters
     ----------
-    dfs: iterable of pandas.DataFrame
+    dfs: iterable of `pandas.DataFrame`
         DataFrames to concatenate.
 
     chunk_size: int
         Number of DataFrames per chunk.
     
     keys : sequence, optional
-        Keys to use for indexing, passed to pandas.concat.
+        Keys to use for indexing, passed to `pandas.concat`.
         When chunking, the corresponding slice of keys is passed to each chunk. Default is None.
 
     **kwargs
-        Additional keyword arguments passed to pandas.concat.
+        Additional keyword arguments passed to `pandas.concat`.
     
     Returns
     -------
-    pandas.DataFrame
+    `pandas.DataFrame`
         Concatenated DataFrame.
     """
     dfs, dfs_len = itertools.tee(dfs, 2)

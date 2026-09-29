@@ -1,14 +1,21 @@
+"""
+This module provides a model for host galaxy dust parameters.
+"""
+
 import scipy
 import numpy as np
 
-__all__ = ["dust_model"]
 
 class ebv_distrib(scipy.stats.rv_continuous):
+    """
+    A class that implements a simple exponential probability density function
+    to model the E(B-V) distribution for dust extinction for host galaxies.
 
-    "E(B-V) distribution"
+    See :class:`scipy.stats.rv_continuous` for the full list of parameters.
+    """
 
     def _pdf(self, x):
-
+        """ Probability density function: exp(-x) for x > 0. """
         return np.heaviside(x, 0)*np.exp(-x)
 
 ebv = ebv_distrib(name='ebv',a=0, b=100)

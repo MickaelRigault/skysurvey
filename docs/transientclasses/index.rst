@@ -1,7 +1,7 @@
 List of transient classes
-=====
+=========================
 
-list of transient classes and specifications
+List of transient classes and specifications
 
 .. toctree::
   :maxdepth: 1

@@ -1,5 +1,5 @@
 Basic usage
-=======
+===========
 
 These are the quickstart tutorials to understand the basic functionalities of skysurvey.
 

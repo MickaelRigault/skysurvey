@@ -1,29 +1,30 @@
-""" module to create lightcurves (used by dataset.realize_lightcurves) """
+"""
+This module provides functions to create lightcurves by applying a transient model 
+to survey observing logs. (used by dataset.realize_lightcurves).
+"""
 
 
 import copy
-#
 import pandas
 import numpy as np
-#
 import sncosmo
 
 
 def get_obsdata(template, observations, parameters,
                 zpsys="ab", incl_error=True, discard_bands=False,
                 trim_observations=False, phase_range=None):
-    """ get observed data using ``sncosmo.realize_lcs()``
+    """ Get observed data using `sncosmo.realize_lcs()`.
 
     Parameters
     ----------
-    template: sncosmo.Model
+    template: `sncosmo.Model`
         an sncosmo model from which we can draw observations
         
-    observations: pandas.DataFrame
+    observations: `pandas.DataFrame`
         Dataframe containing the observing infortation.
         requested entries: TBD
     
-    parameters: pandas.DataFrame
+    parameters: `pandas.DataFrame`
         Dataframe containing the target parameters information.
         These depend on you model. 
 
@@ -34,7 +35,7 @@ def get_obsdata(template, observations, parameters,
 
     discard_bands: bool    
         If True, if the sncosmo model is not defined in a given observeing band, the observation is discarded altogether, 
-        to prevent sncosmo.realize_lcs() from crashing. This only works for bands that are too blue for now.
+        to prevent `sncosmo.realize_lcs()` from crashing. This only works for bands that are too blue for now.
 
     Returns
     -------
@@ -43,7 +44,7 @@ def get_obsdata(template, observations, parameters,
 
     See also
     --------
-    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
+    ``DataSet.from_targets_and_survey``: generate a DataSet from target and survey's object
     """
     # if missing, we assume to work in a 'zpsys' system.
     if "zpsys" not in observations:
@@ -81,24 +82,25 @@ def get_obsdata(template, observations, parameters,
         return pandas.concat(lcs)
     
 def _get_obsdata_(data, **kwargs):
-    """ internal method to simplify get_obsdata using single input (for map)
+    """ Internal method to simplify ``get_obsdata`` using single input (for map).
 
     Parameters
     ----------
     data: list
         3 entries:
-        template: sncosmo.Model
+        template: `sncosmo.Model`
             an sncosmo model from which we can draw observations
             
-        observations: pandas.DataFrame
+        observations: `pandas.DataFrame`
             Dataframe containing the observing infortation.
             requested entries: TBD
     
-        parameters: pandas.DataFrame
+        parameters: `pandas.DataFrame`
             Dataframe containing the target parameters information.
             These depend on you model. 
 
-    **kwargs goes to get_obsdata
+    **kwargs :
+        goes to ``get_obsdata``
 
     Returns
     -------
@@ -107,7 +109,7 @@ def _get_obsdata_(data, **kwargs):
 
     See also
     --------
-    DataSet.from_targets_and_survey: generate a DataSet from target and survey's object
+    ``DataSet.from_targets_and_survey``: generate a DataSet from target and survey's object
     """
     return get_obsdata(*data, **kwargs)
 
@@ -123,7 +125,8 @@ def realize_lightcurves(observations, model, parameters,
                         scatter=True, rng=None):
     """Realize data for a set of SNe given a set of observations.
 
-    Note: adapted from sncosmo.realize_lcs, but:
+    Note: adapted from `sncosmo.realize_lcs`, but:
+
          - replacing astropy.Table by pandas.DataFrame
          - removing ability to use aliases. (no time lost in that)
          - removing thresh (no time lost in that)
@@ -133,32 +136,37 @@ def realize_lightcurves(observations, model, parameters,
     observations : `pandas.DataFrame`
         Table of observations. Must contain the following column names:
         ``band``, ``mjd``, ``zp``, ``zpsys``, ``gain``, ``skynoise``.
+
     model : `sncosmo.Model`
         The model to use in the simulation.
-    parameters : pandas.DataFrame
+
+    parameters : `pandas.DataFrame`
         List of parameters to feed to the model for realizing each light curve.
+
     trim_observations : bool, optional
         If True, only observations with times between
         ``model.mintime()`` and ``model.maxtime()`` are included in
         result table for each SN. Default is False.
+
     phase_range: list, None, optional
         If given, only observations within the given rest-frame phase range
         will be considered.
+
     scatter : bool, optional
         If True, the ``flux`` value of the realized data is calculated by
         adding  a random number drawn from a Normal Distribution with a
         standard deviation equal to the ``fluxerror`` of the observation to
         the bandflux value of the observation calculated from model. Default
         is True.
-    rng : None, int, (Bit)Generator, optional
+
+    rng : None, int, `(Bit)Generator`, optional
         seed for the random number generator.
         (doc adapted from numpy's `np.random.default_rng` docstring. 
         See that documentation for details.)
         If None, an unpredictable entropy will be pulled from the OS.
         If an ``int``, (>0), it will set the initial `BitGenerator` state.
         If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
-        
-                
+           
     Returns
     -------
     sne : list of `pandas.DataFrame`

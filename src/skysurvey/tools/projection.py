@@ -1,3 +1,6 @@
+"""
+This module provides spatial utility functions for projecting camera footprints onto the sky and matching coordinates to survey fields.
+"""
 
 import warnings
 import numpy as np
@@ -6,24 +9,25 @@ import geopandas
 
 from shapely import geometry
 
-__all__ = ["project_to_radec", "spatialjoin_radec_to_fields" ]
-
 _DEG2RA = np.pi / 180 # compute once.
 
 def radecmodel_to_skysurface(radecmodel, ntrial=2e5, frac=True):
-    """Compute the sky area covered by points drawn from a ModelDAG model in RA/Dec space.
+    """
+    Compute the sky area covered by points drawn from a `ModelDAG` model in RA/Dec space.
 
-    This function samples points from a ModelDAG model, projects them onto a unit sphere,
+    This function samples points from a `ModelDAG` model, projects them onto a unit sphere,
     and computes the convex hull of the projected points to estimate the sky area.
     The area can be returned as a fraction of the total sky (4π steradians) or in steradians.
 
     Parameters
     ----------
     radecmodel : object
-        A ModelDAG-compatible model that generates RA/Dec points.
+        A `ModelDAG`-compatible model that generates RA/Dec points.
+
     ntrial : int, optional
         Number of points to sample from the model. Default is 2e5.
         Tests suggest 2e5 is good at 0.01%.
+
     frac : bool, optional
         If True, return the area as a fraction of the total sky (4π steradians).
         If False, return the area in steradians. Default is True.
@@ -66,7 +70,8 @@ def radecmodel_to_skysurface(radecmodel, ntrial=2e5, frac=True):
     return projected_skyarea.area # steradian
 
 def project_to_radec(verts_or_polygon, ra, dec):
-    """ project a geometry (or its vertices) to given ra, dec coordinates
+    """
+    Project a geometry (or its vertices) to given ra, dec coordinates.
     
     Parameters
     ----------
@@ -83,11 +88,8 @@ def project_to_radec(verts_or_polygon, ra, dec):
     Returns
     -------
     list
-        if input are vertices
-        - list of new verticies
-        if input are geometry
-        - list of new geometries
-
+        If input are vertices, returns a list of new verticies.
+        If input are geometries, returns a list of new geometries.
     """
     if isinstance(verts_or_polygon, geometry.Polygon): # polygon
         as_polygon = True
@@ -113,29 +115,31 @@ def spatialjoin_radec_to_fields(radec, fields,
                                 how="inner", predicate="intersects",
                                 index_radec="index_radec",
                                 allow_dask=True, **kwargs):
-    """ join the radecs with the fields
+    """
+    Join the radec coordinates with the fields.
 
     Parameters
     ----------
     radec: DataFrame or 2d-array 
         coordinates of the points. 
+
         - DataFrame: must have the "ra" and "dec" columns. 
             This will use the DataFrame's index are data index.
         - 2d array (shape N,2): returned index will be 'range(len(ra))'
     
-    fields : [geopandas.geoserie, geopandas.geodataframe or  dict]
-        fields contains the fieldid and fields shapes. Several forms are accepted:
+    fields : [`geopandas.geoserie`, `geopandas.geodataframe` or  dict]
+
+        Fields contains the fieldid and fields shapes. Several forms are accepted:
+
         - dict: {fieldid: 2d-array, fieldid: 2d-array ...}
             here, the 2d-array are the field's vertices.
-
-        - geoserie: geopandas.GeoSeries with index as fieldid and geometry as field's vertices.
-            
+        - geoserie: geopandas.GeoSeries with index as fieldid and geometry as field's vertices.  
         - geodataframe: geopandas.GeoDataFrame with the 'fieldid' column and geometry as field's vertices.
 
     Returns
     -------
-    GeoDataFrame 
-        (geometry.sjoin result)
+    `GeoDataFrame`
+        (`geometry.sjoin` result)
     """
     # -------- #
     #  Coords  #
@@ -187,22 +191,23 @@ def spatialjoin_radec_to_fields(radec, fields,
 
 
 def parse_fields(fields):
-    """ read various formats for fields and returns it as a geodataframe
+    """
+    Read various formats for fields and returns it as a `geodataframe`.
 
     Parameters
     ----------
-    fields : [geopandas.geoserie, geopandas.geodataframe or  dict]
-        fields contains the fieldid and fields shapes. Several forms are accepted:
+    fields : [`geopandas.geoserie`, `geopandas.geodataframe` or  dict]
+
+        Fields contains the fieldid and fields shapes. Several forms are accepted:
+
         - dict: {fieldid: 2d-array or regions, fieldid: 2d-array or regions ...}
             here, the 2d-array are the field's vertices or a astropy/ds9 regions
-
-        - geoserie: geopandas.GeoSeries with index as fieldid and geometry as field's vertices.
-            
-        - geodataframe: geopandas.GeoDataFrame with the 'fieldid' column and geometry as field's vertices.
+        - `geoserie`: `geopandas.GeoSeries` with index as fieldid and geometry as field's vertices.  
+        - `geodataframe`: `geopandas.GeoDataFrame` with the 'fieldid' column and geometry as field's vertices.
 
     Returns
     -------
-    GeoDataFrame (geometry.sjoin result)
+    `GeoDataFrame` (`geometry.sjoin` result)
 
     Examples
     --------
@@ -233,16 +238,18 @@ def parse_fields(fields):
     return fields
 
 def regions_to_shapely(region):
-    """ converts astropy Region into a shapely geometry.
+    """
+    Converts astropy Region into a shapely geometry.
 
     Parameters
     ----------
     region: str or Regions (see astropy-regions.readthedocs.io)
-        if str, it is assumed to be the dr9 ircs format 
-        e.g. region = box(40.0, 50.0, 5.0, 4.0, 0.0)
-        if Regions, region will be converted into the str format
-        using ``region = region.serialize("ds9").strip().split("\n")[-1]``
+        
+        - If str, it is assumed to be in the dr9 ircs format, e.g.: ``region = "box(40.0, 50.0, 5.0, 4.0, 0.0)"``.
+        - If Regions, region will be converted into the str format, using ``region = region.serialize("ds9").strip().split("\\n")[-1]``.
+
         The following format have been implemented:
+        
         - box
         - circle
         - ellipse
@@ -316,7 +323,8 @@ def regions_to_shapely(region):
 # Projection coordinates.
 #
 def cart2sph(vec):
-    """ Converts cartesian [x,y,z] to spherical [r, theta, phi] coordinates 
+    """
+    Converts cartesian [x,y,z] to spherical [r, theta, phi] coordinates 
     (in degrees).
     
     Parameters
@@ -337,8 +345,8 @@ def cart2sph(vec):
 
 
 def sph2cart(vec):
-    """ Converts spherical coordinates [r, theta, phi]
-    to cartesian coordinates [x,y,z].
+    """
+    Converts spherical coordinates [r, theta, phi] to cartesian coordinates [x,y,z].
     
     Parameters
     ----------
@@ -356,7 +364,8 @@ def sph2cart(vec):
                        v*np.sin(b)])  
      
 def rot_xz(vec, theta):
-    """ Rotates cartesian vector v [x,y,z] by angle theta around axis (0,1,0) 
+    """
+    Rotates cartesian vector v [x,y,z] by angle theta around axis (0,1,0). 
 
     Parameters
     ----------
@@ -376,8 +385,9 @@ def rot_xz(vec, theta):
             vec[2]*np.cos(theta*_DEG2RA) + vec[0]*np.sin(theta*_DEG2RA)]
 
 def rot_xz_sph(l, b, theta): # noqa: E741
-    """ Rotate spherical coordinate (l,b = theta, phi) by angle theta around axis (0,1,0)
-    (calls does to rot_xz and cart2sph)
+    """
+    Rotate spherical coordinate (l,b = theta, phi) by angle theta around axis (0,1,0)
+    (calls does to :func:`rot_xz` and :func:`cart2sph`).
     
     Parameters
     ----------

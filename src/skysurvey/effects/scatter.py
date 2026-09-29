@@ -1,4 +1,7 @@
-""" module associated to dust effects (host or Milky way) """
+"""
+This module provides intrinsic color scatter models implemented as propagation effects.
+"""
+
 import numpy as np
 import sncosmo
 
@@ -49,23 +52,20 @@ def sine_interp(x_new, fun_x, fun_y):
 
 
 class ColorScatter_G10( sncosmo.PropagationEffect ):
-    """Guy (2010) SNe Ia non-coherent scattering.
+    """ Guy (2010) SNe Ia non-coherent scattering.
     
     Implementation is done following arxiv:1209.2482.
-    """
 
+    Parameters
+    ----------
+    saltsource: `sncosmo.Source`
+        salt source to use.
+    """
     _param_names = ['L0', 'F0', 'F1', 'dL']
     param_names_latex = [r'\lambda_0', 'F_0', 'F_1', 'd_L']
 
     def __init__(self, saltsource):
-        """
-        Initialize G10 class.
-
-        Parameters
-        ----------
-        saltsource: sncosmo.Source
-            salt source to use.
-        """
+        """Initialize G10 class."""
         self._parameters = np.array([2157.3, 0.0, 1.08e-4, 800])
         self._colordisp = saltsource._colordisp
         self._minwave = saltsource.minwave()
@@ -74,7 +74,7 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
     @classmethod
     def from_saltsource(cls, name="salt2", version=None):
         """ 
-        Shortcut to directly load the color scatter from the salt2 source
+        Shortcut to directly load the color scatter from the salt2 source.
 
         Parameters
         ----------
@@ -86,7 +86,7 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
 
         Returns
         -------
-        ColorScatter_G10
+        `ColorScatter_G10`
         """
         saltource = sncosmo.get_source(name, version=version)
         return cls(saltource)

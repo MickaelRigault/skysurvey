@@ -1,3 +1,7 @@
+"""
+This module defines the `Effect` class to construct sncosmo effects with associated parameter models.
+"""
+
 import sncosmo
 from . import milkyway
 from . import hostdust
@@ -6,30 +10,30 @@ from . import hostdust
 #  Effect Class  #
 # ============== #
 class Effect( object ):
-    
+    """
+    A class to represent effects (e.g. dust, scatter) to be applied to a transient template.
+
+    Parameters
+    ----------
+    effect: `sncosmo.PropagationEffect`
+        Propagation effect.
+
+    name: str
+        Name of the effect.
+
+    frame: str
+        'rest': rest-frame
+        'obs': observator-frame
+
+    model: dict
+        model parameters.
+    """
     def __init__(self, 
                  effect=None, 
                  name=None,
                  frame=None,
                  model={}):
-        """ 
-        Initialize the Effect class.
-
-        Parameters
-        ----------
-        effect: `~sncosmo.PropagationEffect`
-            Propagation effect.
-
-        name: str
-            Name of the effect.
-
-        frame: str
-            'rest': rest-frame
-            'obs': observator-frame
-
-        model: dict
-            model parameters.
-        """
+        """ Initialize the Effect class."""
         self._effect = effect
         self._name = name
         self._frame = frame
@@ -38,11 +42,11 @@ class Effect( object ):
     @classmethod
     def from_sncosmo(cls, effect, name, frame, model={}):
         """ 
-        Load an effect from a sncosmo effect.
+        Load an effect from a `sncosmo` effect.
 
         Parameters
         ----------
-        effect : `~sncosmo.PropagationEffect`
+        effect : `sncosmo.PropagationEffect`
             Propagation effect.
             
         name : str
@@ -74,16 +78,15 @@ class Effect( object ):
 
         which: str
             which model to use for the effect.
-            - for mw: ccm89 (default)
-            - for hostdust: ccm89 (default)
-            - for scatter: g10, c11
+
+            - for mw: `ccm89` (default)
+            - for hostdust: `ccm89` (default)
+            - for scatter: `g10`, `c11`
 
         Returns
         -------
         Effect
         """
-
-        
         name = name.lower().replace("_","") # case insensitive, no "_"
         
         # Milky Way dust map
@@ -131,11 +134,11 @@ class Effect( object ):
     #  Internal     #
     # ============= #    
     def __repr__(self):
-        """ string representation of the effect """        
+        """ String representation of the effect. """        
         return self.__str__()
     
     def __str__(self):
-        """ string representation of the effect """
+        """ String representation of the effect. """
         import pprint
         out = { "effect": self.effect,
                 "name":self.name,
@@ -149,20 +152,20 @@ class Effect( object ):
     # ============= #
     @property
     def effect(self):
-        """ Access the effect """
+        """ Access the effect. """
         return self._effect
     
     @property
     def name(self):
-        """ the name of the effect """
+        """ The name of the effect. """
         return self._name
     
     @property
     def frame(self):
-        """ frame of the effect """
+        """ Frame of the effect. """
         return self._frame
 
     @property
     def model(self):
-        """ model of the effect """
+        """ Model of the effect. """
         return self._model

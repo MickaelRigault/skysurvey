@@ -1,3 +1,8 @@
+"""
+This module defines the generic `Survey` and `GridSurvey` classes, combining healpix and polygon survey 
+capabilities with a camera footprint.
+"""
+
 import pandas
 import numpy as np
 
@@ -5,30 +10,36 @@ from .healpix  import HealpixSurvey
 from .polygon  import PolygonSurvey
 
 
-__all__ = ["Survey", "GridSurvey"]
-
 class _FootPrintHandler_( object ):
+    """Mixin class handling footprint geometries for survey objects.
+
+    Parameters
+    ----------
+    _FOOTPRINT : `shapely.geometry.base.BaseGeometry` or None
+        Default camera footprint geometry used if no footprint is provided 
+        during initialization. Usually a Polygon or MultiPolygon.
+    """
+
     _FOOTPRINT = None
     # ============== #
     #  Method        #
     # ============== #
     def show_footprint(self, ax=None, add_text=False, **kwargs):
-        """ shows the survey footprint.
+        """ Shows the survey footprint.
         
         Parameters
         ----------
-        ax: matplotlib.axes
+        ax: `matplotlib.axes`
             axes to plot the footprint on.
             
         add_text: bool
             if True, adds text to the plot.
             
-        **kwargs goes to matplotlib (e.g. facecolor, edgecolor)
+        **kwargs goes to `matplotlib` (e.g. facecolor, edgecolor)
         
         Returns
         -------
-        matplotlib.figure
-        
+        `matplotlib.figure`
         """
         import matplotlib.pyplot as plt
         from matplotlib.colors import to_rgba
@@ -62,7 +73,7 @@ class _FootPrintHandler_( object ):
         return fig
 
     def get_skyarea(self, as_multipolygon=True):
-        """ multipolygon (or list) of field geometries
+        """ Multipolygon (or list) of field geometries.
 
         Parameters
         ----------
@@ -72,7 +83,7 @@ class _FootPrintHandler_( object ):
 
         Returns
         -------
-        shapely.geometry.MultiPolygon or list
+        `shapely.geometry.MultiPolygon` or list
         """
         from shapely import geometry
         list_of_geoms = self.fields["geometry"].values
@@ -85,7 +96,7 @@ class _FootPrintHandler_( object ):
     # ============== #
     @property
     def footprint(self):
-        """ camera footprint (geometry) """
+        """ Camera footprint (geometry). """
         if not hasattr(self,"_footprint") or self._footprint is None:
             if self._FOOTPRINT is None:
                 return None
@@ -102,21 +113,21 @@ class _FootPrintHandler_( object ):
 # ================= #    
 class Survey( HealpixSurvey, _FootPrintHandler_ ):
     # A healpixSurvey based on geometry, so contains a footprint
+    """ The `Survey` class.
+    
+    Parameters
+    ----------
+    footprint: `shapely.geometry`
+        footprint in the sky of the observing camera
 
+    nside : int
+        healpix nside parameter
+
+    data: `pandas.DataFrame`
+        observing data.
+    """
     def __init__(self, footprint=None, nside=200, data=None):
-        """ Initialize the Survey class.
-
-        Parameters
-        ----------
-        footprint: shapely.geometry
-            footprint in the sky of the observing camera
-
-        nside : int
-            healpix nside parameter
-
-        data: pandas.DataFrame
-            observing data.
-        """
+        """ Initialize the Survey class."""
         super().__init__(nside=nside, data=data)
         self._footprint = footprint
         
@@ -130,14 +141,14 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
     
     @classmethod
     def from_data(cls, data, footprint=None, nside=200):
-        """ load an instance given survey data and healpix size (nside) 
+        """ Load an instance given survey data and healpix size (nside) .
         
         Parameters
         ----------
-        data: pandas.DataFrame
+        data: `pandas.DataFrame`
             observing data.
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
         nside : int
@@ -150,7 +161,6 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
         See also
         --------
         from_random: generate random observing data and loads the instance.
-        
         """
         return cls(data=data, footprint=footprint, nside=nside)
         
@@ -161,17 +171,17 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
                           backend="polars",
                           use_pyarrow_extension_array=True,
                           **kwargs):
-        """ loads an instance given observing poitings of a survey
+        """ Loads an instance given observing poitings of a survey.
         
-        This loads an polygon.PolygonSurvey using from_pointing and 
-        converts that into an healpix using the to_healpix() method
+        This loads an ``polygon.PolygonSurvey`` using ``from_pointing`` and 
+        converts that into an healpix using the ``to_healpix()`` method.
 
         Parameters
         ----------
-        data: pandas.DataFrame or dict
+        data: `pandas.DataFrame` or dict
             observing data, must contain the rakey and deckey columns.
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
         rakey: str
@@ -185,9 +195,9 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
 
         backend: str
             which backend to use to merge the data (speed issue):
-            - polars (fastest): requires polars installed -> converted to pandas at the end
-            - pandas (classic): the normal way
-            - dask (lazy): as persisted dask.dataframe is returned
+            - `polars` (fastest): requires polars installed -> converted to pandas at the end
+            - `pandas` (classic): the normal way
+            - `dask` (lazy): as persisted dask.dataframe is returned
 
         use_pyarrow_extension_array: bool
             = ignored in backend != 'polars' or polars_to_pandas is not True = 
@@ -195,7 +205,7 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
             or based on pyarrow array (like in polars) ; faster but numpy.asarray will be 
             used by pandas when need (which will then slow things down).
 
-        **kwargs goes to polygon.PolygonSurvey.from_pointings
+        **kwargs goes to ``polygon.PolygonSurvey.from_pointings``
 
         Returns
         -------
@@ -215,14 +225,14 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
 
     @classmethod
     def from_healpix(cls, healpixsurvey, footprint):
-        """ creates an instance given a heapixsurvey and a footprint
+        """ Creates an instance given a heapixsurvey and a footprint.
 
         Parameters
         ----------
-        healpixsurvey: HealpixSurvey
+        healpixsurvey: `HealpixSurvey`
             healpix survey instance
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
         Returns
@@ -239,41 +249,40 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
 #                   #
 # ================= #
 class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
+    """The `GridSurvey` class.
+            
+    Parameters
+    ----------
+    data: `pandas.DataFrame`
+        observing data.
 
+    fields: `geodataframe`
+        field definitions.
+
+    footprint: `shapely.geometry`
+        footprint in the sky of the observing camera.   
+    """
     def __init__(self, data=None, fields=None, footprint=None, **kwargs):
-        """ Initialize the GridSurvey class
-        
-        Parameters
-        ----------
-        data: pandas.DataFrame
-            observing data.
-
-        fields: geodataframe
-            field definitions.
-
-        footprint: shapely.geometry
-            footprint in the sky of the observing camera
-        
-        """
+        """ Initialize the GridSurvey class."""
         self._footprint = footprint
         super().__init__(data=data, fields=fields)
         
     @classmethod
     def from_pointings(cls, data, fields_or_coords=None, footprint=None, **kwargs):
-        """ loads an instance given observing poitings of a survey
+        """ Loads an instance given observing poitings of a survey.
 
         Parameters
         ----------
-        data: pandas.DataFrame or dict
+        data: `pandas.DataFrame` or `dict`
             observing data, must contain the rakey and deckey columns.
 
-        fields_or_coords: geodataframe or dict
+        fields_or_coords: `geodataframe` or dict
             field definitions or coordinates.
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
-        **kwargs goes to super().__init__
+        **kwargs goes to ``super().__init__``
 
         Returns
         -------
@@ -299,15 +308,15 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
 
         Parameters
         ----------
-        fields_or_coords: geodataframe or dict
+        fields_or_coords: `geodataframe` or dict
             field definitions or coordinates.
 
-        footprint: shapely.geometry
+        footprint: `shapely.geometry`
             footprint in the sky of the observing camera
 
         Returns
         -------
-        geopandas.GeoDataFrame
+        `geopandas.GeoDataFrame`
         """
         if fields_or_coords is None:
             if hasattr(cls, "_DEFAULT_FIELDS"):
@@ -342,7 +351,7 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
     # ============== #
     @property
     def fields(self):
-        """ geodataframe containing the fields coordinates """
+        """ Geodataframe containing the fields coordinates. """
         if not hasattr(self,"_fields") or self._fields is None:
             if self._DEFAULT_FIELDS is None:
                 return None

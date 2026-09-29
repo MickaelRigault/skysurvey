@@ -1,8 +1,6 @@
 
 survey.healpix
-==========
-
-.. currentmodule:: skysurvey.survey.healpix
+==============
 
 .. automodule:: skysurvey.survey.healpix
    :members:

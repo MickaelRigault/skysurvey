@@ -17,7 +17,7 @@ Joining these to create:
 
 
 Elements
-======
+========
 	   
 .. grid:: 3
    :margin: 0
@@ -266,7 +266,7 @@ targets is stored in dset.targets.
 
 
 Tutorials
-======
+=========
 
 .. toctree::
    :maxdepth: 2

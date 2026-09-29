@@ -1,17 +1,20 @@
-import warnings
+"""
+This module defines the Roman survey camera footprint and provides utilities for parsing Roman SIMLIB observation files.
+"""
 
-from shapely import geometry
+import warnings
 import numpy as np
 import pandas
 
+from shapely import geometry
+
 def get_roman_footprint():
     """ 
-    Get the Roman footprint.
-    quick and dirty that have a 1011arcmin FoV
+    Get the Roman footprint (with a  1011arcmin FoV).
 
     Returns
     -------
-    shapely.geometry.Polygon
+    `shapely.geometry.Polygon`
     """
     roman_footprint = geometry.Polygon(
                     np.asarray([[0, 1.], [0.15, 1.],
@@ -36,19 +39,19 @@ def get_roman_footprint():
 #                      #
 # ==================== #
 def parse_simlib(simlib):
-    """ 
+    """ Parse a single simlib file adapted for a Roman simlib file.
 
     Parameters
     ----------
     simlib: str, path
-        the fullpath of a roman simlib file.
+        the fullpath of a Roman simlib file.
 
     Returns
     -------
-    dataframe: pandas.DataFrame
+    dataframe: `pandas.DataFrame`
         a multi-indexed dataframe (level=0 for simlib block index).
 
-    metadata: pandas.DataFrame
+    metadata: `pandas.DataFrame`
         a dataframe of the block metadata.
     """
     file_ = open(simlib, "r").read().splitlines()
@@ -71,7 +74,7 @@ def parse_simlib(simlib):
     return data, metadata
 
 def parse_simlib_block(block):
-    """ official Roman simlib are built per block. This parses one.
+    """ Official Roman simlib are built per block. This parses one.
 
     Parameters
     ----------
@@ -80,10 +83,10 @@ def parse_simlib_block(block):
 
     Returns
     -------
-    dataframe: pandas.DataFrame
+    dataframe: `pandas.DataFrame`
         the dataframe of the simlog
 
-    meta: pandas.Series
+    meta: `pandas.Series`
         a serie containing the metadata of this block.
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]

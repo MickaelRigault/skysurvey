@@ -8,7 +8,6 @@ for x in os.walk('../skysurvey'):
 from skysurvey import * # noqa: F403, E402
 
 
-
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
@@ -23,7 +22,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'matplotlib.sphinxext.plot_directive',
     # extra
-    "numpydoc",
+    #"numpydoc",
     'myst_nb',
     "nbsphinx",
     'sphinx_copybutton'
@@ -39,8 +38,17 @@ myst_enable_extensions = [
 nbsphinx_execute = 'never'
 nb_execution_mode = "off"
 
-autoclass_content = "both"              # Insert class and __init__ docstrings
+autoclass_content = "class"  # only use the class docstring, ignore __init__
 autodoc_member_order = "bysource"
+
+# Prefix section labels with the document path to avoid conflicts between notebooks sharing the same section
+autosectionlabel_prefix_document = True
+
+# Class methods not generated on separate files
+autosummary_generate = False
+
+# Prevents the "duplicate label" warnings for Variables/Parameters/etc.
+autosectionlabel_maxdepth = 1
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3', None),
@@ -75,7 +83,6 @@ html_theme = 'sphinx_book_theme'
 #html_theme = "pydata_sphinx_theme"
 
 html_theme_options = {
-    'logo_only': True,
     'show_toc_level': 2,
     'repository_url': 'https://github.com/MickaelRigault/skysurvey',
     'use_repository_button': True,     # add a "link to repository" button
