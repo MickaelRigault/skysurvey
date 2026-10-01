@@ -34,7 +34,7 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
 
     rng : None, int, `(Bit)Generator`, optional
         seed for the random number generator.
-        (doc adapted from numpy's `np.random.default_rng` docstring. 
+        (doc adapted from numpy's `np.random.default_rng` docstring.
         See that documentation for details.)
         If None, an unpredictable entropy will be pulled from the OS.
         If an ``int``, (>0), it will set the initial `BitGenerator` state.
@@ -79,7 +79,7 @@ def get_rate(z, rate, **kwargs):
         returns the volumetric rate as a function of redshift.
 
     **kwargs
-        Rate options if rate is a function. 
+        Rate options if rate is a function.
         ignored otherwise.
 
     Returns
@@ -91,10 +91,10 @@ def get_rate(z, rate, **kwargs):
     if callable(rate): # function
         n_per_gpc3 = rate(z, **kwargs)
     else: # volumetric
-        n_per_gpc3 = rate
-        
+        n_per_gpc3 = rate / (1+z)
+
     return n_per_gpc3
-    
+
 def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, astype="int", **kwargs):
     """ Get the total number of target expected in the given volume.
 
@@ -107,7 +107,7 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
-        If an array is given, if array broacasts with shell size, then it 
+        If an array is given, if array broacasts with shell size, then it
         multiplies shell, if not than an axes is added and pdf is (rates.shape, nbins).
 
     zmin: float
@@ -138,6 +138,7 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
 
     # this define the volume of the universe
     volume = cosmology.comoving_volume( bins_of_redshift ).to("Gpc**3").value # len(input_z) (+ 1 if keepsize)
+
     # and this the shell of universe. This is used to compute cases of non-constante rates.
     shell = np.diff(volume) # [ndim-1]
 
@@ -152,9 +153,9 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
         ntargets_per_shell = n_per_gpc3_of_shell * shell
     else:
         ntargets_per_shell = np.atleast_1d(n_per_gpc3_of_shell)[:, None] * shell
-    
+
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
-    
+
 def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell=False, astype="int", **kwargs):
     """ Get the total number of target expected in the given volume.
 
@@ -180,7 +181,7 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
 
     force_shell: bool
         If the input rate is a constant, should this force the use of shell computation ?
-        
+
     astype: bool
         type of the returned value.
 
@@ -190,16 +191,16 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
         number(s) of target.
     """
     # function or forced, hence shell computation
-    if callable(rate) or force_shell: 
-        bins_of_redshift_mid, ntargets_per_shell = get_ntargets_per_shell(zmax, rate, 
-                                                                          zmin=zmin, zstep=zstep, 
+    if callable(rate) or force_shell:
+        bins_of_redshift_mid, ntargets_per_shell = get_ntargets_per_shell(zmax, rate,
+                                                                          zmin=zmin, zstep=zstep,
                                                                           cosmology=cosmology,
                                                                           astype="float", # request astype comes at "return"
                                                                           **kwargs)
         ntargets = ntargets_per_shell.sum(axis=-1) # respects rate dimension
 
     # simple constant volumetric rate, so "V(zmax)-V(zmin) * Constant"
-    else: 
+    else:
         volume_zmax = cosmology.comoving_volume( zmax ).to("Gpc**3").value
         volume_zmin = cosmology.comoving_volume( zmin ).to("Gpc**3").value
         rate = np.atleast_1d(rate)
