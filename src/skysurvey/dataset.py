@@ -53,8 +53,8 @@ class DataSet(object):
         self.set_survey(survey)
 
     @classmethod
-    def from_targets_and_survey(cls, targets, survey, incl_error=True, # client=None, 
-                                phase_range=[-50, +200], progress_bar=False, seed=None, 
+    def from_targets_and_survey(cls, targets, survey, incl_error=True, # client=None,
+                                phase_range=[-50, +200], progress_bar=False, seed=None,
                                 discard_bands=True):
         """Loads a dataset (observed data) given targets and a survey.
 
@@ -91,7 +91,7 @@ class DataSet(object):
             If an `int`, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
             Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
             When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
-        
+
         discard_bands : bool, optional
             If True, discards the bands that includes wavelength for which the (observer-frame) target SED is not defined.
             This prevents crashing the code due to an error from `sncosmo`.
@@ -200,7 +200,7 @@ class DataSet(object):
                     bandpass = sncosmo.get_bandpass(band)
                     if bandpass.minwave() < model.minwave() or bandpass.maxwave() > model.maxwave():
                         used_logs = used_logs[used_logs['band'] != band]
-            
+
             used_logs = used_logs.sort_values("mjd")
             # realise the flux lightcurves and its error
             used_logs["flux"] = model.bandflux(
@@ -412,20 +412,20 @@ class DataSet(object):
                 fluxvar_to_be_removed = True
             else:
                 fluxvar_to_be_removed = False
-                
-            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
-            try:
-                data = getattr(gb_data, join_how)().reset_index().set_index(index_colnames)
-            except:
-                raise NotImplementedError(f"{join_how=} not implemented.")
 
-            if join_how in ["mean", "sum"]: 
+            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
+            if hasattr(gb_data, join_how):
+                data = getattr(gb_data, join_how)().reset_index().set_index(index_colnames)
+            else:
+                raise NotImplementedError(f"gb_data.{join_how=} not implemented.")
+
+            if join_how in ["mean", "sum"]:
                 # overwrite fluxerr to respect the statistics
                 data["fluxerr"] = np.sqrt(data["fluxvar"])
 
             if fluxvar_to_be_removed:
                 _ = data.pop("fluxvar")
-            
+
         if add_phase:
             target_info = self.targets.data.loc[index][["t0", redshift_key]]
             #        target_info.index = self._data_index # for merging
@@ -469,7 +469,7 @@ class DataSet(object):
             should these be joined ? (see join_how).
 
         join_how: string
-            specify how the bandday should be joined. 
+            specify how the bandday should be joined.
             = ignored if join_bandday is False =
 
         Returns
@@ -491,18 +491,18 @@ class DataSet(object):
 
     def get_target_lightcurve(self, index, detection=None, phase_range=None):
         """Get the observation of the given target.
-        
-        = short cut to self.get_data(index=index) = 
+
+        = short cut to self.get_data(index=index) =
 
         Parameters
         ----------
         index : int, optional
             The index of the target whose light curve is to be taken. If None, a random index is chosen.
-            
+
         detection: bool, None
             should this be limited to (non)detected points only ?
             This follow the bool/None format:
-            
+
             - detection=None: no selection
             - detection=False: only non-detected points
             - detection=True: only detected points
