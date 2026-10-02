@@ -32,7 +32,7 @@ def test_get_ntargets_per_shell():
 def test_get_ntargets_constantrate():
     """ """
     # this tests get_ntargets for constante rate, either array or float, using the shell or not.
-    
+
     redshift_volume_1Gyr= 0.145031 # for Planck18
     rate_float = 1e4
 
@@ -42,7 +42,7 @@ def test_get_ntargets_constantrate():
     # => use of shell or not.
     ntargets_constant_shell = get_ntargets(redshift_volume_1Gyr, rate=rate_float, cosmology=Planck18, astype="int", force_shell=True)
     assert np.isclose(ntargets_constant_shell, ntargets_constant)
-    
+
     # list of array
     rates_float_array = np.asarray([rate_float, 1e5])
     ntargets_constant_array = get_ntargets(redshift_volume_1Gyr, rate=rates_float_array, cosmology=Planck18, astype="int")
@@ -65,7 +65,7 @@ def test_get_ntargets_multirates():
         ntargets_1, ntargets_2 = get_ntargets(ztest, rate=[1e3, 2e4])
         assert np.isclose(ntargets_1, 1e3*vol_universe, rtol=1e-3)
         assert np.isclose(ntargets_2, 2e4*vol_universe, rtol=1e-3)
-    
+
 
 def test_get_ntargets_volumeconsistancy():
 
@@ -83,53 +83,54 @@ def test_get_ntargets_volumeconsistancy():
         assert np.isclose(ntarget_vol1/ntarget_vol2, 0.5, rtol=0.01)
         assert np.isclose(ntarget_vol1/ntarget_vol_21, 1, rtol=0.01)
 
-    
+
 def test_draw_redshift_constantrate():
     """ """
-    # ks test specify if two sample are drawn 
+    # ks test specify if two sample are drawn
     # from the same underlying population.
     from scipy.stats import ks_2samp
 
     rate_float = 1e3
-    redshifts_float = draw_redshift(int(1e4), rate=rate_float, zmax=0.145, 
+    redshifts_float = draw_redshift(int(1e4), rate=rate_float, zmax=0.145,
                                     rng=1)
     # vary sample size and way rates are defined (constant but specified as constant per shell)
     redshifts_funcflat = draw_redshift(int(1e5), rate=constante_rate, zmax=0.145, rng=2,
                                            c=rate_float)
-    
+
     kstest = ks_2samp(redshifts_float, redshifts_funcflat)
     assert kstest.pvalue>0.1
 
 def test_draw_redshift_ndim2():
     """ """
-    # ks test specify if two sample are drawn 
+    # ks test specify if two sample are drawn
     # from the same underlying population.
     from scipy.stats import ks_2samp
 
-    # constant rate should provide the same thing as the number of target is given. 
+    # constant rate should provide the same thing as the number of target is given.
     # hence, as long as the rate(z) is the same at a constant, this cancels out.
     ntargets_1, ntargets_2 = draw_redshift(10_000, rate=[1, 2], rng = 2)
     kstest = ks_2samp(ntargets_1, ntargets_2)
     assert kstest.pvalue>0.1
-    
+
 # tests for the func volumetric_rate()
 def test_volumetric_rate_float():
    z = 0.1
    n_per_gpc3_float = 10.0
-   n_per_gpc3_returned = get_rate(z, n_per_gpc3_float)
+   n_per_gpc3_returned = get_rate(z, n_per_gpc3_float, H0=70, rate_H0=70)
    assert n_per_gpc3_returned == n_per_gpc3_float
 
 def test_volumetric_rate_array():
    n_per_gpc3_array = np.asarray([10.0, 20.0, 30.0])
-   n_per_gpc3_returned = get_rate(z, n_per_gpc3_array)
+   n_per_gpc3_returned = get_rate(z, n_per_gpc3_array, H0=70, rate_H0=70)
    assert np.all([n_per_gpc3_returned == n_per_gpc3_array])
-   
+
 def test_volumetric_rate_func():
     """ """
     redshifts = np.arange(0, 0.5, step=1e-3)
     constante = 3
 
-    n_per_gpc3_returned = get_rate(redshifts, constante_rate, c=constante)
+    n_per_gpc3_returned = get_rate(redshifts, constante_rate, c=constante,
+                                    H0=70, rate_H0=70)
     assert np.all(n_per_gpc3_returned == constante)
 
 

@@ -15,11 +15,11 @@ def targets_from_collection(transientcollection):
     """Get targets from a transient collection.
     """
     raise NotImplementedError
-    
+
 
 def broadcast_mapping(value, ntargets):
     """Broadcast a value to a given number of targets.
-    
+
     Parameters
     ----------
     value : array or scalar
@@ -45,7 +45,7 @@ def broadcast_mapping(value, ntargets):
         broadcasted_values = np.broadcast_to(value, (ntargets, value.shape[-1]) )
     else:
         broadcasted_values = np.broadcast_to(value, ntargets)
-        
+
     return broadcasted_values
 
 
@@ -65,7 +65,7 @@ class TargetCollection( object ):
     """
     _COLLECTION_OF = Target
     _TEMPLATES = []
-    
+
     def __init__(self, targets=None):
         """Initialize the TargetCollection."""
         self.set_targets(targets)
@@ -74,41 +74,41 @@ class TargetCollection( object ):
         """Convert the collection into a list of same-template targets."""
         if "template" not in self.data:
             raise AttributeError("self.data has no 'template' column")
-        
+
         gtemplates = self.data.groupby("template")
         return [self._COLLECTION_OF.from_data(self.data.loc[indices],
                                               template=template_)
                 for template_, indices in gtemplates.groups.items()]
-        
+
     # ============= #
     #  Collection   #
-    # ============= #            
+    # ============= #
     def call_down(self, which, margs=None, allow_call=True, **kwargs):
         """Call a method on each target in the collection."""
         if margs is not None:
             margs = broadcast_mapping(margs, self.ntargets)
             return [getattr(t, which)(marg_, **kwargs)
                         for marg_, t in zip(margs, self.targets)]
-            
+
         return [attr if not (callable(attr:=getattr(t, which)) and allow_call) else\
-                attr(**kwargs) 
+                attr(**kwargs)
                 for t in self.targets]
-    
+
     # ============= #
     #  Methods      #
-    # ============= #    
+    # ============= #
     def set_targets(self, targets):
         """Set the targets in the collection."""
         self._targets = np.atleast_1d(targets) if targets is not None else []
 
     def get_model_parameters(self, entry, key, default=None):
         """Get the model parameters for each target in the collection."""
-        return self.call_down("get_model_parameter", 
+        return self.call_down("get_model_parameter",
                               entry=entry, key=key, default=default)
 
     def get_data(self, keys="_KIND", colname="kind"):
         """Get a concatenated dataframe of the data from each target."""
-        if keys is not None and type(keys) is str: 
+        if keys is not None and type(keys) is str:
             keys = self.call_down(keys)
 
         list_of_data = self.call_down("data")
@@ -117,7 +117,7 @@ class TargetCollection( object ):
             if colname is None:
                 colname = keys
             data = data.reset_index(names=[colname,"subindex"])
-            
+
         return data
 
     def get_target_template(self, index, as_model=False, set_magabs=False):
@@ -128,9 +128,9 @@ class TargetCollection( object ):
         index : int
             Index of a target (see `self.data.index`) to set the template
             parameters to that of the target.
-            
+
         as_model : bool, optional
-            should this return the `sncosmo.Model` (True) or the 
+            should this return the `sncosmo.Model` (True) or the
             skysurvey.Template (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
 
         set_magabs: bool, optional
@@ -149,7 +149,7 @@ class TargetCollection( object ):
         data_index = self.data.loc[index]
         template_name = data_index["template"]
         template_index = self.template_names.index(template_name)
-        
+
         try:
             target = self.targets[template_index]
             target_template = target.template
@@ -160,7 +160,7 @@ class TargetCollection( object ):
             peak_absmag_band = target.peak_absmag_band
             amplitude_name = target.amplitude_name
             cosmology = target.cosmology
-            
+
         except Exception as e:
             warning_string = (
                     f"Failed getting target template for index {index} with " +
@@ -171,9 +171,9 @@ class TargetCollection( object ):
                     "THIS WILL IGNORE ANY MODEL EFFECTS YOU HAVE SET!"
                 )
             warnings.warn(warning_string)
-            target_template = Template.from_sncosmo(template_name)   
+            target_template = Template.from_sncosmo(template_name)
             peak_absmag_magsys = "ab"
-            peak_absmag_band = "bessellb"   
+            peak_absmag_band = "bessellb"
             amplitude_name = "amplitude"
             cosmology = cosmology.Planck18
 
@@ -182,7 +182,7 @@ class TargetCollection( object ):
         target_params = data_index[param_mask].to_dict()
         _ = target_params.pop(amplitude_name, None)
         target_template.sncosmo_model.set(**target_params)
-        
+
         if set_magabs:
             target_template.sncosmo_model.set_source_peakabsmag(
                 absmag=data_index['magabs'],
@@ -190,7 +190,7 @@ class TargetCollection( object ):
                 magsys=peak_absmag_magsys,
                 cosmo=cosmology
                 )
-        
+
         if as_model:
             output_template = target_template.sncosmo_model
         else:
@@ -203,7 +203,7 @@ class TargetCollection( object ):
                             ax=None, fig=None, colors=None,
                             time_range=[-20,50], npoints=500,
                             zp=25, zpsys="ab",
-                            format_time=True, t0_format="mjd", 
+                            format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
         """Show the lightcurve of a given target.
 
@@ -269,16 +269,16 @@ class TargetCollection( object ):
                                              time_range=time_range, npoints=npoints,
                                              zp=zp, zpsys=zpsys,
                                              format_time=format_time,
-                                             t0_format=t0_format, 
+                                             t0_format=t0_format,
                                              in_mag=in_mag, invert_mag=invert_mag,
                                              **kwargs)
 
-    
+
     def to_transient(self, keys=None, **kwargs):
         """Convert the collection to a `Transient` object."""
         data = self.get_data(keys=keys)
         return Transient.from_data(data, **kwargs)
-        
+
     # ============= #
     #  Properties   #
     # ============= #
@@ -293,17 +293,17 @@ class TargetCollection( object ):
         if not hasattr(self,"_data"):
             self._data = self.get_data()
         return self._data
-    
+
     @property
     def ntargets(self):
         """The number of targets in the collection."""
         return len(self.templates)
-    
+
     @property
     def target_ids(self):
         """The IDs of the targets in the collection."""
         return np.arange(self.ntargets)
-    
+
     @property
     def models(self):
         """The models of the targets in the collection."""
@@ -314,7 +314,7 @@ class TargetCollection( object ):
     #     if not hasattr(self, "_magsys"):
     #         self._magsys = self.call_down("magsys")
     #     return self._magsys
-    
+
     # @property
     # def peak_absmag_band(self):
     #     if not hasattr(self, "_peak_absmag_band"):
@@ -325,13 +325,13 @@ class TargetCollection( object ):
     def template(self):
         """A shortcut to `self.templates` for self-consistency."""
         return self.templates
-    
+
     @property
     def templates(self):
         """The templates of the targets in the collection."""
         if not hasattr(self,"_templates") or self._templates is None:
             self._templates = self._TEMPLATES
-            
+
         return self._templates
 
     @property
@@ -341,7 +341,7 @@ class TargetCollection( object ):
                 target.template.source.name for target in self.targets
             ]
         return self._template_names
-    
+
 class TransientCollection( TargetCollection ):
     """
     A collection of transients.
@@ -354,25 +354,38 @@ class TransientCollection( TargetCollection ):
     _COLLECTION_OF : type, optional
         The type of transient in the collection. The default is `Transient`.
     """
-    _COLLECTION_OF = Transient    
+    _COLLECTION_OF = Transient
     # ============= #
     #  Methods      #
     # ============= #
-    def set_rates(self, float_or_func):
-        """Call `set_rate` for each target in the collection."""
-        _ = self.call_down("set_rate", float_or_func)
+    def set_rates(self, float_or_func, H0=None):
+        """Call `set_rate` for each target in the collection.
+
+        Parameters
+        ----------
+        float_or_func : float or callable
+            If a float is given, it is assumed to be the number of targets per
+            Gpc3. If a callable is given, it is supposed to be a function of z that
+            returns the volumetric rate as a function of redshift.
+
+        H0 : float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving the rate.
+            If None, each target's `_RATE_H0` is used. By default None.
+        """
+        _ = self.call_down("set_rate", float_or_func, H0=H0)
 
     def update_model(self, rate_update=True, **kwargs):
         """Call `update_model` for each target in the collection."""
-        _ = self.call_down("update_model", rate_update=True, **kwargs)
-        
+        _ = self.call_down("update_model", rate_update=rate_update, **kwargs)
+
     def get_rates(self, z, relative=False, **kwargs):
         """Get the rates for each target in the collection."""
         rates = self.call_down("get_rate", margs=z, **kwargs)
         if relative:
             rates /= np.nansum(rates)
+
         return rates
-    
+
     def draw(self, size=None,
                  zmin=None, zmax=None,
                  tstart=None, tstop=None,
@@ -386,7 +399,7 @@ class TransientCollection( TargetCollection ):
         rng : None, int, `(Bit)Generator`, optional
             = ignored if size is None =
             seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring. 
+            (doc adapted from numpy's `np.random.default_rng` docstring.
             See that documentation for details.)
             If None, an unpredictable entropy will be pulled from the OS.
             If an ``int``, (>0), it will set the initial `BitGenerator` state.
@@ -398,11 +411,11 @@ class TransientCollection( TargetCollection ):
             rng = np.random.default_rng(rng)
             templates = rng.choice( np.arange( self.ntargets ), size=size,
                                           p=relat_rate/relat_rate.sum() )
-            
+
             # using pandas to convert that into sizes.
             # Most likely, there is a nuympy way, but it's fast enough.
             templates = pandas.Series(templates)
-            
+
             # count entries and force 0 and none exist.
             sizes = templates.value_counts().reindex( np.arange(self.ntargets)
                                                      ).fillna(0).astype(int)
@@ -410,16 +423,16 @@ class TransientCollection( TargetCollection ):
             size = sizes.values # numpy
 
         draws = self.call_down("draw", margs=size,
-                              zmin=zmin, zmax=zmax,     
+                              zmin=zmin, zmax=zmax,
                               tstart=tstart, tstop=tstop,
-                              nyears=nyears, inplace=False, 
+                              nyears=nyears, inplace=False,
                               **kwargs)
-        
+
         data = pandas.concat(draws, keys=self.templates, axis=0)
         data = data.reset_index(level=0).rename({"level_0":"template"}, axis=1)
         if shuffle:
             data = data.sample(frac=1).reset_index(drop=True)
-            
+
         if inplace:
             self._data = data
 
@@ -440,15 +453,19 @@ class CompositeTransient( TransientCollection ):
         The kind of transient. The default is "unknown".
     _RATE : float, optional
         The rate of the transient. The default is 1e5.
+    _RATE_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `_RATE`.
+        The default is 70.
     _MAGABS : tuple, optional
         The absolute magnitude of the transient. The default is (-18, 1).
     """
     _COLLECTION_OF = Transient
 
-    _KIND = "unknown"    
-    _RATE = 1e5
+    _KIND = "unknown"
+    _RATE = 1e5 # this assumes H0=70 | see Transient._RATE_H0
+    _RATE_H0 = 70
     _MAGABS = (-18, 1) #
-    
+
     # ============= #
     #  Methods      #
     # ============= #
@@ -458,7 +475,7 @@ class CompositeTransient( TransientCollection ):
                    zmax=None, tstart=None, tstop=None,
                    zmin=0, nyears=None,
                    skyarea=None,
-                   rate=None, effect=None,
+                   rate=None, rate_H0=None, effect=None,
                    **kwargs):
         """Load the instance from a random draw of targets given the model.
 
@@ -515,6 +532,10 @@ class CompositeTransient( TransientCollection ):
             returns the volumetric rate as a function of wavelength.
 
             By default None.
+        rate_H0 : float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving `rate`.
+            Ignored if `rate` is None. If None, each target's `_RATE_H0`
+            is used. By default None.
         effect : [type], optional
             [description]. By default None.
         **kwargs
@@ -530,22 +551,22 @@ class CompositeTransient( TransientCollection ):
         ``from_setting``: loads an instance given model parameters (dict)
         """
         this = cls()
-    
+
         if rate is not None:
-            this.set_rates(rate) # this uses call_down('set_rate')
-        
+            this.set_rates(rate, H0=rate_H0) # this uses call_down('set_rate')
+
         if templates is not None:
             this._templates = templates
-    
+
         if model is not None:
             this.call_down("update_model", **model, rate_update=False) # will update any model entry.
-        
+
         if effect is not None:
             this.call_down("add_effect", effect) # will update any model entry.
-    
+
         if kwargs:
             this.update_model_parameter(**kwargs, rate_update=False)
-            
+
         # cleaning rate automatic feeding in model
         #this._update_rate_in_model_()
         _ = this.draw( size=size,
@@ -567,16 +588,16 @@ class CompositeTransient( TransientCollection ):
             # build targets
             self._targets = [self._COLLECTION_OF.from_sncosmo(source_)
                              for source_ in self.templates]
-            self.set_rates( self._RATE ) # default
+            self.set_rates( self._RATE, H0=self._RATE_H0) # default
             self.call_down("set_magabs", np.atleast_2d(self._MAGABS) ) # default
-            
+
         return self._targets
 
     @property
     def magabs(self):
         """The absolute magnitudes of the transients in the collection."""
         return self.call_down("magabs")
-        
+
     @property
     def rate(self):
         """The rate of the transients in the collection.
@@ -589,8 +610,8 @@ class CompositeTransient( TransientCollection ):
     def ntargets(self):
         """The number of templates in the collection."""
         return len(self.templates)
-    
-    
+
+
 class TSTransientCollection( TransientCollection ):
     """
     A collection of time-series transients.
@@ -604,38 +625,38 @@ class TSTransientCollection( TransientCollection ):
         The type of transient in the collection. The default is `TSTransient`.
     """
     _COLLECTION_OF = TSTransient
-        
+
     @classmethod
-    def from_draw(cls, sources, size=None, nyears=None, 
+    def from_draw(cls, sources, size=None, nyears=None,
                       rates=1e3, magabs=None, magscatter=None,
                       **kwargs):
         """Load the instance from a random draw of targets given the model."""
         this = cls.from_sncosmo(sources, rates=rates,
-                                        magabs=magabs, 
+                                        magabs=magabs,
                                         magscatter=magscatter)
         _ = this.draw(size=size, nyears=nyears, inplace=True,
                       **kwargs)
         return this
-        
+
     @classmethod
-    def from_sncosmo(cls, sources, rates=1e3, 
+    def from_sncosmo(cls, sources, rates=1e3,
                         magabs=None, magscatter=None):
         """Load the instance from a list of sources (and relative rates)."""
         # make sure the sizes match
         rates = broadcast_mapping(rates, len(sources))
         transients = [cls._COLLECTION_OF.from_sncosmo(source_, rate_)
                      for source_, rate_ in zip(sources, rates)]
-        
+
         # Change the model.
         if magabs is not None:
             magabs = broadcast_mapping(magabs, len(sources))
-            _ = [t.change_model_parameter(magabs={"loc":magabs_}) 
+            _ = [t.change_model_parameter(magabs={"loc":magabs_})
                  for t, magabs_ in zip(transients, magabs)]
-            
+
         if magscatter is not None:
             magscatter = broadcast_mapping(magscatter, len(sources))
-            _ = [t.change_model_parameter(magabs={"scale":magscatter_}) 
+            _ = [t.change_model_parameter(magabs={"scale":magscatter_})
                  for t, magscatter_ in zip(transients, magscatter)]
-            
+
         # and loads it
         return cls(transients)

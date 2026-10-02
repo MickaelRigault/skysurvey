@@ -15,24 +15,24 @@ The `SNeIa` is defined as such:
        _TEMPLATE_SOURCE = "salt2"
        _VOLUME_RATE = 2.35 * 10**4 # Perley 2020
        _MODEL = dict( redshift ={"param":{"zmax":0.2}, "as":"z"},
-                                  
-                       x1={"model":"nicolas2021"}, 
-                       
+
+                       x1={"model":"nicolas2021"},
+
                        c={"model":"intrinsic_and_dust"},
 
-                       t0={"model":"uniform", 
+                       t0={"model":"uniform",
                            "param":{"mjd_range":[59000, 59000+365*4]} },
-                           
+
                        magabs={"model":"tripp1998",
                                "input":["x1","c"]
                               },
-                               
+
                        magobs={"model":"magabs_to_magobs",
                                "input":["z", "magabs"]},
 
                        x0={"model":"magobs_to_x0",
                            "input":["magobs"]},
-                           
+
                        radec={"model":"random",
                               "param":dict(ra_range=[0, 360],
                               dec_range=[-30, 90]),
@@ -114,14 +114,14 @@ class SNeIaColor( object ):
         """
         if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
-        
+
         from scipy import stats
         # full blue
         pdf = stats.norm.pdf(xx, loc=cint, scale=sigmalow)
         redder = (xx>=cint)
         pdf[redder] = stats.norm.pdf(xx[redder], loc=cint, scale=sigmahigh)
         return xx, pdf
-        
+
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.075, sigmaint=0.05, tau=0.14):
         """Get an exponential decay convolved with and intrinsic gaussian color distribution.
@@ -169,8 +169,8 @@ class SNeIaStretch( object ):
     """A class to model the stretch of SNe Ia."""
 
     @staticmethod
-    def nicolas2021( xx="-4:4:0.005", 
-                     mu1=0.33, sigma1=0.64, 
+    def nicolas2021( xx="-4:4:0.005",
+                     mu1=0.33, sigma1=0.64,
                      mu2=-1.50, sigma2=0.58, a=0.45,
                      fprompt=0.5):
         """Get the pdf of the Nicolas (2021) model.
@@ -211,15 +211,15 @@ class SNeIaStretch( object ):
         from scipy.stats import norm
         if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
-            
+
         mode1 = norm.pdf(xx, loc=mu1, scale=sigma1)
         mode2 = norm.pdf(xx, loc=mu2, scale=sigma2)
-        if type(fprompt) is not float: 
+        if type(fprompt) is not float:
             fprompt = np.asarray(fprompt)[:,None]
-            
+
         pdf = fprompt*mode1 + (1-fprompt)*(a*mode1 + (1-a)*mode2)
         return xx, pdf
-    
+
 
 class SNeIaMagnitude( object ):
     """A class to model the magnitude of SNe Ia."""
@@ -253,9 +253,9 @@ class SNeIaMagnitude( object ):
             The color linear law coeeficient. The default is 3.15.
 
         rng: None, int, Generator
-            Random number generator seed. 
+            Random number generator seed.
             (docstring extracted from `np.random.default_rng()`, see this for complete documentation).
-            If None, then fresh, unpredictable entropy will be pulled from the OS. 
+            If None, then fresh, unpredictable entropy will be pulled from the OS.
             If an ``int``, then the seed will start from this.
             If passed a `Generator`, it will be returned unaltered.
 
@@ -403,30 +403,30 @@ class SNeIa( Transient ):
 
     _KIND = "SNIa"
     _TEMPLATE = "salt2"
-    _RATE = 2.35 * 10**4 # Perley 2020
+    _RATE = 2.35 * 10**4 # Perley 2020 | this assumes H0=70, see Transient._RATE_H0
     _AMPLITUDE_NAME = "x0"
-    
+
     # {'name': {func: ,'kwargs': {}, 'as': str_or_list }}
     _MODEL = dict( redshift = {"func": "draw_redshift", # implicit
                                 "kwargs": {"zmax":0.2},
                                 "as":"z"},
-                              
-                   x1 = {"func": SNeIaStretch.nicolas2021}, 
-                   
+
+                   x1 = {"func": SNeIaStretch.nicolas2021},
+
                    c = {"func": SNeIaColor.intrinsic_and_dust},
 
-                   t0 = {"func": RNG.uniform, 
+                   t0 = {"func": RNG.uniform,
                          "kwargs": {"low":56_000, "high":56_200} },
-                       
+
                    magabs = {"func": SNeIaMagnitude.tripp1998,
                              "kwargs": {"x1": "@x1", "c": "@c",
                                         "mabs":-19.3, "sigmaint":0.10}
                             },
-                           
+
                    magobs = {"func": "magabs_to_magobs", # str-> method of the class
                              "kwargs": {"z":"@z", "magabs":"@magabs"},
                             },
-                       
+
                    radec = {"func": random_radec,
                             "kwargs": {},
                             "as": ["ra","dec"]

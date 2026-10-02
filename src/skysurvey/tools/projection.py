@@ -60,7 +60,6 @@ def skyarea_to_skysurface(skyarea, frac=True, in_deg2=True, projection_correctio
     >>> skyarea_to_skysurface(skyarea, frac=False, in_deg2=True)  # ~398 deg2
     >>> skyarea_to_skysurface(skyarea, frac=False, in_deg2=True, projection_correction=False)  # 400deg2
     """
-    print("using skyarea_to_skysurface")
     def apply_sinprojection(geom):
         """ (ra, dec) in deg -> (ra in rad, sin(dec)) """
         def transform_to_sinprojection(coords):  # coords: (N, 2) array

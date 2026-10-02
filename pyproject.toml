@@ -67,6 +67,12 @@ skysurvey = ["data/*"]
 [tool.setuptools.dynamic]
 version = {attr = "skysurvey.__version__"}
 
+
+# RUFF
+[tool.ruff]
+exclude = ["tests", "docs"]
+include = ["*.py"]
+
 [tool.ruff.lint]
 select = [
   "E", "F", # flake8

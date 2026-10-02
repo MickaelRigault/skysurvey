@@ -1,5 +1,5 @@
 """
-This module provides Core-Collapse (CC) Supernovae classes. See the corresponding documentation page in "List of transient classes" 
+This module provides Core-Collapse (CC) Supernovae classes. See the corresponding documentation page in "List of transient classes"
 for more detail on those Transient class.
 """
 
@@ -8,8 +8,8 @@ import numpy as np
 from .timeserie import MultiTemplateTSTransient
 from ..source import get_sncosmo_sourcenames
 
-CC_RATE = 1.0e5 # Perley+2020
-    
+CC_RATE = 1.0e5 # Perley+2020 | this assumes H0=70, see Transient._RATE_H0.
+
 # https://sncosmo.readthedocs.io/en/stable/source-list.html
 
 class VincenziModels( object ):
@@ -24,24 +24,24 @@ class VincenziModels( object ):
         The parent class of the `VincenziModels` class.
 
     _KIND : str or None
-        The specific supernova type (e.g., 'II', 'IIP', 'Ib'). Used to 
+        The specific supernova type (e.g., 'II', 'IIP', 'Ib'). Used to
         identify the corresponding ``v19-*-corr`` template in sncosmo.
     _TEMPLATES : str
-        The template selection mode. For Vincenzi models, this is set to 
-        `"complex"` to handle the variety of templates associated with 
+        The template selection mode. For Vincenzi models, this is set to
+        `"complex"` to handle the variety of templates associated with
         each supernova sub-type.
     _RATE : float
-        The volumetric rate of the transient. Defaults to `np.nan`. 
+        The volumetric rate of the transient. Defaults to `np.nan`.
         Users should provide a rate (typically in units of :math:`Gpc^{-3} yr^{-1}`).
     """
     _KIND = None
     # takes the v19-*-corr corresponding to the given _KIND
     _TEMPLATES = "complex"
     # Default rate from Perley 2020 ; this is wrong but close.
-    
+
     _RATE = np.nan # CC 1e5 * (0.75 *0.72) for Type II.
     # Perley+2020: CC-rate (all combined) is 1e5 Gyr-3/yr-1
-    
+
     # For Vincenzi model, we considered average absolute magnitude
     # as defined in their Table 1. We favor the right-most column.
 
@@ -59,7 +59,7 @@ class VincenziModels( object ):
                                                         startswith="v19",
                                                         endswith="corr") # all -corr models
             self.set_template(template_list)
-            
+
         return self._template
 
 class SnanaModels( VincenziModels ):
@@ -71,7 +71,7 @@ class SnanaModels( VincenziModels ):
     VincenziModels : class
         The parent class of the `SnanaModels` class.
     """
-    
+
     @property
     def template(self):
         """ List of sncosmo source names using the `SNANA` naming convention.
@@ -86,9 +86,9 @@ class SnanaModels( VincenziModels ):
                                                         startswith="snana",
                                                         endswith="") # all -corr models
             self.set_template(template_list)
-            
+
         return self._template
-    
+
 # =============== #
 #                 #
 #   Type II       #
@@ -117,10 +117,10 @@ class SNeII( VincenziModels, MultiTemplateTSTransient ):
     _KIND : str
         The transient type identifier: ``"SN II"``.
     _RATE : float
-        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.649`, 
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.649`,
         consistent with the Type II fraction from Perley et al. 2020.
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-17.48, 0.7)``, based on BTS z < 0.05.
     """
     _KIND = "SN II"
@@ -130,7 +130,7 @@ class SNeII( VincenziModels, MultiTemplateTSTransient ):
     _RATE = CC_RATE * 0.649  # this combines IIL & IIP
     # _MAGABS = (-16.0, 1.3) # Table 1 of Vincenzi19
     _MAGABS = (-17.48, 0.7) # MR from BTS z<0.05
-    
+
 class SNeIIn( VincenziModels, MultiTemplateTSTransient ):
     r"""
     SNe IIn model from Vincenzi et al. 2019.
@@ -146,16 +146,16 @@ class SNeIIn( VincenziModels, MultiTemplateTSTransient ):
     _KIND : str
         The transient type identifier: ``"SN IIn"``.
     _RATE : float
-        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.047`, 
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.047`,
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-18.0, 0.8)``, based on BTS z < 0.05.
-    """    
+    """
     _KIND = "SN IIn"
     _RATE = CC_RATE * 0.047
     #_MAGABS = (-17.7, 1.1) # Table 1 of Vincenzi19
     _MAGABS = (-18.0, 0.8) # MR from BTS z<0.05
-        
+
 class SNeIIb( VincenziModels, MultiTemplateTSTransient ):
     r"""
     SNe IIb model from Vincenzi et al. 2019.
@@ -167,20 +167,20 @@ class SNeIIb( VincenziModels, MultiTemplateTSTransient ):
 
     MultiTemplateTSTransient : class
         The parent class of the `SNeIIb` class.
-    
+
     _KIND : str
         The transient type identifier: ``"SN IIb"``.
     _RATE : float
-        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.109`, 
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.109`,
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-17.45, 0.6)``, based on BTS z < 0.05.
-    """    
+    """
     _KIND = "SN IIb"
     _RATE = CC_RATE * 0.109
     #_MAGABS = (-16.7, 2.0) # Table 1 of Vincenzi19
     _MAGABS = (-17.45, 0.6) # MR from BTS z<0.05
-    
+
 # =============== #
 #                 #
 #   Type I        #
@@ -197,21 +197,21 @@ class SNeIb( VincenziModels, MultiTemplateTSTransient ):
 
     MultiTemplateTSTransient : class
         The parent class of the `SNeIb` class.
-    
+
     _KIND : str
         The transient type identifier: ``"SN Ib"``.
     _RATE : float
-        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.108`, 
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.108`,
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-17.35, 0.53)``, based on BTS z < 0.05.
-    """    
+    """
     _KIND = "SN Ib"
     _RATE = CC_RATE * 0.108
     # changing the errors averaging with R14
     #_MAGABS = (-18.3, 0.5) # Table 1 of Vincenzi19
     _MAGABS = (-17.35, 0.53) # MR from BTS z<0.05
-    
+
 class SNeIc( VincenziModels, MultiTemplateTSTransient ):
     r"""
     SNe Ic model from Vincenzi et al. 2019.
@@ -223,15 +223,15 @@ class SNeIc( VincenziModels, MultiTemplateTSTransient ):
 
     MultiTemplateTSTransient : class
         The parent class of the `SNeIc` class.
-    
+
     _KIND : str
         The transient type identifier: ``"SN Ic"``.
     _RATE : float
-        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.075`, 
+        Volumetric rate. Calculated as :math:`CC\_RATE \times 0.075`,
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-17.50, 0.7)``, based on BTS z < 0.05.
-    """    
+    """
     _KIND = "SN Ic"
     _RATE = CC_RATE * 0.075
     # _MAGABS = (-17.4, 0.7) # Table 1 of Vincenzi19
@@ -254,10 +254,10 @@ class SNeIcBL( VincenziModels, MultiTemplateTSTransient ):
     _RATE : float
         Volumetric rate. Calculated as :math:`CC\_RATE \times 0.097`, joining rates from SNe Ic-BL and SNe Ic-pec.
     _MAGABS : tuple
-        The peak absolute magnitude distribution ``(mean, sigma)``. 
+        The peak absolute magnitude distribution ``(mean, sigma)``.
         Defaults to ``(-18.12, 0.9)``, based on BTS z < 0.05.
-    """    
+    """
     _KIND = "SN Ic-BL"
-    _RATE = CC_RATE * 0.097 # joining Ic-BL & Ic-pec    
-    # _MAGABS = (-17.7, 1.2) # Table 1 of Vincenzi19 
+    _RATE = CC_RATE * 0.097 # joining Ic-BL & Ic-pec
+    # _MAGABS = (-17.7, 1.2) # Table 1 of Vincenzi19
     _MAGABS = (-18.12, 0.9) # MR from BTS z<0.05

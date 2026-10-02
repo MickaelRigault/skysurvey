@@ -1,5 +1,5 @@
 """
-This module provides the `Kilonovae` class, a pre-defined Transient class. See the corresponding documentation page in "List of transient classes" 
+This module provides the `Kilonovae` class, a pre-defined Transient class. See the corresponding documentation page in "List of transient classes"
 for more detail on this Transient class.
 """
 
@@ -83,7 +83,7 @@ def get_kilonova_model(filename=None):
         import os
         from .. import _PACKAGE_PATH
         filename = os.path.join(_PACKAGE_PATH, "data", "nsns_nph1.0e+06_mejdyn0.020_mejwind0.130_phi30.txt")
-    
+
     phase, wave, cos_theta, flux = read_possis_file(filename)
     source = AngularTimeSeriesSource(phase=phase, wave=wave, flux=flux, cos_theta=cos_theta,
                                          name="kilonova")
@@ -130,18 +130,18 @@ class Kilonova( Transient ):
                    t0 = {"func": RNG.uniform,
                          "kwargs": {"low":56_000, "high":56_200}
                         },
-                         
+
                    # what
                    redshift = {"kwargs":{"zmax":0.2}, "as":"z"},
-                                  
+
                    magabs = {"func": RNG.normal,
                              "kwargs": {"loc": -18, "scale": 1}
                             },
-                             
+
                    magobs = {"func": "magabs_to_magobs",
                              "kwargs": {"z":"@z", "magabs": "@magabs"}
                             },
-                               
+
                    theta = {"func": RNG.uniform,
                             "kwargs": {"low":0., "high":90.}
                             },
@@ -151,5 +151,3 @@ class Kilonova( Transient ):
                             "as": ["ra","dec"]
                            },
                    )
-
-    
