@@ -1,7 +1,4 @@
-"""
-This module provides utilities for executing single lightcurve fits and converting `sncosmo`
-results into structured pandas DataFrames or Series.
-"""
+"""Run single lightcurve fits and convert sncosmo results into pandas objects."""
 
 import numpy as np
 import sncosmo
@@ -9,26 +6,28 @@ import pandas
 
 
 def sncosmo_results_to_dataframe(result, flatten=True):
-    """
-    Convert a `sncosmo` fit result into a pandas DataFrame or flattened Series.
+    """Convert an sncosmo fit result into a pandas DataFrame or Series.
 
     Parameters
     ----------
-    result: result object returned by ``sncosmo.fit_lc()``.
-        dict subclass with attribute access. It must provide:
-        
-        - result.param_names
-        - result.vparam_names
-        - result.parameters
-        - result["errors"]
-        - result["covariance"] 
-    
-    flatten : bool, default is True.
-        If False, return a DataFrame. If True, return a flattened `pandas.Series`.
+    result : sncosmo.utils.Result
+        Result object returned by :func:`sncosmo.fit_lc` (dict subclass with
+        attribute access). It must provide:
+
+        - ``result.param_names``
+        - ``result.vparam_names``
+        - ``result.parameters``
+        - ``result["errors"]``
+        - ``result["covariance"]``
+
+    flatten : bool, optional
+        If False, return a DataFrame. If True, return a flattened
+        `pandas.Series`. The default is True.
 
     Returns
     -------
-    `pandas.DataFrame` or `pandas.Series`
+    pandas.DataFrame or pandas.Series
+        Fit results: values, errors and covariances of the parameters.
     """
     fitted = np.isin(result.param_names, result.vparam_names)
     df = pandas.DataFrame(np.asarray([result.parameters, fitted]).T, 
@@ -59,37 +58,37 @@ def sncosmo_results_to_dataframe(result, flatten=True):
 def sncosmo_fit_single(target_data, target_model, free_param,
                         modelcov=True, keymap={},
                         **kwargs):
-    """ 
-    Fit a `sncosmo` model to a single lightcurve dataset and return the fit
-    results as a `pandas.Series`.
+    """Fit an sncosmo model to a single lightcurve.
 
     Parameters
     ----------
-    target_data: `pandas.DataFrame`
-        dataframe containing the lightcurve data. It must contain
-        ["time", "band", "flux", "fluxerr","zp", "zpsys"]
-        (but see keymap).
+    target_data : pandas.DataFrame
+        Dataframe containing the lightcurve data. It must contain
+        ["time", "band", "flux", "fluxerr", "zp", "zpsys"] (but see
+        `keymap`).
 
-    target_model: sncosmo.Model
+    target_model : sncosmo.Model
         The model to fit.
 
-    free_param: list
-        model parameters to vary in the fit. (all if None)
+    free_param : list
+        Model parameters to vary in the fit.
 
-    modelcov: bool
-        Include model covariance when calculating chisq. 
-        If true, the fit is performed multiple times until convergence.
-        
-    keymap: dict
-        Change the key naming convention. 
-        For instance to use fluxerr_tot for fluxerr use:
-        keymap = {"fluxerr": "fluxerr_tot"}
+    modelcov : bool, optional
+        Include model covariance when calculating chisq. If True, the fit is
+        performed multiple times until convergence. The default is True.
 
-    kwargs goes to ``sncosmo.fit_lc()``
+    keymap : dict, optional
+        Change the key naming convention. For instance, to use
+        ``fluxerr_tot`` for ``fluxerr``, use
+        ``keymap={"fluxerr": "fluxerr_tot"}``. The default is {}.
 
-    Return
-    ------
-    `pandas.Series`
+    **kwargs
+        Passed to :func:`sncosmo.fit_lc`.
+
+    Returns
+    -------
+    pandas.Series
+        Flattened fit results (see :func:`sncosmo_results_to_dataframe`).
     """
     # lightcurve parameters to enter the fit.
     lc_dict = {key: target_data[keymap.get(key, key)].values

@@ -1,7 +1,4 @@
-"""
-This module provides functions to create lightcurves by applying a transient model 
-to survey observing logs. (used by dataset.realize_lightcurves).
-"""
+"""Create lightcurves by applying a transient model to survey observing logs."""
 
 
 import copy
@@ -13,38 +10,53 @@ import sncosmo
 def get_obsdata(template, observations, parameters,
                 zpsys="ab", incl_error=True, discard_bands=False,
                 trim_observations=False, phase_range=None):
-    """ Get observed data using `sncosmo.realize_lcs()`.
+    """Get observed data using :func:`realize_lightcurves`.
 
     Parameters
     ----------
-    template: `sncosmo.Model`
-        an sncosmo model from which we can draw observations
-        
-    observations: `pandas.DataFrame`
-        Dataframe containing the observing infortation.
-        requested entries: TBD
-    
-    parameters: `pandas.DataFrame`
-        Dataframe containing the target parameters information.
-        These depend on you model. 
+    template : sncosmo.Model
+        An sncosmo model from which observations are drawn.
 
-    incl_error: bool
-        should the returned flux contain a random gaussian scatter
-        drawn from the flux_err ?
-        If False, lightcurve flux are "perfect".
+    observations : pandas.DataFrame
+        Dataframe containing the observing information. Must contain the
+        ``band``, ``mjd``, ``zp``, ``gain`` and ``skynoise`` columns
+        (``zpsys`` is added if missing).
 
-    discard_bands: bool    
-        If True, if the sncosmo model is not defined in a given observeing band, the observation is discarded altogether, 
-        to prevent `sncosmo.realize_lcs()` from crashing. This only works for bands that are too blue for now.
+    parameters : pandas.DataFrame
+        Dataframe containing the target parameters information. These
+        depend on the model.
+
+    zpsys : str, optional
+        Zero point system assumed if ``zpsys`` is not a column of
+        `observations`. The default is "ab".
+
+    incl_error : bool, optional
+        Whether the returned flux should contain a random Gaussian scatter
+        drawn from the flux error. If False, lightcurve fluxes are
+        "perfect". The default is True.
+
+    discard_bands : bool, optional
+        If True, if the sncosmo model is not defined in a given observing
+        band, the observation is discarded altogether, to prevent
+        :func:`sncosmo.realize_lcs` from crashing. This only works for bands
+        that are too blue for now. The default is False.
+
+    trim_observations : bool, optional
+        Passed to :func:`realize_lightcurves`. The default is False.
+
+    phase_range : list or None, optional
+        Rest-frame phase range, passed to :func:`realize_lightcurves`.
+        The default is None.
 
     Returns
     -------
-    MultiIndex DataFrame
-        all the observations for all targets
+    pandas.DataFrame or None
+        Multi-index dataframe of all the observations for all targets.
 
-    See also
+    See Also
     --------
-    ``DataSet.from_targets_and_survey``: generate a DataSet from target and survey's object
+    skysurvey.DataSet.from_targets_and_survey : Generate a DataSet from
+        targets and a survey.
     """
     # if missing, we assume to work in a 'zpsys' system.
     if "zpsys" not in observations:
@@ -82,34 +94,26 @@ def get_obsdata(template, observations, parameters,
         return pandas.concat(lcs)
     
 def _get_obsdata_(data, **kwargs):
-    """ Internal method to simplify ``get_obsdata`` using single input (for map).
+    """Call :func:`get_obsdata` with a single input (for map).
 
     Parameters
     ----------
-    data: list
-        3 entries:
-        template: `sncosmo.Model`
-            an sncosmo model from which we can draw observations
-            
-        observations: `pandas.DataFrame`
-            Dataframe containing the observing infortation.
-            requested entries: TBD
-    
-        parameters: `pandas.DataFrame`
-            Dataframe containing the target parameters information.
-            These depend on you model. 
+    data : list
+        3 entries passed as positional arguments to :func:`get_obsdata`:
+        ``template`` (sncosmo.Model), ``observations`` (pandas.DataFrame)
+        and ``parameters`` (pandas.DataFrame).
 
-    **kwargs :
-        goes to ``get_obsdata``
+    **kwargs
+        Passed to :func:`get_obsdata`.
 
     Returns
     -------
-    MultiIndex DataFrame
-        all the observations for all targets
+    pandas.DataFrame or None
+        Multi-index dataframe of all the observations for all targets.
 
-    See also
+    See Also
     --------
-    ``DataSet.from_targets_and_survey``: generate a DataSet from target and survey's object
+    get_obsdata : Get observed data.
     """
     return get_obsdata(*data, **kwargs)
 
@@ -125,52 +129,52 @@ def realize_lightcurves(observations, model, parameters,
                         scatter=True, rng=None):
     """Realize data for a set of SNe given a set of observations.
 
-    Note: adapted from `sncosmo.realize_lcs`, but:
+    Adapted from :func:`sncosmo.realize_lcs`, but:
 
-         - replacing astropy.Table by pandas.DataFrame
-         - removing ability to use aliases. (no time lost in that)
-         - removing thresh (no time lost in that)
+    - replacing astropy.Table by pandas.DataFrame,
+    - removing the ability to use aliases (no time lost in that),
+    - removing thresh (no time lost in that).
 
     Parameters
     ----------
-    observations : `pandas.DataFrame`
+    observations : pandas.DataFrame
         Table of observations. Must contain the following column names:
         ``band``, ``mjd``, ``zp``, ``zpsys``, ``gain``, ``skynoise``.
 
-    model : `sncosmo.Model`
+    model : sncosmo.Model
         The model to use in the simulation.
 
-    parameters : `pandas.DataFrame`
-        List of parameters to feed to the model for realizing each light curve.
+    parameters : pandas.DataFrame
+        Parameters to feed to the model for realizing each lightcurve (one
+        row per target).
 
     trim_observations : bool, optional
-        If True, only observations with times between
-        ``model.mintime()`` and ``model.maxtime()`` are included in
-        result table for each SN. Default is False.
+        If True, only observations with times between ``model.mintime()``
+        and ``model.maxtime()`` are included in the result table for each
+        SN. The default is False.
 
-    phase_range: list, None, optional
+    phase_range : list or None, optional
         If given, only observations within the given rest-frame phase range
-        will be considered.
+        are considered. The default is None.
 
     scatter : bool, optional
         If True, the ``flux`` value of the realized data is calculated by
-        adding  a random number drawn from a Normal Distribution with a
-        standard deviation equal to the ``fluxerror`` of the observation to
-        the bandflux value of the observation calculated from model. Default
-        is True.
+        adding a random number drawn from a Normal distribution with a
+        standard deviation equal to the ``fluxerr`` of the observation to
+        the bandflux value of the observation calculated from the model.
+        The default is True.
 
-    rng : None, int, `(Bit)Generator`, optional
-        seed for the random number generator.
-        (doc adapted from numpy's `np.random.default_rng` docstring. 
-        See that documentation for details.)
-        If None, an unpredictable entropy will be pulled from the OS.
-        If an ``int``, (>0), it will set the initial `BitGenerator` state.
-        If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
-           
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator, passed to
+        :func:`numpy.random.default_rng`. If None, an unpredictable entropy
+        is pulled from the OS. The default is None.
+
     Returns
     -------
-    sne : list of `pandas.DataFrame`
-        Table of realized data for each item in ``params``.
+    pandas.DataFrame or None
+        Multi-index dataframe (target index, observation index) of the
+        realized data for each target in `parameters`, or None if no target
+        has any observation.
 
     Notes
     -----
@@ -181,7 +185,7 @@ def realize_lightcurves(observations, model, parameters,
 
     It is left up to the user to calculate ``skynoise`` as they see fit as the
     details depend on how photometry is done and possibly how the PSF is
-    is modeled. As a simple example, assuming a Gaussian PSF, and perfect
+    modeled. As a simple example, assuming a Gaussian PSF, and perfect
     PSF photometry, ``skynoise`` would be ``4 * pi * sigma_PSF * sigma_pixel``
     where ``sigma_PSF`` is the standard deviation of the PSF in pixels and
     ``sigma_pixel`` is the background noise in a single pixel in counts.

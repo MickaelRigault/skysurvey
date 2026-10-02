@@ -1,6 +1,4 @@
-"""
-This module provides intrinsic color scatter models implemented as propagation effects.
-"""
+"""Intrinsic color scatter models implemented as propagation effects."""
 
 import numpy as np
 import sncosmo
@@ -11,24 +9,29 @@ import sncosmo
 #                    #
 # ================== #
 def sine_interp(x_new, fun_x, fun_y):
-    """ 
-    Sinus interpolation for intrinsic scattering models.
+    """Sine interpolation for intrinsic scattering models.
 
     Parameters
     ----------
-    x_new: array
-        new x values.
+    x_new : numpy.ndarray
+        New x values.
 
-    fun_x: array
-        x values of the function to interpolate.
+    fun_x : numpy.ndarray
+        X values of the function to interpolate.
 
-    fun_y: array
-        y values of the function to interpolate.
+    fun_y : numpy.ndarray
+        Y values of the function to interpolate.
 
     Returns
     -------
-    array
-        interpolated values.
+    numpy.ndarray
+        Interpolated values.
+
+    Raises
+    ------
+    ValueError
+        If `fun_x` and `fun_y` have different lengths or if `x_new` is out of
+        the `fun_x` range.
     """
     
     if len(fun_x) != len(fun_y):
@@ -52,14 +55,14 @@ def sine_interp(x_new, fun_x, fun_y):
 
 
 class ColorScatter_G10( sncosmo.PropagationEffect ):
-    """ Guy (2010) SNe Ia non-coherent scattering.
-    
+    """Guy (2010) SNe Ia non-coherent scattering.
+
     Implementation is done following arxiv:1209.2482.
 
     Parameters
     ----------
-    saltsource: `sncosmo.Source`
-        salt source to use.
+    saltsource : sncosmo.Source
+        SALT source to use.
     """
     _param_names = ['L0', 'F0', 'F1', 'dL']
     param_names_latex = [r'\lambda_0', 'F_0', 'F_1', 'd_L']
@@ -73,43 +76,45 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
 
     @classmethod
     def from_saltsource(cls, name="salt2", version=None):
-        """ 
-        Shortcut to directly load the color scatter from the salt2 source.
+        """Load the color scatter directly from a SALT source.
 
         Parameters
         ----------
-        name: str
-            name of the salt source.
+        name : str, optional
+            Name of the SALT source. The default is 'salt2'.
 
-        version: str
-            version of the salt source.
+        version : str, optional
+            Version of the SALT source. If None, the latest version is used.
+            The default is None.
 
         Returns
         -------
-        `ColorScatter_G10`
+        ColorScatter_G10
+            The color scatter effect.
         """
         saltource = sncosmo.get_source(name, version=version)
         return cls(saltource)
         
 
     def compute_sigma_nodes(self, rng=None):
-        """
-        Computes the sigma nodes.
-        
+        """Compute the sigma nodes.
+
         Parameters
         ----------
-        rng : None, int, (Bit)Generator, optional
-            seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring. 
-            See that documentation for details.)
-            If None, an unpredictable entropy will be pulled from the OS.
-            If an ``int``, (>0), it will set the initial `BitGenerator` state.
-            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator (see
+            :func:`numpy.random.default_rng`). If None, an unpredictable
+            entropy is pulled from the OS. If an int (>0), it sets the initial
+            `BitGenerator` state. If a Generator, it is used unaltered. The
+            default is None.
 
         Returns
         -------
-        (array, array)
-            lambda nodes, sigma values
+        lam_nodes : numpy.ndarray
+            Wavelength nodes.
+
+        siglam_values : numpy.ndarray
+            Random scatter values (in mag) at the nodes.
         """
         rng = np.random.default_rng(rng)
         
@@ -128,21 +133,20 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
         return lam_nodes, siglam_values
 
     def propagate(self, wave, flux):
-        """
-        Propagate the effect to the flux.
+        """Propagate the effect to the flux.
 
         Parameters
         ----------
-        wave: array
-            wavelengths.
+        wave : numpy.ndarray
+            Wavelengths.
 
-        flux: array
-            fluxes.
+        flux : numpy.ndarray
+            Fluxes.
 
         Returns
         -------
-        array
-            propagated fluxes.
+        numpy.ndarray
+            Propagated fluxes.
         """
         lam_nodes, siglam_values = self.compute_sigma_nodes()
         magscat = sine_interp(wave, lam_nodes, siglam_values)
@@ -150,8 +154,8 @@ class ColorScatter_G10( sncosmo.PropagationEffect ):
 
 
 class ColorScatter_C11( sncosmo.PropagationEffect ):
-    """ C11 scattering effect for sncosmo.
-    
+    """C11 scattering effect for sncosmo.
+
     Use covariance matrix between the vUBVRI bands from N. Chotard thesis.
 
     Implementation is done following arxiv:1209.2482.
@@ -163,9 +167,7 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
     _maxwave = 11000
 
     def __init__(self):
-        """
-        Initialize C11 class.
-        """
+        """Initialize C11 class."""
         self._parameters = np.array([0., 1.3])
 
         # vUBVRI lambda eff
@@ -196,29 +198,27 @@ class ColorScatter_C11( sncosmo.PropagationEffect ):
         self._cov_matrix *= self._parameters[1]
 
     def propagate(self, wave, flux, rng=None):
-        """
-        Propagate the effect to the flux.
+        """Propagate the effect to the flux.
 
         Parameters
         ----------
-        wave: array
-            wavelengths.
+        wave : numpy.ndarray
+            Wavelengths.
 
-        flux: array
-            fluxes.
+        flux : numpy.ndarray
+            Fluxes.
 
-        rng : None, int, (Bit)Generator, optional
-            seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring. 
-            See that documentation for details.)
-            If None, an unpredictable entropy will be pulled from the OS.
-            If an ``int``, (>0), it will set the initial `BitGenerator` state.
-            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator (see
+            :func:`numpy.random.default_rng`). If None, an unpredictable
+            entropy is pulled from the OS. If an int (>0), it sets the initial
+            `BitGenerator` state. If a Generator, it is used unaltered. The
+            default is None.
 
         Returns
         -------
-        array
-            propagated fluxes.
+        numpy.ndarray
+            Propagated fluxes.
         """
         rng = np.random.default_rng(rng)
         siglam_values = rng.multivariate_normal(np.zeros(len(self._lam_nodes)),

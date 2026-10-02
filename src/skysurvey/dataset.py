@@ -1,7 +1,8 @@
-"""
-This module concerns the data as observed.
-DataSet joins information for a Transient (list of true data) and a Survey (what has been observed when).
-It generates real lightcurves observations.
+"""Data as observed: lightcurves of targets observed by a survey.
+
+:class:`DataSet` joins information from targets (true parameters) and a
+survey (what has been observed when) to generate realistic lightcurve
+observations.
 """
 
 import numpy as np
@@ -17,29 +18,32 @@ from .target.collection import TargetCollection
 #                    #
 # ================== #
 class DataSet(object):
-    """
-    A class for managing and realistic transient light curves given true data and survey observing logs.
+    """Realistic transient lightcurves given true targets and survey logs.
 
-    This class provides methods to load, manipulate, and visualize light curve data
-    based on target and survey information.
+    This class provides methods to load, manipulate, and visualize lightcurve
+    data based on target and survey information.
 
-    The classmethod ``DataSet.from_targets_and_survey()`` should be favored for loading the dataset.
+    The classmethod :meth:`DataSet.from_targets_and_survey` should be favored
+    for loading the dataset.
 
     Parameters
     ----------
-    data : `pandas.DataFrame`
-        Multi-index dataframe corresponding to the concatenation of all targets observations.
+    data : pandas.DataFrame
+        Multi-index dataframe corresponding to the concatenation of all
+        targets observations.
 
-    targets : ``skysurvey.Target`` or child of, optional
-        Target data corresponding to the true target parameters (as given by nature).
+    targets : skysurvey.Target, optional
+        Target data corresponding to the true target parameters (as given by
+        nature). The default is None.
 
-    survey : ``skysurvey.Survey`` or child of, optional
+    survey : skysurvey.Survey, optional
         Survey that has been used to generate the dataset (if known).
+        The default is None.
 
     See Also
     --------
-    :func:`from_targets_and_survey` : Loads a dataset (observed data) given targets and survey.
-    :func:`read_parquet` : Loads a stored dataset.
+    from_targets_and_survey : Load a dataset given targets and a survey.
+    read_parquet : Load a stored dataset.
     """
 
     def __init__(self, data, targets=None, survey=None):
@@ -52,50 +56,51 @@ class DataSet(object):
     def from_targets_and_survey(cls, targets, survey, incl_error=True, # client=None,
                                 phase_range=[-50, +200], progress_bar=False, seed=None,
                                 discard_bands=True):
-        """Loads a dataset (observed data) given targets and a survey.
+        """Load a dataset (observed data) given targets and a survey.
 
-        This first matches the targets (given ``targets.data[['ra','dec']]``) with the
-        survey to find which target has been observed with which field.
-        Then simulate the targets lightcurves given the observing data (``survey.data``).
-
+        This first matches the targets (given ``targets.data[['ra', 'dec']]``)
+        with the survey to find which target has been observed with which
+        field. Then it simulates the targets lightcurves given the observing
+        data (``survey.data``).
 
         Parameters
         ----------
-        targets: ``skysurvey.Target``, list, ``skysurvey.TargetCollection``
-            Target data corresponding to the true target parameters
-            (as given by nature). Could be a list
+        targets : skysurvey.Target, list, or skysurvey.TargetCollection
+            Target data corresponding to the true target parameters (as given
+            by nature). A list (or tuple) of targets is converted into a
+            :class:`~skysurvey.target.collection.TargetCollection`.
 
-        survey: ``skysurvey.Survey`` (or child of)
+        survey : skysurvey.Survey
             Sky observation (what was observed when with which situation).
 
-        incl_error: bool, optional
-            Include error in the lightcurve.
-            If False, the flux is the true model flux.
+        incl_error : bool, optional
+            Include error in the lightcurve. If False, the flux is the true
+            model flux. The default is True.
 
-        phase_range: list, None, optional
-            Rest-frame phase range to be used for simulating
-            the lightcurves. If None, no cut is applied on time range for the logs.
+        phase_range : list or None, optional
+            Rest-frame phase range to be used for simulating the lightcurves.
+            If None, no cut is applied on time range for the logs.
+            The default is [-50, +200].
 
-        progress_bar: bool, optional
-            shall this display a progress bar associated to the generation of targets ?
-            (uses tqdm)
+        progress_bar : bool, optional
+            Whether to display a progress bar (uses tqdm) associated to the
+            generation of targets. The default is False.
 
-        seed : None, int, Generator, RandomState, optional
-            = ignored if incl_error=False =
-            (docstring adapted from ``np.random.default_rng``)
-            If None, a fresh seed will be pulled.
-            If an `int`, it will be passed to `SeedSequence` to derive the initial `BitGenerator` state.
-            Additionally, when passed a `(Bit)Generator`, it will be returned unaltered.
-            When passed a legacy `RandomState` instance it will be coerced to a `Generator`.
+        seed : None, int, or numpy.random.Generator, optional
+            Seed passed to :func:`numpy.random.default_rng` to draw the flux
+            noise; ignored if `incl_error` is False. If None, a fresh seed is
+            pulled. The default is None.
 
         discard_bands : bool, optional
-            If True, discards the bands that includes wavelength for which the (observer-frame) target SED is not defined.
-            This prevents crashing the code due to an error from `sncosmo`.
+            If True, discard the bands that include wavelengths for which the
+            (observer-frame) target SED is not defined. This prevents
+            crashing the code due to an error from `sncosmo`.
+            The default is True.
 
         Returns
         -------
-        dataset
-            instance of a `DataSet` loaded from the given targets.
+        skysurvey.DataSet
+            Instance of a `DataSet` loaded from the given targets.
         """
         from .template import Template
         lc_prop = dict(progress_bar=progress_bar,
@@ -122,7 +127,48 @@ class DataSet(object):
                                     incl_error=True, phase_range=[-50, 200],
                                     seed=None, discard_bands=True,
                                     single_model=True):
-        """ Loads a dataset (observed data) given targets and a survey."""
+        """Simulate the observed lightcurves of targets given a survey.
+
+        Parameters
+        ----------
+        targets : skysurvey.Target
+            Target data corresponding to the true target parameters (as given
+            by nature).
+
+        survey : skysurvey.Survey
+            Sky observation (what was observed when with which situation).
+
+        progress_bar : bool, optional
+            Whether to display a progress bar (uses tqdm). The default is False.
+
+        incl_error : bool, optional
+            Include error in the lightcurve. If False, the flux is the true
+            model flux. The default is True.
+
+        phase_range : list or None, optional
+            Rest-frame phase range to be used for simulating the lightcurves.
+            If None, no cut is applied. The default is [-50, 200].
+
+        seed : None, int, or numpy.random.Generator, optional
+            Seed passed to :func:`numpy.random.default_rng` to draw the flux
+            noise; ignored if `incl_error` is False. The default is None.
+
+        discard_bands : bool, optional
+            If True, discard the observations in bands that include
+            wavelengths for which the (observer-frame) target SED is not
+            defined. The default is True.
+
+        single_model : bool, optional
+            If True, a single template model is created and its parameters
+            are updated for each target (faster). If False, a new model is
+            built for each target. The default is True.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Multi-index (``index``, ``index_obs``) dataframe of the simulated
+            observations, including ``flux`` and ``fluxerr`` columns.
+        """
         if progress_bar:
             from tqdm import tqdm
 
@@ -211,56 +257,69 @@ class DataSet(object):
 # =================== #
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
-        """Loads a stored dataset.
+        """Load a stored dataset.
 
-        Only the observation data can be loaded this way,
-        not the survey nor the targets (truth).
+        Only the observation data can be loaded this way, not the survey nor
+        the targets (truth), which can be provided separately.
 
         Parameters
         ----------
-        parquetfile: str
-            path to the parquet file containing the dataset (pandas.DataFrame)
+        parquetfile : str
+            Path to the parquet file containing the dataset
+            (pandas.DataFrame).
 
-        survey: ``skysurvey.Survey`` (or child of), None
-            survey that have been used to generate the dataset (if you know it)
+        survey : skysurvey.Survey, optional
+            Survey that has been used to generate the dataset (if known).
+            The default is None.
 
-        targets: ``skysurvey.Target`` (of child of), None
-            target data corresponding to the true target parameters
-            (as given by nature)
+        targets : skysurvey.Target, optional
+            Target data corresponding to the true target parameters (as given
+            by nature). The default is None.
 
-        **kwargs goes to `pandas.read_parquet`
+        **kwargs
+            Passed to :func:`pandas.read_parquet`.
 
         Returns
         -------
-        class instance
-            with a dataset loaded but maybe no survey nor targets
+        skysurvey.DataSet
+            Instance with the dataset loaded, but possibly no survey nor
+            targets.
 
-        See also
+        See Also
         --------
-        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
+        from_targets_and_survey : Load a dataset given targets and a survey.
         """
         data = pandas.read_parquet(parquetfile, **kwargs)
         return cls(data, survey=survey, targets=targets)
 
     @classmethod
     def read_from_directory(cls, dirname, **kwargs):
-        """Loads a directory containing the dataset, the survey and the targets.
+        """Load a directory containing the dataset, the survey and the targets.
 
-        = Not Implemented Yet =
+        Not implemented yet.
 
         Parameters
         ----------
-        dirname: str
-            path to the directory.
+        dirname : str
+            Path to the directory.
+
+        **kwargs
+            Currently unused.
 
         Returns
         -------
-        class instance
+        skysurvey.DataSet
+            Instance of the loaded dataset.
 
-        See also
+        Raises
+        ------
+        NotImplementedError
+            Always, as this is not implemented yet.
+
+        See Also
         --------
-        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
-        :func:`read_parquet`: loads a stored dataset
+        from_targets_and_survey : Load a dataset given targets and a survey.
+        read_parquet : Load a stored dataset.
         """
         raise NotImplementedError("read_from_directory is not yet available.")
 
@@ -271,23 +330,19 @@ class DataSet(object):
     #  SETTER  #
     # -------- #
     def set_data(self, data):
-        """Lightcurve data as observed by the survey.
+        """Set the lightcurve data as observed by the survey.
 
-        = It is unlikely you need to use that directly. =
+        It is unlikely you need to use this directly.
 
         Parameters
         ----------
-        data: `pandas.DataFrame`
-            multi-index dataframe ((id, observation index))
-            corresponding the concat of all targets observations
+        data : pandas.DataFrame
+            Multi-index dataframe (target id, observation index)
+            corresponding to the concatenation of all targets observations.
 
-        Returns
-        -------
-        None
-
-        See also
+        See Also
         --------
-        :func:`read_parquet`: loads a stored dataset
+        read_parquet : Load a stored dataset.
         """
         self._data = data
         self._obs_index = None
@@ -295,41 +350,33 @@ class DataSet(object):
     def set_targets(self, targets):
         """Set the targets.
 
-        = It is unlikely you need to use that directly. =
+        It is unlikely you need to use this directly.
 
         Parameters
         ----------
-        targets: ``skysurvey.Target`` (of child of), None
-            target data corresponding to the true target parameters
-            (as given by nature)
+        targets : skysurvey.Target or None
+            Target data corresponding to the true target parameters (as given
+            by nature).
 
-        Returns
-        -------
-        None
-
-        See also
+        See Also
         --------
-        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
+        from_targets_and_survey : Load a dataset given targets and a survey.
         """
         self._targets = targets
 
     def set_survey(self, survey):
-        """set the survey
+        """Set the survey.
 
-        = It is unlikely you need to use that directly. =
+        It is unlikely you need to use this directly.
 
         Parameters
         ----------
-        survey: ``skysurvey.Survey`` (or child of), None
-            survey that have been used to generate the dataset (if you know it)
+        survey : skysurvey.Survey or None
+            Survey that has been used to generate the dataset (if known).
 
-        Returns
-        -------
-        None
-
-        See also
+        See Also
         --------
-        :func:`from_targets_and_survey`: loads a dataset (observed data) given targets and survey
+        from_targets_and_survey : Load a dataset given targets and a survey.
         """
         self._survey = survey
 
@@ -338,46 +385,60 @@ class DataSet(object):
     # -------- #
     def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
                 detection=None, zp=None, join_bandday=False, join_how="first"):
-        """ Tools to access the data with additional tools.
+        """Get the observation data with optional selections and additions.
 
         Parameters
         ----------
-        add_phase: bool
-            should the phase information 'phase_obs' (obs-frame), 'phase' (rest-frame)
-            be added to the dataframe assuming the input target's t0 and redshift ?
+        add_phase : bool, optional
+            Whether the phase information ``phase_obs`` (observer-frame) and
+            ``phase`` (rest-frame) should be added to the dataframe, assuming
+            the input target's t0 and redshift. The default is False.
 
-        phase_range: array
-            min and max phases to be returned. Applied on phase (rest-frame).
-            Setting this sets add_phase to True.
+        phase_range : array_like, optional
+            Min and max phases to be returned. Applied on phase (rest-frame).
+            Setting this sets `add_phase` to True. The default is None.
 
-        index: `pandas.Index`, list, None
-            select the index (targets id) you want.
+        index : pandas.Index, list, or None, optional
+            Index (target ids) to select. If None, all targets are returned.
+            The default is None.
 
-        redshift_key: string
-            name of the redshift column in the dset.targets.data.
-             = ignored if add_phase is False =
+        redshift_key : str, optional
+            Name of the redshift column in ``self.targets.data``; ignored if
+            `add_phase` is False. The default is "z".
 
-        detection: bool, None
-            should this be limited to (non)detected points only ?
-            This follow the bool/None format:
+        detection : bool or None, optional
+            Whether to limit to (non-)detected points only
+            (detection means flux/fluxerr >= 5):
 
-            - detection=None: no selection
-            - detection=False: only non-detected points
-            - detection=True: only detected points
+            - None: no selection
+            - False: only non-detected points
+            - True: only detected points
 
-        zp: float
-            get the simulated data in the given zp system
+            The default is None.
 
-        join_bandday: bool
-            if there are multiple observations per band and day (int of mjd) for a given target,
-            should these be joined ? (see join_how).
+        zp : float, optional
+            If given, convert the flux and fluxerr to this zero point system.
+            The default is None.
 
-        join_how: str
-            join_bandday is True, how multiple observation should be considered ? (e.g., first).
+        join_bandday : bool, optional
+            If there are multiple observations per band and day (int of mjd)
+            for a given target, whether these should be joined (see
+            `join_how`). The default is False.
+
+        join_how : str, optional
+            If `join_bandday` is True, how multiple observations should be
+            combined (name of a pandas groupby method, e.g. "first", "mean",
+            "sum"). The default is "first".
 
         Returns
         -------
-        `pandas.DataFrame`
+        pandas.DataFrame
+            The (selected) observation data.
+
+        Raises
+        ------
+        NotImplementedError
+            If `join_how` is not a valid groupby method.
         """
         if phase_range is not None:
             add_phase = True
@@ -436,31 +497,34 @@ class DataSet(object):
         return data
 
     def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False, join_how="firt"):
-        """get the number of detection for each lightcurves
+        """Get the number of detections for each lightcurve.
 
-        Basically computes the number of datapoints with (flux/fluxerr)>detlimit).
+        Computes the number of datapoints with (flux/fluxerr) >= 5
+        (see :meth:`get_data`).
 
         Parameters
         ----------
-        phase_range: array
-            rest-frame phase range to be considered.
+        phase_range : array_like, optional
+            Rest-frame phase range to be considered. The default is None.
 
-        per_band: bool
-            should be computation be made per band ?
-            if true it will then be per target *and* per band.
+        per_band : bool, optional
+            Whether the computation should be made per band. If True, it is
+            made per target *and* per band. The default is False.
 
-        join_bandday: bool
-            if there are multiple observations per band and day (int of mjd) for a given target,
-            should these be joined ? (see join_how).
+        join_bandday : bool, optional
+            If there are multiple observations per band and day (int of mjd)
+            for a given target, whether these should be joined (see
+            `join_how`). The default is False.
 
-        join_how: string
-            specify how the bandday should be joined.
-            = ignored if join_bandday is False =
+        join_how : str, optional
+            How the band-day observations should be joined; ignored if
+            `join_bandday` is False. The default is "firt" (sic).
 
         Returns
         -------
-        `pandas.Series`
-            the number of detected point per target (and per band if per_band=True)
+        pandas.Series
+            The number of detected points per target (and per band if
+            `per_band` is True).
         """
 
         data = self.get_data(phase_range=phase_range, detection=True,
@@ -475,31 +539,36 @@ class DataSet(object):
         return ndetection
 
     def get_target_lightcurve(self, index, detection=None, phase_range=None):
-        """Get the observation of the given target.
+        """Get the observations of the given target.
 
-        = short cut to self.get_data(index=index) =
+        Shortcut to ``self.get_data(index=index)``.
 
         Parameters
         ----------
-        index : int, optional
-            The index of the target whose light curve is to be taken. If None, a random index is chosen.
+        index : int
+            The index of the target whose lightcurve is to be taken.
 
-        detection: bool, None
-            should this be limited to (non)detected points only ?
-            This follow the bool/None format:
+        detection : bool or None, optional
+            Whether to limit to (non-)detected points only:
 
-            - detection=None: no selection
-            - detection=False: only non-detected points
-            - detection=True: only detected points
+            - None: no selection
+            - False: only non-detected points
+            - True: only detected points
 
-        phase_range: array
-            min and max phases to be returned. Applied on phase (rest-frame).
-            Setting this sets add_phase to True.
+            The default is None.
+
+        phase_range : array_like, optional
+            Min and max phases to be returned. Applied on phase (rest-frame).
+            The default is None.
 
         Returns
         -------
-        `pandas.DataFrame`
-            the lightcurve
+        pandas.DataFrame
+            The lightcurve.
+
+        See Also
+        --------
+        get_data : Get the observation data.
         """
         return self.get_data(index=index, phase_range=phase_range, detection=detection)
 
@@ -508,50 +577,57 @@ class DataSet(object):
     # -------- #
     def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25, lc_prop={}, bands=None, show_truth=True,
                                format_time=True, t0_format="mjd", phase_window=None, **kwargs):
-        """Plot the light curve of a target.
+        """Plot the lightcurve of a target.
 
-        If `index` is None, a random index will be used. If `bands` is None,
-        the target's observed band will be used.
+        If `index` is None, a random index is used. If `bands` is None, the
+        target's observed bands are used.
 
         Parameters
         ----------
-        ax : `matplotlib.axes.Axes`, optional
-            The axes on which to plot the light curve. If None, a new figure and axes will be created.
+        ax : matplotlib.axes.Axes, optional
+            The axes on which to plot the lightcurve. If None, a new figure
+            and axes are created. The default is None.
 
-        fig : `matplotlib.figure.Figure`, optional
-            The figure on which to plot the light curve. If None, a new figure will be created.
+        fig : matplotlib.figure.Figure, optional
+            The figure on which to plot the lightcurve (ignored if `ax` is
+            given). If None, a new figure is created. The default is None.
 
         index : int, optional
-            The index of the target whose light curve is to be plotted. If None, a random index is chosen.
+            The index of the target whose lightcurve is to be plotted.
+            If None, a random observed index is chosen. The default is None.
 
         zp : float, optional
-            Zero point magnitude for flux conversion. Default is 25.
+            Zero point for the flux conversion. The default is 25.
 
         lc_prop : dict, optional
-            Additional properties to pass to the light curve plotting function (kwargs).
+            Additional properties passed to the true lightcurve plotting
+            function (``self.targets.show_lightcurve``). The default is {}.
 
         bands : list of str, optional
-            The bands to plot. If None, all observed bands for the target will be used.
+            The bands to plot. If None, all observed bands for the target are
+            used. The default is None.
 
         show_truth : bool, optional
-            Whether to show the true light curve. Default is True.
+            Whether to show the true lightcurve. The default is True.
 
         format_time : bool, optional
-            Whether to format the time axis as dates. Default is True.
+            Whether to format the time axis as dates. The default is True.
 
         t0_format : str, optional
-            The format of the reference time. Default is "mjd".
+            The format of the reference time. The default is "mjd".
 
-        phase_window : array-like, optional
-            The phase window to plot. If None, the entire light curve will be plotted.
+        phase_window : array_like, optional
+            The (observer-frame) phase window, relative to t0, to plot.
+            If None, the entire lightcurve is plotted. The default is None.
 
-        **kwargs : dict
-            Additional keyword arguments to pass to the plotting functions.
+        **kwargs
+            Passed to the scatter and errorbar plotting functions.
 
         Returns
         -------
-        `matplotlib.figure.Figure`
-            The figure object containing the light curve plot.
+        matplotlib.figure.Figure or None
+            The figure containing the lightcurve plot, or None if there are
+            no data points to show.
         """
         from matplotlib.colors import to_rgba
 
@@ -653,7 +729,7 @@ class DataSet(object):
 
     @property
     def obs_index(self):
-        """Index of the observed target."""
+        """Index of the observed targets."""
         if not hasattr(self, "_obs_index") or self._obs_index is None:
             self._obs_index = self.data.index.get_level_values(0).unique().sort_values()
 

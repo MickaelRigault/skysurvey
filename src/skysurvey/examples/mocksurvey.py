@@ -1,6 +1,7 @@
-"""
-This module provides utility functions to generate mock surveys and observation logs from given parameters
-for testing and demonstration purposes.
+"""Mock surveys and observation logs for testing and demonstration.
+
+This module provides utility functions to generate mock surveys and
+observation logs from given parameters.
 """
 
 import pandas
@@ -17,39 +18,39 @@ def get_mocklogs(size = 10_000,
                     skynoise = {"loc": 200, "scale":20},
                     bands = ["desg","desr","desi"],
                     zp = 30, gain=1, rng=None):
-    """ Generate mock observation logs with random observing conditions.
-    
+    """Generate mock observation logs with random observing conditions.
+
     Parameters
     ----------
     size : int, optional
-        Number of observations to generate. Default is 10_000.
+        Number of observations to generate. The default is 10_000.
 
-    mjd_range : 2-element list, optional
-        Time range [mjd_min, mjd_max] from which observation times are uniformly drawn.
-        Default is [58_900, 58_930].
+    mjd_range : list, optional
+        Time range [mjd_min, mjd_max] from which observation times are
+        uniformly drawn. The default is [58_900, 58_930].
 
     skynoise : dict, optional
-        Parameters for the Gaussian sky noise distribution, passed to `numpy.random.normal`
-        as ``loc`` (mean) and ``scale`` (std). Default is {"loc": 200, "scale": 20}.
+        Parameters of the Gaussian sky noise distribution, passed to
+        :meth:`numpy.random.Generator.normal` as ``loc`` (mean) and ``scale``
+        (std). The default is {"loc": 200, "scale": 20}.
 
     bands : list of str, optional
-        List of photometric bands to randomly assign to observations.
-        Default is ["desg", "desr", "desi"] (DES's bands).
+        List of photometric bands randomly assigned to observations.
+        The default is ["desg", "desr", "desi"] (DES bands).
 
     zp : float, optional
-        Zero point. Default is 30.
-        
-    gain : float, optional
-        Detector gain. Default is 1.
+        Zero point. The default is 30.
 
-    rng : None, int, or (Bit)Generator, optional
-        Seed for the random number generator. Default is None.
+    gain : float, optional
+        Detector gain. The default is 1.
+
+    rng : None, int, or numpy.random.Generator, optional
+        Seed or random number generator. The default is None.
 
     Returns
     -------
     pandas.DataFrame
         Mock observation log with columns: gain, zp, skynoise, mjd, band.
-    
     """
     rng = np.random.default_rng(rng)
     
@@ -67,34 +68,34 @@ def get_mock_survey(size=10_000, footprint = None,
                        nside=200,
                        ra_range = [200,250], dec_range=[-20,10],
                        **kwargs):
-    """ Generate a mock Survey with random pointings over a given sky area.
+    """Generate a mock Survey with random pointings over a given sky area.
 
     Parameters
     ----------
     size : int, optional
-        Number of observations to generate. Default is 10_000.
+        Number of observations to generate. The default is 10_000.
 
-    footprint : shapely.geometry, optional
-        Camera footprint. If None, a circle of radius 2 degrees centered at (0,0)
-        is used. Default is None.
+    footprint : shapely.geometry.Polygon, optional
+        Camera footprint. If None, a circle of radius 2 degrees centered at
+        (0, 0) is used. The default is None.
 
     nside : int, optional
-        HEALPix resolution parameter. Default is 200.
+        HEALPix nside parameter. The default is 200.
 
-    ra_range : 2-element list, optional
+    ra_range : list, optional
         Right ascension range [min, max] in degrees for random pointings.
-        Default is [200, 250].
+        The default is [200, 250].
 
-    dec_range : 2-element list, optional
+    dec_range : list, optional
         Declination range [min, max] in degrees for random pointings.
-        Default is [-20, 10].
+        The default is [-20, 10].
 
     **kwargs
-        Additional arguments passed to `get_mocklogs`.
+        Passed to :func:`get_mocklogs`.
 
     Returns
     -------
-    Survey
+    skysurvey.Survey
         A Survey instance built from the randomly generated pointings.
     """
     # footprint
@@ -114,31 +115,32 @@ def get_mock_survey(size=10_000, footprint = None,
 def get_mock_gridsurvey(size=10_000, footprint = None, radec=None,
                         rng=None,
                        **kwargs):
-    """ Get a default GridSurvey randomly drawn from the given parameters.
+    """Generate a mock GridSurvey randomly drawn from the given parameters.
 
     Parameters
     ----------
     size : int, optional
-        Number of observations to generate. Default is 10_000.
+        Number of observations to generate. The default is 10_000.
 
-    footprint : shapely.geometry, optional
-        Camera footprint. If None, a circle of radius 2 degrees centered at (0,0)
-        is used. Default is None.
+    footprint : shapely.geometry.Polygon, optional
+        Camera footprint. If None, a circle of radius 2 degrees centered at
+        (0, 0) is used. The default is None.
 
     radec : dict, optional
         Dictionary of field positions with the format
-        ``{fieldid: {"ra": float, "dec": float}}``.
-        If None, a default set of 5 DES-like fields is used. Default is None.
+        ``{fieldid: {"ra": float, "dec": float}}``. If None, a default set of
+        5 DES-like fields is used. The default is None.
 
-    rng : None, int, or (Bit)Generator, optional
-        Seed for the random number generator. Default is None.
+    rng : None, int, or numpy.random.Generator, optional
+        Seed or random number generator, used both for the mock logs and the
+        field assignment. The default is None.
 
     **kwargs
-        Additional arguments passed to `get_mocklogs`.
+        Passed to :func:`get_mocklogs`.
 
     Returns
     -------
-    GridSurvey
+    skysurvey.GridSurvey
         A GridSurvey instance built from the randomly generated pointings.
     """
     # footprint

@@ -1,5 +1,7 @@
-"""
-This module provides spatial utility functions for projecting camera footprints onto the sky and matching coordinates to survey fields.
+"""Spatial utilities to project footprints on the sky and match fields.
+
+Includes functions to project camera footprints onto the sky and to match
+coordinates to survey fields.
 """
 
 import warnings
@@ -14,8 +16,7 @@ _DEG2RA = np.pi / 180 # compute once.
 
 
 def skyarea_to_skysurface(skyarea, frac=True, in_deg2=True, projection_correction=True):
-    """
-    Compute the sky surface covered by a (RA, Dec) geometry.
+    """Compute the sky surface covered by a (RA, Dec) geometry.
 
     By default, the geometry is projected onto the cylindrical equal-area plane
     (RA in radian, sin(Dec)) such that its planar area is the true solid angle.
@@ -23,23 +24,23 @@ def skyarea_to_skysurface(skyarea, frac=True, in_deg2=True, projection_correctio
 
     Parameters
     ----------
-    skyarea : shapely.Geometry or array of shapely.Geometry
+    skyarea : shapely.Geometry or array_like of shapely.Geometry
         Sky footprint with coordinates (RA, Dec) in degrees.
 
     frac : bool, optional
         If True, return the area as a fraction of the full sky (4π steradians).
-        This takes precedence over `in_deg2`. Default is True.
+        This takes precedence over `in_deg2`. The default is True.
 
     in_deg2 : bool, optional
-        Only used if `frac` is False. If True, return the area in
-        square degrees, otherwise in steradians. Default is True.
+        Only used if `frac` is False. If True, return the area in square
+        degrees, otherwise in steradians. The default is True.
 
     projection_correction : bool, optional
         If True, account for the spherical projection by using
         (RA, sin(Dec)) coordinates, giving the true solid angle.
         If False, use plain (RA, Dec) in radian, i.e. the flat-sky area,
         which overestimates the surface away from the equator.
-        Default is True.
+        The default is True.
 
     Returns
     -------
@@ -61,7 +62,7 @@ def skyarea_to_skysurface(skyarea, frac=True, in_deg2=True, projection_correctio
     >>> skyarea_to_skysurface(skyarea, frac=False, in_deg2=True, projection_correction=False)  # 400deg2
     """
     def apply_sinprojection(geom):
-        """ (ra, dec) in deg -> (ra in rad, sin(dec)) """
+        """Project (ra, dec) in deg to (ra in rad, sin(dec))."""
         def transform_to_sinprojection(coords):  # coords: (N, 2) array
             ra, dec = np.deg2rad(coords).T
             if projection_correction:
@@ -80,42 +81,59 @@ def skyarea_to_skysurface(skyarea, frac=True, in_deg2=True, projection_correctio
 
 def radecmodel_to_skysurface(radecmodel, favor_skyarea=True,
                             ntrial=2e5, frac=True):
-    """
-    Compute the sky area covered by points drawn from a `ModelDAG` model in RA/Dec space.
+    """Compute the sky area covered by points drawn from a RA/Dec `ModelDAG` model.
 
-    This function samples points from a `ModelDAG` model, projects them onto a unit sphere,
-    and computes the convex hull of the projected points to estimate the sky area.
-    The area can be returned as a fraction of the total sky (4π steradians) or in steradians.
+    This function samples points from a `ModelDAG` model, projects them onto a
+    unit sphere, and computes the convex hull of the projected points to
+    estimate the sky area. The area can be returned as a fraction of the total
+    sky (4π steradians) or in steradians.
 
     Parameters
     ----------
-    radecmodel : object
-        A `ModelDAG`-compatible model that generates RA/Dec points.
+    radecmodel : dict
+        A `ModelDAG`-compatible model entry that generates RA/Dec points.
 
     favor_skyarea : bool, optional
         If True and `radecmodel` has a "skyarea" entry in its "kwargs",
         the area is computed analytically from that geometry using
-        :func:`skyarea_to_skysurface` instead of sampling. Default is True.
+        :func:`skyarea_to_skysurface` instead of sampling.
+        The default is True.
 
-    ntrial : int, optional
-        Number of points to sample from the model. Default is 2e5.
-        Tests suggest 2e5 is good at 0.01%.
+    ntrial : int or float, optional
+        Number of points to sample from the model. Tests suggest 2e5 is good
+        at 0.01%. The default is 2e5.
 
     frac : bool, optional
-        If True, return the area as a fraction of the total sky (4π steradians).
-        If False, return the area in steradians. Default is True.
+        If True, return the area as a fraction of the total sky
+        (4π steradians). If False, return the area in steradians.
+        The default is True.
 
     Returns
     -------
     float
-        The sky area covered by the sampled points. If `frac=True`, the value is a fraction of the total sky.
-        If `frac=False`, the value is in steradians.
+        The sky area covered by the sampled points. If `frac=True`, the value
+        is a fraction of the total sky. If `frac=False`, the value is in
+        steradians.
+
+    Raises
+    ------
+    NotImplementedError
+        If sampling is requested (`favor_skyarea=False`) while the skyarea is
+        made of multiple disconnected regions.
+
+    Warns
+    -----
+    UserWarning
+        If a skyarea is provided but `favor_skyarea` is False.
 
     Notes
     -----
-    - The RA/Dec points are converted to radians and projected using `sin(dec)` to account for spherical geometry.
-    - The convex hull of the projected points is computed to estimate the sky area.
-    - The total sky area is 4π steradians, which corresponds to 41253 square degrees.
+    - The RA/Dec points are converted to radians and projected using
+      `sin(dec)` to account for spherical geometry.
+    - The convex hull of the projected points is computed to estimate the sky
+      area.
+    - The total sky area is 4π steradians, which corresponds to 41253 square
+      degrees.
 
     Examples
     --------
@@ -152,26 +170,25 @@ def radecmodel_to_skysurface(radecmodel, favor_skyarea=True,
     return projected_skyarea.area # steradian
 
 def project_to_radec(verts_or_polygon, ra, dec):
-    """
-    Project a geometry (or its vertices) to given ra, dec coordinates.
+    """Project a geometry (or its vertices) to given RA, Dec coordinates.
 
     Parameters
     ----------
-    verts_or_polygon: shapely.Polygon or 2d-array
-        geometry or vertices representing the camera footprint in the sky
-        if vertices, the format is: x, y = vertices
+    verts_or_polygon : shapely.geometry.Polygon or array_like
+        Geometry or vertices representing the camera footprint in the sky.
+        If vertices, the format is: ``x, y = vertices``.
 
-    ra: float or array
-        poiting(s) R.A.
+    ra : float or array_like
+        Pointing(s) right ascension, in degrees.
 
-    dec: float or array
-        poiting(s) declination
+    dec : float or array_like
+        Pointing(s) declination, in degrees.
 
     Returns
     -------
-    list
-        If input are vertices, returns a list of new verticies.
-        If input are geometries, returns a list of new geometries.
+    list of shapely.geometry.Polygon or numpy.ndarray
+        If input are vertices, returns an array of new vertices (one per
+        pointing). If input is a geometry, returns a list of new geometries.
     """
     if isinstance(verts_or_polygon, geometry.Polygon): # polygon
         as_polygon = True
@@ -197,49 +214,58 @@ def spatialjoin_radec_to_fields(radec, fields,
                                 how="inner", predicate="intersects",
                                 index_radec="index_radec",
                                 allow_dask=True, **kwargs):
-    """
-    Join the radec coordinates with the fields.
+    """Join the RA, Dec coordinates with the fields.
 
     Parameters
     ----------
-    radec: DataFrame or 2d-array
-        coordinates of the points.
+    radec : pandas.DataFrame or array_like
+        Coordinates of the points.
 
-        - DataFrame: must have the "ra" and "dec" columns.
-            This will use the DataFrame's index are data index.
-        - 2d array (shape N,2): returned index will be 'range(len(ra))'
+        - DataFrame: must have the "ra" and "dec" columns. The DataFrame's
+          index is used as data index.
+        - 2d array (shape N, 2): returned index will be ``range(len(ra))``.
 
-    fields : [`geopandas.geoserie`, `geopandas.geodataframe` or  dict]
+    fields : geopandas.GeoSeries, geopandas.GeoDataFrame, or dict
+        Fields containing the fieldid and field shapes. Several forms are
+        accepted:
 
-        Fields contains the fieldid and fields shapes. Several forms are accepted:
+        - dict: {fieldid: 2d-array, fieldid: 2d-array ...}, where the
+          2d-arrays are the field's vertices.
+        - GeoSeries: index as fieldid and geometry as field's vertices.
+        - GeoDataFrame: with the 'fieldid' column and geometry as field's
+          vertices.
 
-        - dict: {fieldid: 2d-array, fieldid: 2d-array ...}
-            here, the 2d-array are the field's vertices.
-        - geoserie: geopandas.GeoSeries with index as fieldid and geometry as field's vertices.
-        - geodataframe: geopandas.GeoDataFrame with the 'fieldid' column and geometry as field's vertices.
+        See :func:`parse_fields`.
 
     how : str, optional
-        Type of join, see `geopandas.sjoin`. Default is "inner".
+        Type of join, see :func:`geopandas.sjoin`. Currently not forwarded:
+        an "inner" join is always used. The default is "inner".
 
     predicate : str, optional
-        Binary predicate used for the join, see `geopandas.sjoin`.
-        Default is "intersects".
+        Binary predicate used for the join, see :func:`geopandas.sjoin`.
+        Currently not forwarded: "intersects" is always used.
+        The default is "intersects".
 
     index_radec : str, optional
         Name of the column storing the index of the input `radec`.
-        Default is "index_radec".
+        The default is "index_radec".
 
     allow_dask : bool, optional
         If True and `dask_geopandas` is installed, use it to speed up
-        the join when there are more than 30 000 fields. Default is True.
+        the join when there are more than 30 000 fields. The default is True.
 
     **kwargs
-        Additional keyword arguments passed to `geopandas.sjoin`.
+        Passed to :func:`geopandas.sjoin`.
 
     Returns
     -------
-    `GeoDataFrame`
-        (`geometry.sjoin` result)
+    geopandas.GeoDataFrame
+        Result of the spatial join (:func:`geopandas.sjoin`).
+
+    Raises
+    ------
+    ValueError
+        If `radec` is an array whose shape is not (N, 2).
     """
     # -------- #
     #  Coords  #
@@ -291,30 +317,37 @@ def spatialjoin_radec_to_fields(radec, fields,
 
 
 def parse_fields(fields):
-    """
-    Read various formats for fields and returns it as a `geodataframe`.
+    """Read various formats for fields and return them as a GeoDataFrame.
 
     Parameters
     ----------
-    fields : [`geopandas.geoserie`, `geopandas.geodataframe` or  dict]
+    fields : geopandas.GeoSeries, geopandas.GeoDataFrame, or dict
+        Fields containing the fieldid and field shapes. Several forms are
+        accepted:
 
-        Fields contains the fieldid and fields shapes. Several forms are accepted:
-
-        - dict: {fieldid: 2d-array or regions, fieldid: 2d-array or regions ...}
-            here, the 2d-array are the field's vertices or a astropy/ds9 regions
-        - `geoserie`: `geopandas.GeoSeries` with index as fieldid and geometry as field's vertices.
-        - `geodataframe`: `geopandas.GeoDataFrame` with the 'fieldid' column and geometry as field's vertices.
+        - dict: {fieldid: 2d-array or region, fieldid: 2d-array or region ...},
+          where the 2d-arrays are the field's vertices; regions are
+          astropy/ds9 regions (see :func:`regions_to_shapely`).
+        - GeoSeries: index as fieldid and geometry as field's vertices.
+        - GeoDataFrame: with the 'fieldid' column and geometry as field's
+          vertices.
 
     Returns
     -------
-    `GeoDataFrame` (`geometry.sjoin` result)
+    geopandas.GeoDataFrame
+        Fields with a 'fieldid' column and their geometry.
+
+    Raises
+    ------
+    ValueError
+        If the format of `fields` cannot be parsed.
 
     Examples
     --------
-    provide a dict of ds9 regions
+    Provide a dict of ds9 regions:
+
     >>> fields = {450:"box(50,30, 3,4,0)", 541:"ellipse(190,-10,1.5,1,50)"}
     >>> geodf = parse_fields(fields)
-
     """
     if type(fields) is dict:
         values = fields.values()
@@ -338,17 +371,19 @@ def parse_fields(fields):
     return fields
 
 def regions_to_shapely(region):
-    """
-    Converts astropy Region into a shapely geometry.
+    r"""Convert an astropy Region into a shapely geometry.
 
     Parameters
     ----------
-    region: str or Regions (see astropy-regions.readthedocs.io)
+    region : str or regions.Region
+        Region to convert (see astropy-regions.readthedocs.io).
 
-        - If str, it is assumed to be in the dr9 ircs format, e.g.: ``region = "box(40.0, 50.0, 5.0, 4.0, 0.0)"``.
-        - If Regions, region will be converted into the str format, using ``region = region.serialize("ds9").strip().split("\\n")[-1]``.
+        - If str, it is assumed to be in the ds9 icrs format, e.g.:
+          ``region = "box(40.0, 50.0, 5.0, 4.0, 0.0)"``.
+        - If Region, it will be converted into the str format, using
+          ``region = region.serialize("ds9").strip().split("\n")[-1]``.
 
-        The following format have been implemented:
+        The following formats have been implemented:
 
         - box
         - circle
@@ -357,13 +392,16 @@ def regions_to_shapely(region):
 
     Returns
     -------
-    Shapely's Geometry
-        the geometry will depend on the input regions.
+    shapely.Geometry
+        The geometry; its type depends on the input region.
 
     Raises
     ------
+    ValueError
+        If the input region is not a str (after conversion).
+
     NotImplementedError
-        if the format is not recognised.
+        If the region shape is not recognised.
 
     Examples
     --------
@@ -423,19 +461,19 @@ def regions_to_shapely(region):
 # Projection coordinates.
 #
 def cart2sph(vec):
-    """
-    Converts cartesian [x,y,z] to spherical [r, theta, phi] coordinates
-    (in degrees).
+    """Convert cartesian [x, y, z] to spherical [r, theta, phi] coordinates.
+
+    Angles are returned in degrees.
 
     Parameters
     ----------
-    vec: array
-        x, y, z
+    vec : array_like
+        Cartesian coordinates x, y, z.
 
     Returns
     -------
-    array
-        [r, theta, phi]
+    numpy.ndarray
+        Spherical coordinates [r, theta, phi], angles in degrees.
     """
     x, y ,z = vec
     v = np.sqrt(x**2 + y**2 + z**2)
@@ -445,18 +483,17 @@ def cart2sph(vec):
 
 
 def sph2cart(vec):
-    """
-    Converts spherical coordinates [r, theta, phi] to cartesian coordinates [x,y,z].
+    """Convert spherical [r, theta, phi] to cartesian [x, y, z] coordinates.
 
     Parameters
     ----------
-    vec: array
-        r, theta, phi ; angles in degrees
+    vec : array_like
+        Spherical coordinates r, theta, phi; angles in degrees.
 
     Returns
     -------
-    array
-        [x, y, z]
+    numpy.ndarray
+        Cartesian coordinates [x, y, z].
     """
     v, l, b = vec[0], np.asarray(vec[1])*_DEG2RA, np.asarray(vec[2])*_DEG2RA # noqa: E741
     return np.asarray([v*np.cos(b)*np.cos(l),
@@ -464,43 +501,42 @@ def sph2cart(vec):
                        v*np.sin(b)])
 
 def rot_xz(vec, theta):
-    """
-    Rotates cartesian vector v [x,y,z] by angle theta around axis (0,1,0).
+    """Rotate cartesian vector [x, y, z] by angle theta around axis (0, 1, 0).
 
     Parameters
     ----------
-    vec: array
-        x, y, z
+    vec : array_like
+        Cartesian coordinates x, y, z.
 
-    theta: float
-        angle in degree
+    theta : float or array_like
+        Rotation angle, in degrees.
 
     Returns
     -------
-    array
-        rotated x, y, z
+    list
+        Rotated x, y, z.
     """
     return [vec[0]*np.cos(theta*_DEG2RA) - vec[2]*np.sin(theta*_DEG2RA),
             vec[1][None,:],
             vec[2]*np.cos(theta*_DEG2RA) + vec[0]*np.sin(theta*_DEG2RA)]
 
 def rot_xz_sph(l, b, theta): # noqa: E741
-    """
-    Rotate spherical coordinate (l,b = theta, phi) by angle theta around axis (0,1,0)
-    (calls to :func:`sph2cart`, :func:`rot_xz` and :func:`cart2sph`).
+    """Rotate spherical coordinates (l, b) by angle theta around axis (0, 1, 0).
+
+    Calls :func:`sph2cart`, :func:`rot_xz` and :func:`cart2sph`.
 
     Parameters
     ----------
-    l, b: float or array
-       spherical coordinates, in degrees
+    l, b : float or array_like
+        Spherical coordinates (theta, phi), in degrees.
 
-    theta: float or array
-        rotation angle in degrees
+    theta : float or array_like
+        Rotation angle, in degrees.
 
     Returns
     -------
-    array
-        rotated [theta, phi], in degrees
+    numpy.ndarray
+        Rotated [theta, phi], in degrees.
     """
     v_rot = rot_xz( sph2cart([1,l,b]), theta)
     return cart2sph(v_rot)[1:]

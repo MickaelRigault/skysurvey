@@ -1,23 +1,24 @@
-"""
-This module provides a skewed Gaussian probability density function with asymmetric low and high scale parameters.
+"""Skewed Gaussian probability density function.
+
+The distribution has asymmetric low and high scale parameters.
 """
 
 import numpy as np
 
 def skewed_gaussian_pdf(xx, loc, scale_low, scale_high):
-    """ Compute the probability density function (PDF) of a skewed Gaussian distribution.
+    """Compute the PDF of a skewed Gaussian distribution.
 
     The skewed Gaussian distribution is defined by different scale parameters
-    for values below and above the location parameter
+    for values below and above the location parameter.
 
     Parameters
     ----------
     xx : array_like or str
-        Input values at which to evaluate the PDF.
-        If a string, it is assumed to be in NumPy's `r_` format (e.g., "1:10").
+        Input values at which to evaluate the PDF. If a string, it is assumed
+        to be in NumPy's `r_` format (e.g., "1:10").
 
     loc : float
-        Location parameter (mean) of the distribution.
+        Location parameter (mode) of the distribution.
 
     scale_low : float
         Scale parameter (standard deviation) for values less than `loc`.
@@ -27,9 +28,10 @@ def skewed_gaussian_pdf(xx, loc, scale_low, scale_high):
 
     Returns
     -------
-    xx : ndarray
+    xx : numpy.ndarray
         Input values as a NumPy array.
-    pdf : ndarray
+
+    pdf : numpy.ndarray
         Probability density function values for the input `xx`.
 
     Notes

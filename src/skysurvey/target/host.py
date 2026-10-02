@@ -15,14 +15,15 @@ def get_sfr_as_function_of_mass_and_redshift(mass, redshift):
 
     Parameters
     ----------
-    mass : float or array
-        The mass of the host galaxy.
-    redshift : float or array
+    mass : float or array_like
+        The (log10) stellar mass of the host galaxy.
+
+    redshift : float or array_like
         The redshift of the host galaxy.
 
     Returns
     -------
-    float or array
+    float or numpy.ndarray
         The star formation rate.
     """
     ampl = (10**(mass)/10**10)**0.7
@@ -31,27 +32,35 @@ def get_sfr_as_function_of_mass_and_redshift(mass, redshift):
 
 def get_schechterpdf(mass, mstar, alpha, phi, alpha2=None, phi2=None):
     """Get the Schechter probability density function.
-    
+
     Parameters
     ----------
-    mass : float or array
-        Stellar mass value(s) at which to evaluate the Schechter function.   
-    mstar : float or array
-         Characteristic stellar mass defining the exponential cutoff at higher masses.
+    mass : float or array_like
+        (Log10) stellar mass value(s) at which to evaluate the Schechter
+        function.
+
+    mstar : float or array_like
+        Characteristic (log10) stellar mass defining the exponential cutoff at
+        higher masses.
+
     alpha : float
         Low-mass end slope of the Schechter function.
+
     phi : float
         Normalization of the Schechter function.
-    alpha2 : None, float, optional
-        Second low-mass end slope (for double Schechter).
-        By default None.
-    phi2 : None, float, optional
-        Second normalization of the Schechter function (for double Schechter).
-        By default None.
+
+    alpha2 : float, optional
+        Second low-mass end slope (for double Schechter). If None (or if
+        `phi2` is None), a single Schechter is used. The default is None.
+
+    phi2 : float, optional
+        Second normalization of the Schechter function (for double
+        Schechter). If None (or if `alpha2` is None), a single Schechter is
+        used. The default is None.
 
     Returns
     -------
-    float or array
+    float or numpy.ndarray
         The single or double Schechter pdf.
     """
     delta_logmass = mass-mstar
@@ -67,18 +76,23 @@ def get_stellarmassfunction(redshift, which="all", xx="6:13:100j"):
 
     Parameters
     ----------
-    redshift : float or array
+    redshift : float or array_like
         The redshift of the host galaxy.
-    which : str, optional
-        Which stellar mass function to use. Can be "all", "blue", or "red".
-        The default is "all".
-    xx : str, optional
-        The mass range to use. The default is "6:13:100j".
+
+    which : {'all', 'blue', 'red'}, optional
+        Which stellar mass function to use. The default is 'all'.
+
+    xx : str or array_like, optional
+        The (log10) mass grid. If a str, it is interpreted as a ``numpy.r_``
+        input. The default is '6:13:100j'.
 
     Returns
     -------
-    tuple
-        A tuple containing the mass array and the pdf.
+    xx : numpy.ndarray
+        The mass array.
+
+    pdf : numpy.ndarray
+        The stellar mass function pdf, one row per input redshift.
     """
     if isinstance(xx, str): # assumed r_ input
         xx = eval(f"np.r_[{xx}]")

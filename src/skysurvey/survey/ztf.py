@@ -1,6 +1,7 @@
-"""
-This module defines the `ZTF` survey class, including ZTF field geometry at different levels (quadrant, CCD, field) 
-and tools to the load observing logs.
+"""ZTF survey class and associated field geometry.
+
+This module defines the `ZTF` survey class, including ZTF field geometry at
+different levels (quadrant, CCD, field) and tools to load the observing logs.
 """
 
 import pandas
@@ -10,22 +11,21 @@ from ztffields.fields import Fields
 
 
 class ZTF( GridSurvey ):
-    """
-    A class to model the `ZTF` survey.
-
+    """A class to model the `ZTF` survey.
 
     Parameters
     ----------
-    data: `pandas.DataFrame`
-        observing data.
+    data : pandas.DataFrame, optional
+        Observing data. The default is None.
 
-    level: str
-        level of the ZTF fields (quadrant, ccd, field).
+    level : {'quadrant', 'ccd', 'field'}, optional
+        Level of the ZTF fields. The default is 'quadrant'.
 
-    **kwargs goes to ``GridSurvey.__init__``
+    **kwargs
+        Currently ignored.
     """
     def __init__(self, data=None, level="quadrant", **kwargs):
-        """ Initialize the ZTF class."""
+        """Initialize the ZTF class."""
         
         footprint = Fields.get_contours(level=level,
                                         as_polygon=True,
@@ -37,17 +37,25 @@ class ZTF( GridSurvey ):
         
     @classmethod
     def from_logs(cls, **kwargs):
-        """ 
-        Load the ZTF survey from the logs.
+        """Load the ZTF survey from the observing logs.
+
+        The logs are obtained from ``ztfcosmo.get_observing_logs()`` (requires
+        the `ztfcosmo` package) and loaded at the 'quadrant' level.
 
         Parameters
         ----------
         **kwargs
-            goes to ``from_pointings``
+            Currently ignored.
 
         Returns
         -------
         ZTF
+            The ZTF survey instance.
+
+        Raises
+        ------
+        ImportError
+            If `ztfcosmo` is not installed.
         """
         try:
             import ztfcosmo
@@ -59,20 +67,20 @@ class ZTF( GridSurvey ):
         
     @classmethod
     def from_pointings(cls, data, level="quadrant"):
-        """ 
-        Load the ZTF survey from pointings.
+        """Load the ZTF survey from pointings.
 
         Parameters
         ----------
-        data: `pandas.DataFrame` or dict
-            observing data, must contain the rakey and deckey columns.
+        data : pandas.DataFrame or dict
+            Observing data.
 
-        level: str
-            level of the ZTF fields (quadrant, ccd, field).
+        level : {'quadrant', 'ccd', 'field'}, optional
+            Level of the ZTF fields. The default is 'quadrant'.
 
         Returns
         -------
         ZTF
+            The ZTF survey instance.
         """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data)
@@ -80,24 +88,24 @@ class ZTF( GridSurvey ):
         return cls(data=data, level=level)
 
     def get_skyarea(self, observed=True, buffer=0.5):
-        """ 
-        Compute the total sky area covered by the survey fields.
+        """Compute the total sky area covered by the survey fields.
 
         Parameters
         ----------
         observed : bool, optional
-            If True, only fields present in the observation log are included. If False, the area is calculated using all fields 
-            defined in the survey. Default is True.
+            If True, only fields present in the observation log are included.
+            If False, the area is calculated using all fields defined in the
+            survey. The default is True.
 
         buffer : float, optional
-            Size of the padding (in degrees) to apply around the combined 
-            geometry. This helps smooth overlaps and fill small gaps between 
-            neighboring fields. Default is 0.5.
+            Size of the padding (in degrees) to apply around the combined
+            geometry. This helps smooth overlaps and fill small gaps between
+            neighboring fields. The default is 0.5.
 
         Returns
         -------
-        `shapely.geometry.base.BaseGeometry`
-            A shapely geometry (Polygon or MultiPolygon) representing the combined sky coverage.
+        shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+            The combined sky coverage.
         """
         import shapely
         list_of_geoms = self.fields["geometry"]
@@ -108,7 +116,21 @@ class ZTF( GridSurvey ):
 
 
     def show(self, *args, **kwargs):
-        """ shortcut to show_ztf() """
+        """Shortcut to :meth:`show_ztf`.
+
+        Parameters
+        ----------
+        *args
+            Passed to :meth:`show_ztf`.
+
+        **kwargs
+            Passed to :meth:`show_ztf`.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            The sky coverage figure.
+        """
         return self.show_ztf(*args, **kwargs)
     
     def show_ztf(self, data=None, fieldstat=None, **kwargs):
@@ -116,20 +138,22 @@ class ZTF( GridSurvey ):
 
         Parameters
         ----------
-        data: `pandas.DataFrame`, optional
-            Data to be considered to get the field statistics.
-            fieldstat will be derived from that (main grid only) groupby(fieldid).size().
-            Ignored is fieldstat is given.
+        data : pandas.DataFrame, optional
+            Data used to derive the field statistics: number of exposures per
+            field of the main grid (fieldid < 1000). Ignored if `fieldstat` is
+            given. If None, ``self.data`` is used.
 
-        fieldstat: `pandas.Series`, optional
-            Field statistics.
+        fieldstat : pandas.Series, optional
+            Field statistics (value per fieldid). If None, it is derived from
+            `data`.
 
         **kwargs
-            Goes to ``ztffields.skyplot_fields``.
+            Passed to ``ztffields.skyplot_fields``.
 
         Returns
         -------
-        `matplotlib.figure`
+        matplotlib.figure.Figure
+            The sky coverage figure.
         """
         import ztffields
         if fieldstat is None:

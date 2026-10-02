@@ -1,9 +1,10 @@
-"""
-This module provides the `SNeIa` class, a pre-defined Transient class.
+"""Pre-defined `SNeIa` Transient class and its parameter models.
 
-It means the basic ``_MODEL`` functionality has been defined.
+The `SNeIa` class is a pre-defined Transient class, meaning that the basic
+``_MODEL`` functionality has been defined.
 
-See the corresponding documentation page in "List of transient classes" for more detail on this Transient class.
+See the corresponding documentation page in "List of transient classes" for
+more detail on this Transient class.
 
 The `SNeIa` is defined as such:
 
@@ -39,7 +40,8 @@ The `SNeIa` is defined as such:
                               "as":["ra","dec"]}
                         )
 
-Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude) are also defined:
+Pre-defined models for the `SNeIa` parameters (color, stretch, magnitude)
+are also defined.
 """
 import numpy as np
 from scipy import stats
@@ -80,14 +82,14 @@ class SNeIaColor( object ):
 
         Returns
         -------
-        ndarray
+        numpy.ndarray
             The drawn random variates.
         """
         return stats.alpha.rvs(size=size, a=a, loc=loc, scale=scale)
 
     @staticmethod
     def asymetric_gaussian(xx="-0.3:1:0.001", cint=-0.05, sigmalow=0.03, sigmahigh=0.1):
-        """Get an asymetric gaussian distribution.
+        """Get an asymmetric gaussian distribution.
 
         As in Scolnic and Kessler 2016 (https://arxiv.org/pdf/1603.01559).
 
@@ -95,22 +97,25 @@ class SNeIaColor( object ):
         ----------
         xx : str, optional
             The x-axis of the color distribution. It should be a string with
-            the format "min:max:step". The default is "-0.3:1:0.01".
+            the format "min:max:step". The default is "-0.3:1:0.001".
             This is evaluated as `np.r_[xx]`.
 
         cint : float, optional
             The mean of the intrinsic color distribution. The default is -0.05.
 
         sigmalow : float, optional
-            The standard deviation for the bluer tails. The default is 0.03.
+            The standard deviation for the bluer tail. The default is 0.03.
 
         sigmahigh : float, optional
-            The standard deviation for the redder tails. The default is 0.1.
+            The standard deviation for the redder tail. The default is 0.1.
 
         Returns
         -------
-        tuple
-            A tuple containing the x-axis and the pdf.
+        xx : numpy.ndarray
+            The x-axis.
+
+        pdf : numpy.ndarray
+            The pdf evaluated on `xx`.
         """
         if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
@@ -124,15 +129,15 @@ class SNeIaColor( object ):
 
     @staticmethod
     def intrinsic_and_dust(xx="-0.3:1:0.001", cint=-0.075, sigmaint=0.05, tau=0.14):
-        """Get an exponential decay convolved with and intrinsic gaussian color distribution.
+        """Get an exponential decay convolved with an intrinsic gaussian.
 
-        As in Ginolin et al. 2024 (https://arxiv.org/pdf/2406.02072).
+        This models the color distribution as in Ginolin et al. 2024 (https://arxiv.org/pdf/2406.02072).
 
         Parameters
         ----------
         xx : str, optional
             The x-axis of the color distribution. It should be a string with
-            the format "min:max:step". The default is "-0.3:1:0.01".
+            the format "min:max:step". The default is "-0.3:1:0.001".
             This is evaluated as `np.r_[xx]`.
 
         cint : float, optional
@@ -147,8 +152,11 @@ class SNeIaColor( object ):
 
         Returns
         -------
-        tuple
-            A tuple containing the x-axis and the pdf.
+        xx : numpy.ndarray
+            The x-axis.
+
+        pdf : numpy.ndarray
+            The pdf evaluated on `xx`.
         """
         if type(xx) is str: # assumed r_ input
             xx = eval(f"np.r_[{xx}]")
@@ -177,7 +185,7 @@ class SNeIaStretch( object ):
 
         Parameters
         ----------
-        xx : str or array, optional
+        xx : str or array_like, optional
             Definition range for the parameters. Draws will be done from this
             array given the pdf that will be estimated for it. If a string is
             given, it is evaluated as `np.r_[xx]`. The default is
@@ -199,14 +207,18 @@ class SNeIaStretch( object ):
             The relative influence of both modes (1 or 2) in the delayed
             environment. `a>0.5` means more mode 1. The default is 0.45.
 
-        fprompt : float, optional
-            The fraction of prompt SNe Ia. This is ignored if `redshift` is
-            given. The default is 0.5.
+        fprompt : float or array_like, optional
+            The fraction of prompt SNe Ia. If not a float, it is converted
+            into an array (one value per target) and the returned pdf is 2D.
+            The default is 0.5.
 
         Returns
         -------
-        tuple
-            A tuple containing the x-axis and the pdf.
+        xx : numpy.ndarray
+            The x-axis.
+
+        pdf : numpy.ndarray
+            The pdf evaluated on `xx`.
         """
         from scipy.stats import norm
         if type(xx) is str: # assumed r_ input
@@ -232,10 +244,10 @@ class SNeIaMagnitude( object ):
 
         Parameters
         ----------
-        x1 : array
+        x1 : array_like
             The lightcurve stretch. `x1` and `c` must have the same size.
 
-        c : array
+        c : array_like
             The lightcurve color. `x1` and `c` must have the same size.
 
         mabs : float, optional
@@ -250,19 +262,20 @@ class SNeIaMagnitude( object ):
             The stretch linear law coefficient. The default is -0.14.
 
         beta : float, optional
-            The color linear law coeeficient. The default is 3.15.
+            The color linear law coefficient. The default is 3.15.
 
-        rng: None, int, Generator
-            Random number generator seed.
-            (docstring extracted from `np.random.default_rng()`, see this for complete documentation).
-            If None, then fresh, unpredictable entropy will be pulled from the OS.
-            If an ``int``, then the seed will start from this.
+        rng : None, int, or numpy.random.Generator, optional
+            Random number generator seed. (Docstring extracted from
+            :func:`numpy.random.default_rng`, see it for complete
+            documentation.) If None, then fresh, unpredictable entropy will be
+            pulled from the OS. If an int, then the seed will start from this.
             If passed a `Generator`, it will be returned unaltered.
+            The default is None.
 
         Returns
         -------
-        array
-           The absolute magnitude, with the same format as `x1` and `c`.
+        numpy.ndarray
+            The absolute magnitude, with the same format as `x1` and `c`.
         """
         rng = np.random.default_rng(rng)
         mabs = rng.normal(loc=mabs, scale=sigmaint, size=len(x1))
@@ -279,13 +292,13 @@ class SNeIaMagnitude( object ):
 
         Parameters
         ----------
-        x1 : array
+        x1 : array_like
             The lightcurve stretch. `x1` and `c` must have the same size.
 
-        c : array
+        c : array_like
             The lightcurve color. `x1` and `c` must have the same size.
 
-        isup : array
+        isup : array_like
             An array of 0 or 1, flagging which target has `+gamma/2` (1) or
             `-gamma/2` (0).
 
@@ -306,10 +319,19 @@ class SNeIaMagnitude( object ):
         gamma : float, optional
             The step's amplitude. The default is 0.1.
 
+        rng : None, int, or numpy.random.Generator, optional
+            Random number generator seed. (Docstring extracted from
+            :func:`numpy.random.default_rng`, see it for complete
+            documentation.) If None, then fresh, unpredictable entropy will be
+            pulled from the OS. If an int, then the seed will start from this.
+            If passed a `Generator`, it will be returned unaltered.
+            The default is None.
+
         Returns
         -------
-        array
-           The absolute magnitude, with the same format as `x1`, `c` and `isup`.
+        numpy.ndarray
+            The absolute magnitude, with the same format as `x1`, `c` and
+            `isup`.
         """
         tripp_mabs = cls.tripp1998( x1, c,
                                     mabs=mabs, sigmaint=sigmaint,
@@ -326,13 +348,13 @@ class SNeIaMagnitude( object ):
 
         Parameters
         ----------
-        x1 : array
+        x1 : array_like
             The lightcurve stretch. `x1` and `c` must have the same size.
 
-        c : array
+        c : array_like
             The lightcurve color. `x1` and `c` must have the same size.
 
-        hostmass : array
+        hostmass : array_like
             The host stellar mass.
 
         mabs : float, optional
@@ -347,7 +369,7 @@ class SNeIaMagnitude( object ):
             The stretch linear law coefficient. The default is -0.14.
 
         beta : float, optional
-            The color linear law coeeficient. The default is 3.15.
+            The color linear law coefficient. The default is 3.15.
 
         gamma : float, optional
             The step's amplitude. The default is 0.1.
@@ -356,10 +378,19 @@ class SNeIaMagnitude( object ):
             The host mass boundary between low-mass and high-mass hosts.
             The default is 10.
 
+        rng : None, int, or numpy.random.Generator, optional
+            Random number generator seed. (Docstring extracted from
+            :func:`numpy.random.default_rng`, see it for complete
+            documentation.) If None, then fresh, unpredictable entropy will be
+            pulled from the OS. If an int, then the seed will start from this.
+            If passed a `Generator`, it will be returned unaltered.
+            The default is None.
+
         Returns
         -------
-        array
-           The absolute magnitude, with the same format as `x1`, `c` and `isup`.
+        numpy.ndarray
+            The absolute magnitude, with the same format as `x1`, `c` and
+            `hostmass`.
         """
         isup = np.asarray( hostmass>split, dtype=float)
         return cls.tripp_and_step( x1, c, isup,
@@ -374,20 +405,24 @@ class SNeIaMagnitude( object ):
 
 
 class SNeIa( Transient ):
-    """
-    A class to model SNe Ia.
+    """A class to model SNe Ia.
 
-    Parameters
+    Attributes
     ----------
-    _KIND : str, optional
+    _KIND : str
         The kind of transient. The default is "SNIa".
-    _TEMPLATE : str, optional
+
+    _TEMPLATE : str
         The template to use. The default is "salt2".
-    _RATE : float, optional
-        The rate of SNe Ia. The default is 2.35 * 10**4.
-    _AMPLITUDE_NAME : str, optional
-        The name of the amplitude. The default is "x0"
-    _MODEL : dict, optional
+
+    _RATE : float
+        The volumetric rate of SNe Ia (in Gpc-3 / yr, assuming H0=70).
+        The default is 2.35 * 10**4 (Perley 2020).
+
+    _AMPLITUDE_NAME : str
+        The name of the amplitude parameter. The default is "x0".
+
+    _MODEL : dict
         The model to use. The default is a dictionary with the following
         keys:
 
@@ -397,7 +432,6 @@ class SNeIa( Transient ):
         - `t0`: The time of maximum of the SNe Ia.
         - `magabs`: The absolute magnitude of the SNe Ia.
         - `magobs`: The observed magnitude of the SNe Ia.
-        - `x0`: The amplitude of the SNe Ia.
         - `radec`: The ra and dec of the SNe Ia.
     """
 
