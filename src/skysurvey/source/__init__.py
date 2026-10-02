@@ -1,4 +1,4 @@
-""" module for target template sources """
+"""Target template sources."""
 
 
 # ============== #
@@ -9,24 +9,30 @@ from sncosmo.models import _SOURCES
 
 SNCOSMO_SOURCES_DF = pandas.DataFrame(_SOURCES.get_loaders_metadata())
 def get_sncosmo_sourcenames(of_type=None, startswith=None, endswith=None):
-    """ get the list of available sncosmo source names
+    """Get the list of available sncosmo source names.
 
     Parameters
     ----------
-    of_type: str, list
-        type name (of list of). e.g SN II
+    of_type : str or list of str, optional
+        Source type name (or list of), e.g. 'SN II'. If None, all types
+        are considered. The default is None.
 
-    startswith: str
-        the source name should start by this (e.g. v19)
+    startswith : str, optional
+        The source name should start with this (e.g. 'v19'). If None, no
+        selection is applied. The default is None.
 
-    endswith: str
-        the source name should end by this
+    endswith : str, optional
+        The source name should end with this. If None, no selection is
+        applied. The default is None.
 
     Returns
     -------
-    list
-        list of names
+    list of str
+        List of source names.
 
+    Notes
+    -----
+    The `startswith` selection is only applied if `endswith` is also given.
     """
     import numpy as np
     

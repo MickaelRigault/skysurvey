@@ -1,5 +1,7 @@
-"""
-This module defines the Roman survey camera footprint and provides utilities for parsing Roman SIMLIB observation files.
+"""Roman camera footprint and SIMLIB parsing utilities.
+
+This module defines the Roman survey camera footprint and provides utilities
+for parsing Roman SIMLIB observation files.
 """
 
 import warnings
@@ -9,12 +11,12 @@ import pandas
 from shapely import geometry
 
 def get_roman_footprint():
-    """ 
-    Get the Roman footprint (with a  1011arcmin FoV).
+    """Get the Roman camera footprint (0.281 deg**2 FoV).
 
     Returns
     -------
-    `shapely.geometry.Polygon`
+    shapely.geometry.Polygon
+        The Roman camera footprint.
     """
     roman_footprint = geometry.Polygon(
                     np.asarray([[0, 1.], [0.15, 1.],
@@ -39,20 +41,29 @@ def get_roman_footprint():
 #                      #
 # ==================== #
 def parse_simlib(simlib):
-    """ Parse a single simlib file adapted for a Roman simlib file.
+    """Parse a single Roman SIMLIB file.
 
     Parameters
     ----------
-    simlib: str, path
-        the fullpath of a Roman simlib file.
+    simlib : str
+        Full path of a Roman SIMLIB file.
 
     Returns
     -------
-    dataframe: `pandas.DataFrame`
-        a multi-indexed dataframe (level=0 for simlib block index).
+    data : pandas.DataFrame
+        Multi-indexed dataframe (level 0 is the SIMLIB block index).
 
-    metadata: `pandas.DataFrame`
-        a dataframe of the block metadata.
+    metadata : pandas.DataFrame
+        Dataframe of the block metadata.
+
+    Raises
+    ------
+    ValueError
+        If the file does not contain exactly one 'BEGIN LIBGEN' line.
+
+    See Also
+    --------
+    parse_simlib_block : Parse a single SIMLIB block.
     """
     file_ = open(simlib, "r").read().splitlines()
     i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
@@ -74,20 +85,32 @@ def parse_simlib(simlib):
     return data, metadata
 
 def parse_simlib_block(block):
-    """ Official Roman simlib are built per block. This parses one.
+    """Parse one block of an official Roman SIMLIB file.
+
+    Official Roman SIMLIB files are built per block.
 
     Parameters
     ----------
-    block: list
-        the list of data lines from the simlib.
+    block : list of str
+        List of data lines of the SIMLIB block.
 
     Returns
     -------
-    dataframe: `pandas.DataFrame`
-        the dataframe of the simlog
+    dataframe : pandas.DataFrame
+        Dataframe of the SIMLIB block observations.
 
-    meta: `pandas.Series`
-        a serie containing the metadata of this block.
+    meta : pandas.Series or None
+        Metadata of this block (None if the metadata parsing failed).
+
+    Raises
+    ------
+    ValueError
+        If the block does not contain exactly one 'READ' line.
+
+    Notes
+    -----
+    If a data line cannot be parsed, a warning is issued and None is
+    returned.
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
     if len(read_start) == 0:

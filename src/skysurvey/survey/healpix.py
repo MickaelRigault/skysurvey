@@ -1,6 +1,4 @@
-"""
-This module provides HEALPix-based functions for handling survey observations on the sky.
-"""
+"""HEALPix-based functions and classes for handling survey observations."""
 
 from .core import BaseSurvey
 
@@ -11,25 +9,25 @@ import warnings
 
 
 def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
-    """Get the healpix pixel index (ipix) that are with a given ra and dec range.
+    """Get the healpix pixel indices (ipix) within the given ra and dec range.
 
     Parameters
     ----------
     nside : int
         Healpix nside.
 
-    ra_range, dec_range: 2d-array, None, optional
+    ra_range, dec_range : array_like or None, optional
         Min and max to define a coordinate range to be considered.
-        None means no limit.
+        If None, no limit. The default is None.
 
-    in_rad: bool, optional
-        Are the ra and dec coordinates in radian (True)
-        or degree (False).
+    in_rad : bool, optional
+        Whether the ra and dec ranges are in radian (True) or degree (False).
+        The default is False.
 
     Returns
     -------
-    list
-        List of healpix pixel index ipix.
+    numpy.ndarray
+        Healpix pixel indices.
     """
     npix = hp.nside2npix(nside)
     pixs = np.arange(npix) # list of all healpix pixels
@@ -63,47 +61,47 @@ def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
 #                    #
 # ================== #
 class HealpixSurvey( BaseSurvey ):
-    """ The `HealpixSurvey` class.
+    """Survey whose fields are healpix pixels.
 
     Parameters
     ----------
     nside : int
-        healpix nside parameter
+        Healpix nside parameter.
 
-    data: `pandas.DataFrame`
-        observing data.
+    data : pandas.DataFrame or None, optional
+        Observing data. The default is None.
 
-    See also
+    See Also
     --------
-    :func:`from_data`: loads the instance given observing data.
-    :func:`from_random`: generate random observing data and loads the instance.
+    from_data : Load the instance given observing data.
+    from_random : Generate random observing data and load the instance.
     """
    
     def __init__(self, nside, data=None):
-        """ Initialize the HealpixSurvey class."""
+        """Initialize the HealpixSurvey class."""
         super().__init__(data)
         self._nside = nside
         
     @classmethod
     def from_data(cls, nside, data):
-        """ Load an instance given survey data and healpix size (nside).
-        
+        """Load an instance given survey data and healpix size (nside).
+
         Parameters
         ----------
         nside : int
-            healpix nside parameter
+            Healpix nside parameter.
 
-        data: pandas.DataFrame
-            observing data.
+        data : pandas.DataFrame
+            Observing data.
 
         Returns
         -------
-        instance
+        HealpixSurvey
+            The loaded instance.
 
-        See also
+        See Also
         --------
-        :func:`from_random`: generate random observing data and loads the instance.
-        
+        from_random : Generate random observing data and load the instance.
         """
         return cls(nside=nside, data=data)
 
@@ -113,44 +111,43 @@ class HealpixSurvey( BaseSurvey ):
                     mjd_range, skynoise_range,
                     ra_range=None, dec_range=None,
                     rng=None, **kwargs):
-        """ 
-        Load an instance with random observing data.
+        """Load an instance with random observing data.
 
         Parameters
         ----------
         nside : int
-            healpix nside parameter
+            Healpix nside parameter.
 
-        size: int
-            number of observations to draw
+        size : int
+            Number of observations to draw.
 
-        bands: list of str
-            list of bands that should be drawn.
+        bands : list of str
+            List of bands that should be drawn.
 
-        mjd_range: list or array
-            min and max mjd for the random drawing.
+        mjd_range : array_like
+            Min and max mjd for the random drawing.
 
-        skynoise_range: list or array
-            min and max skynoise for the random drawing.
+        skynoise_range : array_like
+            Min and max skynoise for the random drawing.
 
-        ra_range, dec_range: 2d-array, None
-            min and max to define a coordinate range to be considered.
-            None means no limit.
+        ra_range, dec_range : array_like or None, optional
+            Min and max to define a coordinate range to be considered.
+            If None, no limit. The default is None.
 
-        rng : None, int, (Bit)Generator, optional
-            seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring. 
-            See that documentation for details.)
-            If None, an unpredictable entropy will be pulled from the OS.
-            If an `int`, (>0), it will set the initial `BitGenerator` state.
-            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator (see
+            :func:`numpy.random.default_rng`). If None, an unpredictable entropy
+            is pulled from the OS. If an int (>0), it sets the initial
+            `BitGenerator` state. If a Generator, it is used unaltered.
+            The default is None.
 
-        **kwargs:
-            goes to the ``draw_random()`` method
+        **kwargs
+            Passed to :meth:`draw_random`.
 
         Returns
         -------
-        `HealpixSurvey`
+        HealpixSurvey
+            The loaded instance.
         """
         this = cls(nside=nside)
         this.draw_random(size,  bands,  
@@ -166,49 +163,58 @@ class HealpixSurvey( BaseSurvey ):
                        backend="polars",
                        use_pyarrow_extension_array=False,
                        **kwargs):
-        """ Loads an instance given observing poitings of a survey.
-        
-        This loads an ``polygon.PolygonSurvey`` using from_pointing and 
-        converts that into an healpix using the ``to_healpix()`` method.
+        """Load an instance given observing pointings of a survey.
+
+        This loads a :class:`~skysurvey.survey.polygon.PolygonSurvey` using its
+        ``from_pointings`` method and converts it into a healpix survey using its
+        ``to_healpix()`` method.
 
         Parameters
         ----------
         nside : int
-            healpix nside parameter
+            Healpix nside parameter.
 
-        data: `pandas.DataFrame` or dict
-            observing data, must contain the rakey and deckey columns.
+        data : pandas.DataFrame or dict
+            Observing data, must contain the `rakey` and `deckey` columns.
 
-        footprint: `shapely.geometry`
-            footprint in the sky of the observing camera
+        footprint : shapely.geometry.Polygon or None, optional
+            Footprint in the sky of the observing camera. The default is None.
 
-        moc: `mocpy.MOC`
-            MOC representation of the observing camera
+        moc : mocpy.MOC or None, optional
+            MOC representation of the observing camera (used if `footprint` is
+            None). The default is None.
 
-        rakey: str
-            name of the R.A. column (in deg)
+        rakey : str, optional
+            Name of the R.A. column (in deg). The default is 'ra'.
 
-        deckey: str
-            name of the Declination column (in deg)
+        deckey : str, optional
+            Name of the declination column (in deg). The default is 'dec'.
 
-        backend: str
-            which backend to use to merge the data (speed issue):
-            - `polars` (fastest): requires polars installed -> converted to pandas at the end
-            - `pandas` (classic): the normal way
-            - `dask` (lazy): as persisted dask.dataframe is returned
+        backend : {'polars', 'pandas', 'dask'}, optional
+            Which backend to use to merge the data (speed issue):
 
-        use_pyarrow_extension_array: bool
-            = ignored in backend != 'polars' or polars_to_pandas is not True = 
-            should the pandas dataframe be based on numpy array (slow to load but faster then)
-            or based on pyarrow array (like in polars) ; faster but numpy.asarray will be 
-            used by pandas when need (which will then slow things down).
+            - 'polars' (fastest): requires polars installed; converted to pandas
+              at the end.
+            - 'pandas' (classic): the normal way.
+            - 'dask' (lazy): a persisted dask.dataframe is returned.
 
-        **kwargs:
-            goes to ``polygon.PolygonSurvey.from_pointings``
+            The default is 'polars'.
+
+        use_pyarrow_extension_array : bool, optional
+            Ignored if backend is not 'polars'. Should the pandas dataframe be
+            based on pyarrow arrays (like in polars; faster to load, but
+            numpy.asarray will be used by pandas when needed, which will then slow
+            things down) rather than numpy arrays (slow to load but faster then).
+            The default is False.
+
+        **kwargs
+            Passed to
+            :meth:`~skysurvey.survey.polygon.PolygonSurvey.from_pointings`.
 
         Returns
         -------
-        instance
+        HealpixSurvey
+            The loaded instance.
         """
         from .polygon import PolygonSurvey
         # Create a generic polygon survey
@@ -227,21 +233,31 @@ class HealpixSurvey( BaseSurvey ):
     #   Methods      #
     # ============== #
     def get_field_area(self):
-        """ Area (deg**2) of a healpy pixel. """
-        return hp.nside2pixarea(self.nside, degrees = True)
-    
-    def get_observed_area(self, min_obs=1):
-        """ Get the observed area (in deg**2).
-        A healpix is consider observed if present more than min_obs time.
-
-        Parameters
-        ----------
-        min_obs: int
-            minimum number of observations to consider a field as observed.
+        """Get the area (in deg**2) of a healpix pixel.
 
         Returns
         -------
         float
+            Pixel area in deg**2.
+        """
+        return hp.nside2pixarea(self.nside, degrees = True)
+    
+    def get_observed_area(self, min_obs=1):
+        """Get the observed area (in deg**2).
+
+        A healpix pixel is considered observed if present more than `min_obs`
+        times (at least once if `min_obs` <= 1).
+
+        Parameters
+        ----------
+        min_obs : int, optional
+            Minimum number of observations to consider a field as observed.
+            The default is 1.
+
+        Returns
+        -------
+        float
+            Observed area in deg**2.
         """
         if min_obs <=1: # 0 or 1 the same
             nfields = self.data["fieldid"].nunique()
@@ -252,27 +268,25 @@ class HealpixSurvey( BaseSurvey ):
         return self.get_field_area() * nfields
 
     def get_polygons(self, observed_fields=False, as_vertices=False, origin=180):
-        """Get a list of polygons.
+        """Get the list of field polygons.
 
         Parameters
         ----------
-        observed_fields: bool, optional
-            Should this be limited to observed fields?
+        observed_fields : bool, optional
+            Should this be limited to observed fields? The default is False.
 
-        as_vertices: bool, optional
-            Should this returns a list of shapely.geometry.Polygon (False)
-            or its vertices (shape N [fields], 2 [ra, dec], 4[corners]).
+        as_vertices : bool, optional
+            Should this return a list of shapely.geometry.Polygon (False) or
+            their vertices (True; shape N [fields], 2 [ra, dec], 4 [corners]).
+            The default is False.
 
-        origin: float, optional
-            Origin of the R.A. coordinate (center of image).
+        origin : float, optional
+            Origin of the R.A. coordinate (center of image). The default is 180.
 
         Returns
         -------
-        list
-            (as_vertices)
-
-            - list of polygon
-            - list of vertices
+        list of shapely.geometry.Polygon or numpy.ndarray
+            The polygons, or their vertices if `as_vertices` is True.
         """
         if observed_fields:
             fieldid = self.data[self.fieldids.name].unique()
@@ -292,23 +306,23 @@ class HealpixSurvey( BaseSurvey ):
         return polygons
 
     def get_skyarea(self, as_multipolygon=True, buffer=0.01):
-        """Get multipolygon (or list) of field geometries.
+        """Get the multipolygon (or union) of the observed field geometries.
 
         Parameters
         ----------
-        as_multipolygon: bool, optional
-            If True, returns a multipolygon.
-            Otherwise, returns unary_union of polygons
+        as_multipolygon : bool, optional
+            If True, returns a multipolygon. Otherwise, returns the unary_union
+            of the polygons. The default is True.
 
-        buffer: float, None, optional
-            buffer (in deg) around the polygon. 
-            This helps joining edges and reduces the number of 
-            isolated sky-pixels which may artificially slow down 
-            computation
+        buffer : float or None, optional
+            Buffer (in deg) around the polygons. This helps joining edges and
+            reduces the number of isolated sky-pixels which may artificially slow
+            down computation. If None, no buffer is applied. The default is 0.01.
 
         Returns
         -------
-        `shapely.geometry.MultiPolygon` or list
+        shapely.geometry.MultiPolygon or shapely.geometry.Polygon
+            The sky area.
         """
         from shapely import ops, geometry
         
@@ -331,19 +345,21 @@ class HealpixSurvey( BaseSurvey ):
 
         Parameters
         ----------
-        radec: `pandas.DataFrame` or 2d array
-            Coordinates in degree.
+        radec : pandas.DataFrame or array_like
+            Coordinates in degree, either a DataFrame with 'ra' and 'dec' columns
+            or a (ra, dec) array.
 
-        origin: float, optional
-            Value of the central R.A.
+        origin : float, optional
+            Value of the central R.A. The default is 180.
 
-        observed_fields: bool, optional
+        observed_fields : bool, optional
             Should this be limited to fields actually observed?
-            This is ignored is self.data is None.
+            The default is False.
 
         Returns
         -------
-        `pandas.DataFrame`
+        pandas.DataFrame
+            Fieldid for each input coordinate (indexed as the input).
         """
         if type(radec) is pandas.DataFrame:
             ra = np.asarray(radec["ra"].values, dtype="float")
@@ -372,13 +388,16 @@ class HealpixSurvey( BaseSurvey ):
 
         Parameters
         ----------
-        origin: float, optional
-            Origin of the ra coordinates.
+        origin : float, optional
+            Origin of the ra coordinates. The default is 180.
 
         Returns
         -------
-        (array, array)
-            ra, dec
+        ra : numpy.ndarray
+            R.A. of the field centroids (in deg).
+
+        dec : numpy.ndarray
+            Declination of the field centroids (in deg).
         """
         dec, ra = np.asarray(hp.pix2ang(self.nside, self.fieldids))*180/np.pi
         dec = 90-dec
@@ -394,44 +413,57 @@ class HealpixSurvey( BaseSurvey ):
                     ra_range=None, dec_range=None,
                     inplace=False, nside=None,
                     rng=None, **kwargs):
-        """ Draw observations. 
+        """Draw random observations.
 
         Parameters
         ----------
+        size : int
+            Number of observations to draw.
 
-        size: int
-            number of observations to draw
+        bands : list of str
+            List of bands that should be drawn.
 
-        bands: list of str
-            list of bands that should be drawn.
+        mjd_range : array_like
+            Min and max mjd for the random drawing.
 
-        ra_range, dec_range: 2d-array, None
-            min and max to define a coordinate range to be considered.
-            None means no limit.
+        skynoise_range, gain_range, zp_range : array_like, float or int
+            Range to be considered. If float or int, this value will always be
+            used. Otherwise, a uniform distribution within the range is assumed.
+            The defaults are 1 for `gain_range` and 25 for `zp_range`.
 
-        skynoise_range, gain_range, zp_range: 2d-array, float, int
-            range to be considered.
-            If float or int, this value will always be used.
-            otherwise, uniform distribution between the range assumed.
+        ra_range, dec_range : array_like or None, optional
+            Min and max to define a coordinate range to be considered.
+            If None, no limit. The default is None.
 
-        inplace: bool
-            shall this method replace the current self.data or
-            return a new instance of the class with the 
-            generated observing data.
-            
-        nside: int
-            = ignore if inplace is set to True =
-            provide a new healpix nside parameters.
+        inplace : bool, optional
+            If True, replace the current `self.data`. Otherwise, return a new
+            instance of the class with the generated observing data.
+            The default is False.
+
+        nside : int or None, optional
+            New healpix nside parameter. If None, the current nside is used.
+            If given with `inplace=True`, a warning is raised and a new instance
+            is returned (inplace is set to False). The default is None.
+
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator (see
+            :func:`numpy.random.default_rng`). If None, an unpredictable entropy
+            is pulled from the OS. If an int (>0), it sets the initial
+            `BitGenerator` state. If a Generator, it is used unaltered.
+            The default is None.
+
+        **kwargs
+            Passed to :meth:`_draw_random`.
 
         Returns
         -------
-        class instance or None
-            see the inplace option.
+        HealpixSurvey or None
+            New instance if `inplace` is False, None otherwise.
 
-        See also
+        See Also
         --------
-        :func:`from_random`: generate random observing data and loads the instance.
-        set_data: set the observing data to the instance.
+        from_random : Generate random observing data and load the instance.
+        set_data : Set the observing data to the instance.
         """
         if nside is None: # don't change nside
             nside = self.nside
@@ -457,36 +489,40 @@ class HealpixSurvey( BaseSurvey ):
     # ----------- #
     def show(self, stat='size', column=None, title=None, data=None, vmin=None,
              vmax=None, seed=None, **kwargs):
-        """ Shows the sky coverage using `healpy.mollview`.
+        """Show the sky coverage using `healpy.mollview`.
 
         Parameters
         ----------
-        stat: str
-            element to be passed to groupby.agg() 
-            could be e.g.: 'mean', 'std' etc.
-            If stat = 'size', this returns data["fieldid"].value_counts()
-            (slightly faster than groupby("fieldid").size()).
+        stat : str, optional
+            Element passed to `groupby.agg()`, e.g. 'mean', 'std', etc.
+            If stat is 'size', this returns the number of observations per field.
+            The default is 'size'.
 
-        columns: str
-            column of the dataframe the stat should be applied to.
-            = ignored if stat='size' = 
+        column : str or None, optional
+            Column of the dataframe the stat should be applied to.
+            Ignored if stat is 'size'. The default is None.
 
-        title: str
-            title of the healpy.mollview plot.
-            (`healpy.mollview` option)
-        
-        data: `pandas.DataFrame`, None
-            data you want this to be applied to.
-            if None, a copy of self.data is used.
-            = leave to None if unsure =
-            
-        Returns
-        -------
-        None
-        
-        See also
+        title : str or None, optional
+            Title of the `healpy.mollview` plot. The default is None.
+
+        data : pandas.Series, dict, array_like or None, optional
+            Values to plot per field. If None, the field statistic is computed
+            from `self.data` (or random values are drawn if there is no data).
+            Leave to None if unsure. The default is None.
+
+        vmin, vmax : float or None, optional
+            Values below `vmin` (above `vmax`) are clipped. The default is None.
+
+        seed : int or None, optional
+            Random seed used to draw values if there is no data.
+            The default is None.
+
+        **kwargs
+            Passed to :func:`healpy.mollview`.
+
+        See Also
         --------
-        :func:`get_fieldstat`: get observing statistics for the fields
+        get_fieldstat : Get observing statistics for the fields.
         """
         if data is None:
             if self.data is None:
@@ -523,46 +559,45 @@ class HealpixSurvey( BaseSurvey ):
                      zp_range=[27,30],
                      ra_range=None, dec_range=None,
                      rng=None):
-        """Draw observations | internal.
+        """Draw random observations (internal).
 
         Parameters
         ----------
         nside : int
             Healpix nside parameter.
 
-        size: int
+        size : int
             Number of observations to draw.
 
-        bands: list of str
+        bands : list of str
             List of bands that should be drawn.
 
-        mjd_range: list or array
+        mjd_range : array_like
             Min and max mjd for the random drawing.
 
-        skynoise_range: list or array
+        skynoise_range : array_like
             Min and max skynoise for the random drawing.
 
-        gain_range: list or array, optional
-            Min and max gain for the random drawing.
+        gain_range : array_like or float, optional
+            Min and max gain for the random drawing. The default is 1.
 
-        zp_range: list or array, optional
-            Min and max zp for the random drawing.
+        zp_range : array_like or float, optional
+            Min and max zp for the random drawing. The default is [27, 30].
 
-        ra_range, dec_range: 2d-array, None, optional
+        ra_range, dec_range : array_like or None, optional
             Min and max to define a coordinate range to be considered.
-            None means no limit.
+            If None, no limit. The default is None.
 
-        rng : None, int, (Bit)Generator, optional
-            seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring. 
-            See that documentation for details.)
-            If None, an unpredictable entropy will be pulled from the OS.
-            If an ``int``, (>0), it will set the initial `BitGenerator` state.
-            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator (see
+            :func:`numpy.random.default_rng`). If None, an unpredictable entropy
+            is pulled from the OS. If an int (>0), it sets the initial
+            `BitGenerator` state. If a Generator, it is used unaltered.
+            The default is None.
 
         Returns
         -------
-        `pandas.DataFrame`
+        pandas.DataFrame
             A DataFrame with the drawn observations.
         """
         rng = np.random.default_rng(rng)
@@ -593,17 +628,17 @@ class HealpixSurvey( BaseSurvey ):
     # ============== #
     @property
     def nside(self):
-        """ Healpix nside parameter (defines the 'fields' size and number). """
+        """Healpix nside parameter (defines the fields' size and number)."""
         return self._nside
     
     @property
     def nfields(self):
-        """ Number of fields (shortcut to npix). """
+        """Number of fields (shortcut to npix)."""
         return self.npix
     
     @property    
     def npix(self):
-        """ Number of healpix pixels. """
+        """Number of healpix pixels."""
         if not hasattr(self, "_npix") or self._npix is None:
             self._npix = hp.nside2npix(self.nside)
             
@@ -611,17 +646,18 @@ class HealpixSurvey( BaseSurvey ):
 
     @property
     def fieldids(self):
-        """ Id of the individual fields. """
+        """Id of the individual fields."""
         fieldids = np.arange( self.npix )
         # use pandas.index for self consistency with polygon.survey
         return pandas.Index(fieldids, name="fieldid")
    
     def metadata(self):
-        """Pandas Series containing meta data information.
+        """Get the metadata information.
 
         Returns
         -------
-        pandas.Series
+        dict
+            Survey metadata, including the nside.
         """
         meta = super().metadata
         meta["nside"] = self.nside

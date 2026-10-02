@@ -1,299 +1,247 @@
-========================
-skysurvey
-========================
+skysurvey: simulate what your survey sees
+=========================================
 
-skysurvey_ is a python package made to simulate astronomical targets as they
-would be observed by a survey.
+**skysurvey** is a Python package to simulate astronomical targets (supernovae,
+kilonovae, any transient) as they would be observed by a real or imagined
+survey. It produces realistic, noisy lightcurves in seconds, for millions of
+targets.
 
-To simulate a realistic lightcurves you need two things:
+.. grid:: 1 2 3 3
+   :gutter: 3
+   :margin: 4 4 0 0
 
-1.  **target** properties as given by nature.
-2. **survey** observing data providing what has been observed when
-   and under which condition.
-
-Joining these to create:
-
-3. a **dataset**, i.e. simulated data of the targets observed by your survey.
-
-
-Elements
-========
-	   
-.. grid:: 3
-   :margin: 0
-   :padding: 0
-   :gutter: 0
-
-   .. grid-item-card:: Targets
-      :columns: 12 6 6 4
+   .. grid-item-card:: :octicon:`star;1.5em;sd-mr-1` Realistic targets
       :class-card: sd-border-0
-      :shadow: None
+      :shadow: none
 
-      ``Target`` are objects as given by nature. You can generate
-      realistic targets, building complex parametrisation thanks to
-      the modeldag_ backend.
-      skysurvey_ provides multi-predefined targets, such as SNeIa, SNII,
-      or any sncosmo_ TimeSerie Source. 
+      Draw populations of SNe Ia, core-collapse SNe, kilonovae or any
+      ``sncosmo`` source at the right rate, with parameter models you can
+      fully customise.
 
-   .. grid-item-card:: Survey
-      :columns: 12 6 6 4
+   .. grid-item-card:: :octicon:`telescope;1.5em;sd-mr-1` Any survey
       :class-card: sd-border-0
-      :shadow: None
+      :shadow: none
 
-      Survey objects handle your observations. It can
-      match sky positions with observing logs and provide observing
-      statistics.  There are two kinds of
-      surveys: ``Survey`` that accept any observing pattern and
-      ``GridSurvey`` that are customed for field-based surveys.
+      Use real observing logs (ZTF, LSST, DES, SNLS) or build your own from
+      a list of pointings, with field-based or free-form strategies.
 
-   .. grid-item-card:: DataSet
-      :columns: 12 6 6 4
+   .. grid-item-card:: :octicon:`zap;1.5em;sd-mr-1` Fast datasets
       :class-card: sd-border-0
-      :shadow: None
+      :shadow: none
 
-      ``DataSet`` corresponds the actual data you would have collected
-      observing ``target`` (s) with your ``survey``. A dataset is easy
-      and fast to load, and it contains analytical and visualisation tools.
+      Combine both to get the lightcurves you would have collected, ready
+      for detection studies, lightcurve fits or cosmology.
 
-.. grid:: 3
+Installation
+------------
 
-    .. grid-item-card:: :material-regular:`star;2em` Make Targets
-      :columns: 12 6 6 4
-      :link: quickstart/quickstart_target.html
+.. code-block:: bash
 
-    .. grid-item-card:: :material-regular:`scatter_plot;2em` Build a Survey
-      :columns: 12 6 6 4
-      :link: quickstart/quickstart_survey.html
+   pip install skysurvey
 
-    .. grid-item-card:: :material-regular:`timeline;2em`
-			Create a DataSet
-      :columns: 12 6 6 4
-      :link: quickstart/quickstart_survey_target_dataset.html
+See :doc:`installation` for optional dependencies and the development
+version.
 
-.. image:: ./gallery/concept_image.png
-		   
+skysurvey in three steps
+------------------------
 
+Every simulation follows the same pattern: create a **target** (the truth), a
+**survey** (the observations), and combine them into a **dataset** (the data).
+See :doc:`key_concepts` for details.
 
-	   
-
-Sharp start
-============
-
-You need to create a `Transient` object, a `Survey`
-object and then to simulate how your survey would observe
-your targets. This latter is called a `DataSet`.
-
-
-Step 1: transients
-------------------
-
-**Draw the 'truth'**
+**1. Draw the truth.**
 
 .. tab-set::
 
-    .. tab-item:: SNeIa
+   .. tab-item:: SNe Ia
 
-       .. code-block:: python
+      .. code-block:: python
 
-	  import skysurvey
-	  snia = skysurvey.SNeIa()
-	  data = snia.draw(size=50_000, inplace=True) # inplace sets snia.data
-	  data.head(5) # see also snia.data
+         import skysurvey
 
+         snia = skysurvey.SNeIa.from_draw(tstart=56_000, tstop=56_100, zmax=0.2)
+         snia.data.head()
 
-    .. tab-item:: SNeII
+   .. tab-item:: SNe II
 
-       .. code-block:: python
+      .. code-block:: python
 
-	  import skysurvey
-	  snii = skysurvey.SNII()
-	  data = snii.draw(size=50_000, inplace=True) # inplace sets snia.data
-	  data.head(5) # see also self.data
+         import skysurvey
 
-    .. tab-item:: Any TimeSerie
+         snii = skysurvey.SNeII.from_draw(tstart=56_000, tstop=56_100, zmax=0.1)
+         snii.data.head()
 
-       .. code-block:: python
+   .. tab-item:: Any sncosmo source
 
-	  import skysurvey
-	  # genetic time serie transient
-	  # specify the template (e.g. from sncosmo) and the absolute mag (loc, scale)
-	  # see https://sncosmo.readthedocs.io/en/stable/source-list.html
-	  snib = skysurvey.TSTransient("v19-2005bf-corr", magabs=[-18, 1])
-	  snib.draw(50_000, inplace=True) # inplace sets snia.data
-	  snib.data.head(5) # also self.data
+      .. code-block:: python
 
+         import skysurvey
 
-You have more built-in targets. You can also directly use ``target = Target.from_draw()``.
+         # any sncosmo template (https://sncosmo.readthedocs.io/en/stable/source-list.html)
+         # with a Gaussian absolute magnitude distribution (mean, scatter)
+         snib = skysurvey.TSTransient("v19-2005bf-corr", magabs=[-18, 1])
+         # no rate given: set the number of targets with size
+         snib.draw(size=5_000, tstart=56_000, tstop=56_100, zmax=0.1, inplace=True)
+         snib.data.head()
 
-Step 2: survey
------------------
-
-**Provide what has been observed when**
-
+**2. Describe what has been observed, and when.**
 
 .. tab-set::
 
-    .. tab-item:: Survey
+   .. tab-item:: Survey
 
-       .. code-block:: python
+      .. code-block:: python
 
-            import skysurvey
-	  
-            # footprint
-            from shapely import geometry
-            footprint = geometry.Point(0,0).buffer(2)
+         import numpy as np
+         from shapely import geometry
+         from skysurvey.tools import utils
 
-            # observing logs
-            import numpy as np
-            from skysurvey.tools import utils
-            size = 10_000
+         # camera footprint (a 2 deg radius disk) and observing logs
+         footprint = geometry.Point(0, 0).buffer(2)
 
-            data = {}
-            data["gain"] = 1
-            data["zp"] = 30
-            data["skynoise"] = np.random.normal(size=size, loc=200, scale=20)
-            data["mjd"] = np.random.uniform(56_000, 56_200, size=size)
-            data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+         size = 10_000
+         data = {"gain": 1, "zp": 30,
+                 "skynoise": np.random.normal(size=size, loc=200, scale=20),
+                 "mjd": np.random.uniform(56_000, 56_100, size=size),
+                 "band": np.random.choice(["desg", "desr", "desi"], size=size)}
+         data["ra"], data["dec"] = utils.random_radec(size=size,
+                                                      ra_range=[200, 250],
+                                                      dec_range=[-20, 10])
 
-            data["ra"], data["dec"] = utils.random_radec(size=size, 
-                                                         ra_range=[200,250], 
-                                                         dec_range=[-20,10])
+         survey = skysurvey.Survey.from_pointings(data, footprint=footprint)
 
-            # Load a GridSurvey
-            survey = skysurvey.Survey.from_pointings(data, footprint=footprint)
-	    
-    .. tab-item:: GridSurvey
+   .. tab-item:: GridSurvey
 
-       .. code-block:: python
+      .. code-block:: python
 
-            import skysurvey
-	    
-            # footprint
-            from shapely import geometry
-            footprint = geometry.Point(0,0).buffer(2)
+         import numpy as np
+         from shapely import geometry
 
-            # fields
-            import numpy as np
-            radec = {'C1': {'dec': -27.11161, 'ra': 54.274292+180},
-                     'C2': {'dec': -29.08839, 'ra': 54.274292+180},
-                     'C3': {'dec': -28.10000, 'ra': 52.648417+180}
-                     }
+         # camera footprint and field centers
+         footprint = geometry.Point(0, 0).buffer(2)
+         radec = {"C1": {"ra": 234.27, "dec": -27.11},
+                  "C2": {"ra": 234.27, "dec": -29.09},
+                  "C3": {"ra": 232.65, "dec": -28.10}}
 
-            # observing logs
-            size = 10_000
+         size = 10_000
+         data = {"gain": 1, "zp": 30,
+                 "skynoise": np.random.normal(size=size, loc=200, scale=20),
+                 "mjd": np.random.uniform(56_000, 56_100, size=size),
+                 "band": np.random.choice(["desg", "desr", "desi"], size=size),
+                 "fieldid": np.random.choice(list(radec), size=size)}
 
-            data = {}
-            data["gain"] = 1
-            data["zp"] = 30
-            data["skynoise"] = np.random.normal(size=size, loc=200, scale=20)
-            data["mjd"] = np.random.uniform(56_000, 56_200, size=size)
-            data["band"] = np.random.choice(["desg","desr","desi"], size=size)
+         survey = skysurvey.GridSurvey.from_pointings(data, radec, footprint=footprint)
 
-            data["fieldid"] = np.random.choice(list(radec.keys()), size=size)
+   .. tab-item:: ZTF
 
-            # Load a GridSurvey
-            survey = skysurvey.GridSurvey.from_pointings(data, radec,
-	                                       	         footprint=footprint)
+      .. code-block:: python
 
-    .. tab-item:: ZTF
+         # requires the ztfcosmo package
+         survey = skysurvey.ZTF.from_logs()
 
-       .. code-block:: python
-		       
-            import skysurvey
-	    
-            survey = skysurvey.ZTF.from_logs()
+   .. tab-item:: LSST
 
-    .. tab-item:: LSST
+      .. code-block:: python
 
-       .. code-block:: python
-		       
-            import skysurvey
-	    # lsst opsim files are large, this may take a few minutes (see options)
-	    opsim_path = "baseline_v3.3_10yrs.db" # provide fullpath
-            survey = skysurvey.LSST.from_opsim(opsim_path)
-	    
-		       
+         # path to an LSST opsim simulation (large file: loading takes a while)
+         survey = skysurvey.LSST.from_opsim("baseline_v3.3_10yrs.db")
 
-`Survey` uses healpy_ as backend to match position with observing
-history, while ``GridSurvey`` uses shapely_ and geopandas_. Yet, both
-can be used equally in any skysurvey_ input ;
-especially for DataSet.
-
-There are several surveys already implemented, such as ``ZTF`` and ``DES``
-(shallow and deep fields).
-
-Step 3: dataset 
-------------------
-
-**and get lightcurve data**
-
-As you would observe them i.e., the dataset. The simulated lightcurves are in
-dset.data, the input survey is stored in dset.survey, the input
-targets is stored in dset.targets. 
-
+**3. Get the lightcurves you would have observed.**
 
 .. tab-set::
 
-    .. tab-item:: Realistic
+   .. tab-item:: Realistic
 
-       .. code-block:: python
-		       
-            import skysurvey
-            dset = skysurvey.DataSet.from_targets_and_survey(snia, survey)
-            dset.data
+      .. code-block:: python
 
-    .. tab-item:: Noise-free
+         dset = skysurvey.DataSet.from_targets_and_survey(snia, survey)
+         dset.data.head()
+         dset.show_target_lightcurve()
 
-       .. code-block:: python
-		       
-            import skysurvey
-            dset = skysurvey.DataSet.from_targets_and_survey(snia, survey,
-                                                             incl_error=False)
-            dset.data
-	    
+   .. tab-item:: Noise-free
 
-    .. tab-item:: Multi-targets
+      .. code-block:: python
 
-       .. code-block:: python
-		       
-            import skysurvey
-	    # simply pass a list of targets
-            dset = skysurvey.DataSet.from_targets_and_survey([snia, snii], survey)
-            dset.data
-	    
+         dset = skysurvey.DataSet.from_targets_and_survey(snia, survey,
+                                                          incl_error=False)
+
+   .. tab-item:: Several targets
+
+      .. code-block:: python
+
+         # pass a list of targets
+         dset = skysurvey.DataSet.from_targets_and_survey([snia, snii], survey)
+
 .. image:: ./gallery/lc_example.png
+   :alt: Example of a simulated SN Ia lightcurve.
+   :align: center
 
+Where to go next
+----------------
 
+.. grid:: 1 2 2 3
+   :gutter: 3
 
-Tutorials
-=========
+   .. grid-item-card:: :octicon:`rocket;1.5em;sd-mr-1` Quickstart
+      :link: quickstart/skysurvey_101
+      :link-type: doc
+
+      An end-to-end simulation in five minutes.
+
+   .. grid-item-card:: :octicon:`mortar-board;1.5em;sd-mr-1` Tutorials
+      :link: quickstart/index
+      :link-type: doc
+
+      Learn targets, surveys and datasets step by step.
+
+   .. grid-item-card:: :octicon:`checklist;1.5em;sd-mr-1` How-to guides
+      :link: howto/index
+      :link-type: doc
+
+      Short recipes for common tasks.
+
+   .. grid-item-card:: :octicon:`beaker;1.5em;sd-mr-1` Examples
+      :link: examples/index
+      :link-type: doc
+
+      Science use cases: detection efficiency, survey design, Hubble
+      diagram.
+
+   .. grid-item-card:: :octicon:`list-unordered;1.5em;sd-mr-1` Transient catalogue
+      :link: transientclasses/index
+      :link-type: doc
+
+      The built-in transient models and their parameters.
+
+   .. grid-item-card:: :octicon:`code;1.5em;sd-mr-1` API reference
+      :link: api/index
+      :link-type: doc
+
+      Every class and function, organised by concept.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: How to
+   :hidden:
+   :maxdepth: 1
+   :caption: Getting started
 
    installation
-   quickstart/index
-   howto/index   
-   advanced/index
-   analysisexamples/index
-   transientclasses/index
-   
+   quickstart/skysurvey_101
+   key_concepts
+
 .. toctree::
+   :hidden:
    :maxdepth: 2
-   :caption: API documentation
+   :caption: Learn
 
-   skysurvey
-   
-   
+   quickstart/index
+   howto/index
+   examples/index
 
+.. toctree::
+   :hidden:
+   :maxdepth: 2
+   :caption: Reference
 
-.. _simsurvey: https://simsurvey.readthedocs.io/en/latest/index.html
-.. _skysurvey: https://github.com/MickaelRigault/skysurvey
-.. _modeldag: https://github.com/MickaelRigault/modeldag
-.. _sncosmo: https://sncosmo.readthedocs.io/en/stable/
-.. _`see list here`: https://sncosmo.readthedocs.io/en/stable/source-list.html
-.. _snana: https://github.com/RickKessler/SNANA
-.. _shapely: https://shapely.readthedocs.io/en/stable/manual.html
-.. _geopandas: https://geopandas.org/en/stable/gallery/index.html
-.. _healpy: https://healpy.readthedocs.io/en/latest/
+   transientclasses/index
+   advanced/index
+   api/index

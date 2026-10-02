@@ -1,5 +1,7 @@
-"""
-This module defines StableTarget and Star, representing time-independent point sources such as stars.
+"""Time-independent point sources such as stars.
+
+This module defines `StableTarget` and `Star`, representing time-independent
+point sources such as stars.
 """
 
 import numpy as np
@@ -8,19 +10,20 @@ from .core import Target
 
 
 class StableTarget( Target ):
-    """
-    A class to model targets with fixed, time-independent properties.
+    """A class to model targets with fixed, time-independent properties.
 
-    Parameters
+    Attributes
     ----------
-    _KIND : str
-        The transient type. Default is ``"stable"``.
-    _MODEL : dict
+    _KIND : str, optional
+        The target type. The default is 'stable'.
+
+    _MODEL : dict, optional
         The model to use. The default is a dictionary with the following
         keys:
-        
+
         - `radec`: The ra and dec of the target.
-        - `magobs`: Randomly drawn observed magnitudes of the target, using :meth:`random_magobs`.
+        - `magobs`: Randomly drawn observed magnitudes of the target, using
+          :meth:`random_magobs`.
     """
     _KIND = "stable"
     _MODEL = dict( radec = {"func":"random",
@@ -37,20 +40,21 @@ class StableTarget( Target ):
         Parameters
         ----------
         size : int, optional
-            Number of magnitudes to draw. Default is None.
+            Number of magnitudes to draw. If None, a single value is
+            returned. The default is None.
 
         zpmax : float, optional
-            Upper magnitude limit. Default is 22.5.
+            Upper magnitude limit. The default is 22.5.
 
         scale : float, optional
-            Scale parameter of the exponential distribution. Default is 3.
+            Scale parameter of the exponential distribution. The default is 3.
 
-        rng : None, int, or (Bit)Generator, optional
-            Seed for the random number generator. Default is None.
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator. The default is None.
 
         Returns
         -------
-        array
+        float or numpy.ndarray
             Randomly drawn observed magnitudes.
         """
         rng = np.random.default_rng(rng)
@@ -59,12 +63,11 @@ class StableTarget( Target ):
 
     
 class Star( StableTarget ):
-    """
-    A class to model stars, modelled as a stable point source.
+    """A class to model stars, modelled as a stable point source.
 
-    Parameters
+    Attributes
     ----------
-    _KIND : str
-        The transient type. Default is ``"star"``.
+    _KIND : str, optional
+        The target type. The default is 'star'.
     """
     _KIND = "star"

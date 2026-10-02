@@ -1,5 +1,7 @@
-"""
-This module defines the `LSST` survey class and utilities for loading and parsing LSST OpSim observation databases.
+"""LSST survey class and OpSim database utilities.
+
+This module defines the `LSST` survey class and utilities for loading and
+parsing LSST OpSim observation databases.
 """
 
 import numpy as np
@@ -7,11 +9,15 @@ from .basesurvey import Survey
 import pandas
 
 def get_lsst_footprint():
-    """ Get the LSST footprint, a (3 5 5 5 3) ccd structure centered on 0 with a 9.6 deg**2 area.
+    """Get the LSST camera footprint.
+
+    The footprint is a (3 5 5 5 3) CCD structure centered on 0 with a
+    9.6 deg**2 area.
 
     Returns
     -------
-    `shapely.geometry.Polygon`
+    shapely.geometry.Polygon
+        The LSST camera footprint.
     """
     from shapely import geometry
     lowleft = 0
@@ -42,22 +48,29 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
                                     "fiveSigmaDepth", "night", "numExposures", 
                                     "observationId"],  
               sql_where=None):
-    """ Parse input opsim database and returns a dataframe.
-    
+    """Parse an input OpSim database and return a dataframe.
+
     Parameters
     ----------
-    filepath: str, path
-        path to the opsim db.
+    filepath : str
+        Path to the OpSim database.
 
-    columns: list, None
-        list of column to load from the db. Is 'None', all loaded.
+    columns : list of str or None, optional
+        List of columns to load from the OBSERVATIONS table. If None, all
+        columns are loaded. If 'note' is requested but absent, 'scheduler_note'
+        is used instead if available, otherwise it is dropped. The default is
+        ["fieldRA", "fieldDec", "observationStartMJD", "visitExposureTime",
+        "filter", "skyBrightness", "fiveSigmaDepth", "night", "numExposures",
+        "observationId"].
 
-    sql_where: str, None
-        options to select rows to load. e.g. night<365.
+    sql_where : str, optional
+        SQL condition to select the rows to load (e.g. 'night<365').
+        If None, all rows are loaded. The default is None.
 
     Returns
     -------
-    `pandas.DataFrame`
+    pandas.DataFrame
+        The loaded observations.
     """
     import sqlite3
     connect = sqlite3.connect(filepath)
@@ -88,51 +101,60 @@ def read_opsim(filepath, columns = ["fieldRA", "fieldDec", "observationStartMJD"
 
 
 class LSST( Survey ):
-    """ A class to model the `LSST` survey. 
-    
+    """A class to model the `LSST` survey.
+
     Parameters
     ----------
-    footprint: `shapely.geometry`
-        footprint in the sky of the observing camera
+    footprint : shapely.geometry.Polygon, optional
+        Footprint in the sky of the observing camera. The default is None.
 
-    nside : int
-        healpix nside parameter
+    nside : int, optional
+        HEALPix nside parameter. The default is 200.
 
-    data: `pandas.DataFrame`
-        observing data.
+    data : pandas.DataFrame, optional
+        Observing data. The default is None.
 
-    _FOOTPRINT : `shapely.geometry.Polygon`
+    Attributes
+    ----------
+    _FOOTPRINT : shapely.geometry.Polygon
         The LSST camera footprint loaded via :func:`get_lsst_footprint`.
     """
     _FOOTPRINT = get_lsst_footprint()
 
     @classmethod
     def from_opsim(cls, filepath, sql_where=None, zp=30, backend="pandas", **kwargs):
-        """ Load a LSST survey object from an opsim db path.
+        """Load an LSST survey object from an OpSim database path.
 
         Parameters
         ----------
-        filepath: str, path
-            path to the opsim db.
+        filepath : str
+            Path to the OpSim database.
 
-        sql_where: str, None
-            options to select rows to load. e.g. night<365.
+        sql_where : str, optional
+            SQL condition to select the rows to load (e.g. 'night<365').
+            If None, all rows are loaded. The default is None.
 
-        zp: float
-            zp to convert maglimit into skynoise and used for LC flux definition
+        zp : float, optional
+            Zero point used to convert the limiting magnitude into skynoise
+            and used for the light-curve flux definition. The default is 30.
 
-        backend: str
-            backend used to merge the data:
+        backend : {'pandas', 'polars', 'dask'}, optional
+            Backend used to merge the data:
 
-            - `polars` (fastest): requires polars installed -> converted to pandas at the end
-            - `pandas` (classic): the normal way
-            - `dask` (lazy): as persisted dask.dataframe is returned
+            - 'polars' (fastest): requires polars installed; converted to
+              pandas at the end.
+            - 'pandas' (classic): the normal way.
+            - 'dask' (lazy): a persisted dask.dataframe is returned.
 
-        **kwargs goes to ``read_opsim()``: columns
+            The default is 'pandas'.
+
+        **kwargs
+            Passed to :meth:`Survey.from_pointings`.
 
         Returns
         -------
         LSST
+            The LSST survey instance.
         """
         from ..tools.utils import get_skynoise_from_maglimit
         

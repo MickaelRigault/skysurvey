@@ -1,22 +1,26 @@
-"""
-This module defines the `BaseSurvey` base class, providing the core data structure and shared methods for all survey types.
+"""Base survey class providing the core data structure and shared methods.
+
+This module defines the `BaseSurvey` base class, providing the core data
+structure and shared methods for all survey types.
 """
 
 import warnings
 import numpy as np
 
 class BaseSurvey( object ):
-    """ The `BaseSurvey` class.
-
+    """Base class for all survey types.
 
     Parameters
     ----------
-    data: `pandas.DataFrame`
-        observing data.
-        
-    REQUIRED_COLUMNS : list
-        List of column names that must be present in the input DataFrame:
-        
+    data : pandas.DataFrame or None
+        Observing data. See `REQUIRED_COLUMNS` for the list of required
+        columns.
+
+    Attributes
+    ----------
+    REQUIRED_COLUMNS : list of str
+        Column names that must be present in the input DataFrame:
+
         * ``mjd``: Modified Julian Date of the observation.
         * ``band``: Filter/bandpass used (e.g., 'g', 'r', 'i').
         * ``skynoise``: Image background contribution to flux error.
@@ -44,37 +48,34 @@ class BaseSurvey( object ):
     
     
     def __init__(self, data):
-        """ 
-        Initialize the BaseSurvey class."""
+        """Initialize the BaseSurvey class."""
         self.set_data(data)
     
     def __array__(self):
-        """ Numpy array representation of the data. """
+        """Numpy array representation of the data."""
         return self.data.__array__()
     
     # ============== #
     #   Methods      #
     # ============== #    
     def set_data(self, data, lower_precision=True, sort_mjd=True):
-        """ Set the observing data.
+        """Set the observing data.
 
-        = It is unlikely you need to use that directly. =
+        It is unlikely you need to use this method directly.
 
         Parameters
         ----------
-        data: `pandas.DataFrame`
-            observing data. see REQUIRED_COLUMNS for the list of
-            required columns.
+        data : pandas.DataFrame or None
+            Observing data. See `REQUIRED_COLUMNS` for the list of required
+            columns. If None, the data are set to None.
 
-        lower_precision: bool
-            change the types from 64 to 32 precision when possible.
+        lower_precision : bool, optional
+            Change the dtypes from 64 to 32 bit precision when possible.
+            The default is True.
 
-        sort_mjd: bool
-            should this sort by mjd (if needed) as required to draw dataset
-            
-        Returns
-        -------
-        None
+        sort_mjd : bool, optional
+            Sort the data by ``mjd`` (if needed), as required to draw a dataset.
+            The default is True.
         """
         if data is None:
             self._data = None
@@ -98,43 +99,46 @@ class BaseSurvey( object ):
     #   GETTER     #
     # ------------ #
     def get_timerange(self, timekey="mjd"):
-        """ Returns the min and max of the given timekey column.
+        """Get the min and max of the given time column.
 
         Parameters
         ----------
-        timekey: str
-            column name of the time column.
+        timekey : str, optional
+            Column name of the time column. The default is 'mjd'.
 
         Returns
         -------
-        `numpy.array`
+        numpy.ndarray
+            Min and max values of the `timekey` column.
         """
         return self.data[timekey].agg(["min", "max"]).values
         
     def get_fieldcoverage(self, incl_zeros=False, fillna=np.nan,
                           **kwargs):
-        """ Short cut to ``get_fieldstat('size')``.
+        """Get the number of observations per field.
+
+        Shortcut to ``get_fieldstat(stat='size')``.
 
         Parameters
         ----------
-        incl_zeros: bool
-            fields will no entries will not be shown 
-            except if incl_zeros is True
+        incl_zeros : bool, optional
+            If True, fields with no entries are included. Otherwise they are not
+            shown. The default is False.
 
-        fillna: float, str
-            format of the N/A entries
+        fillna : float or str, optional
+            Value for the N/A entries. The default is numpy.nan.
 
-        **kwargs goes to ``get_fieldstat()``
+        **kwargs
+            Passed to :meth:`get_fieldstat`.
 
         Returns
         -------
-        DataFrame or Serie 
-            following `groupby.agg()`
+        pandas.DataFrame or pandas.Series
+            Output of `groupby.agg()`.
 
-        See also
+        See Also
         --------
-        ``get_fieldstat``: get observing statistics for the fields
-
+        get_fieldstat : Get observing statistics for the fields.
         """
         return self.get_fieldstat(stat="size", columns=None,
                                     incl_zeros=incl_zeros, 
@@ -143,38 +147,36 @@ class BaseSurvey( object ):
     def get_fieldstat(self, stat, columns=None,
                         incl_zeros=False, fillna=np.nan,
                         data=None):
-        """ Get observing statistics for the fields.
+        """Get observing statistics for the fields.
 
-        basically a shortcut to ``data.groupby("fieldid")[`column`].`stat`()`` 
-        
+        Basically a shortcut to ``data.groupby(fieldids)[columns].agg(stat)``.
+
         Parameters
         ----------
-        stat: str, list
-            element to be passed to `groupby.agg()` 
-            could be e.g.: 'mean' or ['mean', 'std'] or [np.median, 'mean'] etc.
-            If stat = 'size', this returns data["fieldid"].value_counts()
-            (slightly faster than groupby("fieldid").size()).
-                
-        columns: str, list, None
-            name of the columns to be kept.
-            None means no cut.
+        stat : str or list
+            Element passed to `groupby.agg()`, e.g. 'mean', ['mean', 'std'] or
+            [np.median, 'mean']. If stat is 'size' (or 'value_counts'), this
+            returns the number of entries per field.
 
-        incl_zeros: bool
-            fields will no entries will not be shown 
-            except if incl_zeros is True
+        columns : str, list or None, optional
+            Name of the columns to be kept. If None, no cut is applied.
+            The default is None.
 
-        fillna: float, str
-            format of the N/A entries
-            
-        data: `pandas.DataFrame`, None
-            data you want this to be applied to.
-            if None, a copy of self.data is used.
-            = leave to None if unsure =
-        
+        incl_zeros : bool, optional
+            If True, fields with no entries are included (reindexed on
+            `fieldids`). Otherwise they are not shown. The default is False.
+
+        fillna : float or str, optional
+            Value for the N/A entries. The default is numpy.nan.
+
+        data : pandas.DataFrame or None, optional
+            Data you want this to be applied to. If None, a copy of `self.data`
+            is used. Leave to None if unsure. The default is None.
+
         Returns
         -------
-        DataFrame or Serie 
-            following `groupby.agg()`
+        pandas.DataFrame or pandas.Series
+            Output of `groupby.agg()`.
         """
         if data is None:
             data = self.data.copy()
@@ -197,35 +199,40 @@ class BaseSurvey( object ):
         
         
     def radec_to_fieldid(self, radec):
-        """ Get the fieldid of the given (list of) coordinates.
+        """Get the fieldid of the given (list of) coordinates.
 
         Parameters
         ----------
-        radec: `pandas.DataFrame` or 2d array
-            coordinates in degree
+        radec : pandas.DataFrame or array_like
+            Coordinates in degree.
 
         Returns
         -------
-        `pandas.Series`
+        pandas.Series
+            Fieldid of the given coordinates.
+
+        Raises
+        ------
+        NotImplementedError
+            This method must be implemented by the survey subclass.
         """
         raise NotImplementedError("you have not implemented radec_to_fieldid for your survey")
 
     def get_observations_from_coords(self, radec):
-        """ Returns the data associated to the input radec coordinates.
-        
-        (calls ``radec_to_fieldid`` and select data matching the fieldid)
+        """Get the data associated to the input radec coordinates.
+
+        This calls :meth:`radec_to_fieldid` and selects the data matching the
+        fieldid.
 
         Parameters
         ----------
-        radec: `pandas.DataFrame` or 2d array
-            coordinates in degree
-            (see format ``radec_to_fieldid()``)
-            
+        radec : pandas.DataFrame or array_like
+            Coordinates in degree (see :meth:`radec_to_fieldid` for the format).
+
         Returns
         -------
-        `pandas.DataFrame`
-            copy of the data observed in the given radec coordinates
-        
+        pandas.DataFrame
+            Copy of the data observed at the given radec coordinates.
         """
         fields = self.radec_to_fieldid(radec, observed_fields=True)
         return self.data[ self.data[self.fieldids.name].isin(fields[self.fieldids.name]) ].copy()
@@ -234,7 +241,7 @@ class BaseSurvey( object ):
     #  PLOTTER    #
     # ----------- #        
     def show(self):
-        """ Shows the sky coverage.
+        """Show the sky coverage.
 
         Raises
         ------
@@ -248,39 +255,46 @@ class BaseSurvey( object ):
                             bands=None,perband=True, band_key="band", band_colors=None,
                             fieldid=None,
                             legend=True, **kwargs):
-        """ Show the number of exposures per day.
+        """Show the number of exposures per day.
 
         Parameters
         ----------
-        ax: `matplotlib.axes`
-            axes to plot on.
+        ax : matplotlib.axes.Axes or None, optional
+            Axes to plot on. If None, a new figure and axes are created.
+            The default is None.
 
-        exposure_key: str
-            column name of the exposure id.
+        exposure_key : str, optional
+            Column name of the exposure id. The default is 'expid'.
 
-        bands: list
-            list of bands to plot.
+        bands : list or None, optional
+            List of bands to plot (used if `perband` is True). If None, all the
+            bands present in the data are used. The default is None.
 
-        perband: bool
-            if True, plot the number of exposures per band.
+        perband : bool, optional
+            If True, plot the number of exposures per band (stacked).
+            The default is True.
 
-        band_key: str
-            column name of the band.
+        band_key : str, optional
+            Column name of the band. The default is 'band'.
 
-        band_colors: dict
-            dictionary of colors for each band.
+        band_colors : list or None, optional
+            Colors for each band, in the same order as `bands`. If None, the
+            default matplotlib colors are used. The default is None.
 
-        fieldid: int or list
-            field id to plot.
+        fieldid : int, list or None, optional
+            Field id(s) to consider. If None, all fields are used.
+            The default is None.
 
-        legend: bool
-            if True, show the legend.
+        legend : bool, optional
+            If True, show the legend. The default is True.
 
-        **kwargs goes to ax.bar
+        **kwargs
+            Passed to :meth:`matplotlib.axes.Axes.bar`.
 
         Returns
         -------
-        `matplotlib.figure`
+        matplotlib.figure.Figure
+            The figure containing the plot.
         """
         from astropy.time import Time
         
@@ -356,20 +370,18 @@ class BaseSurvey( object ):
     # ============== #
     @property
     def data(self):
-        """ Dataframe containing what has been observed when.
-        aka. the observing data 
-        """
+        """Observing data, i.e., dataframe containing what has been observed when."""
         return self._data
     
     @property
     def metadata(self):
-        """ Metadata associated to the survey, """
+        """Metadata associated to the survey."""
         meta = {"type":self.of_type}
         return meta
     
     @property    
     def nfields(self):
-        """ Number of fields """
+        """Number of fields."""
         if not hasattr(self,"_nfields") or self._nfields is None:
             warnings.warn("no nfields set, so this is assuming max of data['fieldid'].")
             self._nfields =self.data["fieldid"].max()
@@ -378,7 +390,7 @@ class BaseSurvey( object ):
 
     @property
     def fields(self):
-        """ Geodataframe containing the fields coordinates. """
+        """GeoDataFrame containing the fields coordinates."""
         if not hasattr(self,"_fields"):
             return None
         return self._fields
@@ -386,11 +398,11 @@ class BaseSurvey( object ):
     
     @property
     def of_type(self):
-        """ Kind of survey that is. """
+        """Kind of survey (name of the class)."""
         return str(type(self)).split("'")[-2].split(".")[-1]
 
     @property
     def date_range(self):
-        """ First and last date of the survey. """
+        """First and last date (mjd) of the survey."""
         return np.min(self.data["mjd"]), np.max(self.data["mjd"])
         

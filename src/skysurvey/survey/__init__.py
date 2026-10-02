@@ -8,19 +8,26 @@ from .lsst import * # noqa: F403
 
 # shortcut
 def get_footprint(which, **kwargs):
-    """ 
-    Get the footprint of a given survey.
+    """Get the footprint of a given survey.
 
     Parameters
     ----------
-    which: str
-        name of the survey (e.g. ztf, des, lsst).
+    which : str
+        Name of the survey (e.g. 'des', 'lsst'). It must correspond to a
+        survey module providing a ``get_{which}_footprint`` function.
 
-    **kwargs goes to the get_{which}_footprint function.
+    **kwargs
+        Passed to the ``get_{which}_footprint`` function.
 
     Returns
     -------
     shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+        The footprint of the survey camera.
+
+    Raises
+    ------
+    ValueError
+        If no ``get_{which}_footprint`` function exists for `which`.
     """
     which = which.lower()
     

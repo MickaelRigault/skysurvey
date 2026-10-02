@@ -1,6 +1,4 @@
-"""
-This module provides utility functions for drawing and computing volumetric rates and redshift distributions.
-"""
+"""Utilities to draw and compute volumetric rates and redshift distributions."""
 
 import numpy as np
 
@@ -9,12 +7,12 @@ from astropy.cosmology import Planck18
 def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
                     rate_H0=70,
                     cosmology=Planck18, rng=None, **kwargs):
-    """Draw random redshift following the given rate.
+    """Draw random redshifts following the given rate.
 
     Parameters
     ----------
     size : int
-        Number of target to draw.
+        Number of targets to draw.
 
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
@@ -28,30 +26,38 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         Maximum redshift. The default is 2.
 
     zstep : float, optional
-        Sampling of the redshift. The default is 1e-5.
+        Sampling of the redshift. The default is 1e-4.
 
     rate_H0 : float, optional
         Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
         is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
 
-    cosmology: `astropy.Cosmology`, optional
-        Cosmology to use to compute volume, as the rate are "volumetric rates".
+    cosmology : astropy.cosmology.Cosmology, optional
+        Cosmology to use to compute volume, as the rates are "volumetric
+        rates". The default is `Planck18`.
 
-    rng : None, int, `(Bit)Generator`, optional
-        seed for the random number generator.
-        (doc adapted from numpy's `np.random.default_rng` docstring.
-        See that documentation for details.)
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator
+        (doc adapted from numpy's `np.random.default_rng` docstring;
+        see that documentation for details).
         If None, an unpredictable entropy will be pulled from the OS.
-        If an ``int``, (>0), it will set the initial `BitGenerator` state.
+        If an ``int`` (>0), it will set the initial `BitGenerator` state.
         If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        The default is None.
 
     **kwargs
-        Goes to :func:`get_ntargets_per_shell()` -> :func:`get_rate()`.
+        Goes to :func:`get_ntargets_per_shell` -> :func:`get_rate`.
 
     Returns
     -------
-    list
-        A list of redshifts.
+    numpy.ndarray or list of numpy.ndarray
+        Array of drawn redshifts, or a list of such arrays if `rate` is an
+        array (2D pdf).
+
+    Raises
+    ------
+    ValueError
+        If the redshift pdf is neither 1D nor 2D.
     """
     # force number of target per redshift shell to be a float to avoid rounding errors.
     xx, pdf = get_ntargets_per_shell(zmin=zmin, zmax=zmax, zstep=zstep, rate=rate,
@@ -75,10 +81,9 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
 def get_rate(z, rate, H0, rate_H0=70, **kwargs):
     """Get the (volumetric) rate as a function of redshift.
 
-
     Parameters
     ----------
-    z : array
+    z : array_like
         Array of redshifts.
 
     rate : float or callable
@@ -94,13 +99,12 @@ def get_rate(z, rate, H0, rate_H0=70, **kwargs):
         is rescaled by (H0 / rate_H0)**3. The default is 70.
 
     **kwargs
-        Rate options if rate is a function.
-        ignored otherwise.
+        Rate options if `rate` is a function, ignored otherwise.
 
     Returns
     -------
-    rate
-        the rate per Gpc3, array (if func) or float
+    float or numpy.ndarray
+        The rate per Gpc3, including the 1/(1+z) frame change.
     """
     # specified rate function or volumetric rate ?
     if callable(rate): # function
@@ -115,46 +119,50 @@ def get_rate(z, rate, H0, rate_H0=70, **kwargs):
 def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
                             rate_H0 = 70,
                             cosmology=Planck18, astype="int", **kwargs):
-    """ Get the total number of target expected in the given volume.
+    """Get the number of targets expected in each redshift shell of the volume.
 
     Parameters
     ----------
     zmax : float
-        outter redshift of the volume.
+        Outer redshift of the volume.
 
-    rate : float, array or callable
+    rate : float, array_like or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
-        If an array is given, if array broacasts with shell size, then it
-        multiplies shell, if not than an axes is added and pdf is (rates.shape, nbins).
+        If an array is given and it broadcasts with the shell size, then it
+        multiplies the shells; if not, an axis is added and the pdf has shape
+        (rates.shape, nbins).
 
-    zmin: float
-        inner redshift of the volume.
+    zmin : float, optional
+        Inner redshift of the volume. The default is 0.
 
-    zstep: float
-        binning of the redshift used for the computation.
+    zstep : float, optional
+        Binning of the redshift used for the computation. The default is 1e-5.
 
     rate_H0 : float, optional
         Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
         is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
 
-    cosmology : `astropy.Cosmology`, optional
-        Cosmology used to get the comoving_volume. The default is
+    cosmology : astropy.cosmology.Cosmology, optional
+        Cosmology used to get the comoving volume. The default is
         `Planck18`.
 
-    astype: bool
-        type of the returned number of target per shell.
+    astype : str or type, optional
+        Type of the returned number of targets per shell. The default is
+        'int'.
 
-    **kwargs:
-        goes to :func:`get_rate()`
+    **kwargs
+        Goes to :func:`get_rate`.
 
     Returns
     -------
-    zbins: array
-        mid value of the redshift corresponding to the shell
-    pdf: nd-array
-        1d array if rate broadcast with shell, else nd-array with n the rate shape.
+    zbins : numpy.ndarray
+        Mid value of the redshift corresponding to the shells.
+
+    pdf : numpy.ndarray
+        Number of targets per shell. 1D array if the rate broadcasts with the
+        shells, else an nD array with n the rate shape.
     """
     # initial binning
     bins_of_redshift = np.arange(zmin, zmax, step=zstep) # [ndim]
@@ -186,42 +194,42 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
 def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18,
                     rate_H0=70,
                     zstep=1e-5, astype="int", **kwargs):
-    """ Get the total number of target expected in the given volume.
+    """Get the total number of targets expected in the given volume.
 
     Parameters
     ----------
     zmax : float
-        outter redshift of the volume.
+        Outer redshift of the volume.
 
     rate : float or callable
         If a float is given, it is assumed to be the number of targets per
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
 
-    zmin: float
-        inner redshift of the volume.
+    zmin : float, optional
+        Inner redshift of the volume. The default is 0.
 
-    cosmology : `astropy.Cosmology`, optional
-        Cosmology used to get the comoving_volume. The default is
+    cosmology : astropy.cosmology.Cosmology, optional
+        Cosmology used to get the comoving volume. The default is
         `Planck18`.
 
     rate_H0 : float, optional
         Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
         is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
 
-    zstep: float
-        binning of the redshift used for the computation.
+    zstep : float, optional
+        Binning of the redshift used for the computation. The default is 1e-5.
 
-    astype: bool
-        type of the returned value.
+    astype : str or type, optional
+        Type of the returned value. The default is 'int'.
 
     **kwargs
-        goes to :func:`get_ntargets_per_shell()` -> :func:`get_rate()`
+        Goes to :func:`get_ntargets_per_shell` -> :func:`get_rate`.
 
     Returns
     -------
-    ntargets: float, array
-        number(s) of target.
+    ntargets : int, float or numpy.ndarray
+        Number(s) of targets.
     """
     # function or forced, hence shell computation
     _, ntargets_per_shell = get_ntargets_per_shell( zmax, rate,

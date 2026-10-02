@@ -1,6 +1,4 @@
-"""
-This module provides utility functions for drawing sky coordinates, and applying observational noise.
-"""
+"""Utility functions to draw sky coordinates and apply observational noise."""
 
 import pandas
 import healpy as hp
@@ -20,21 +18,20 @@ except ImportError:
     LIGO_SKYMAP_IMPORTED = False
 
 def get_skynoise_from_maglimit(maglim, zp=30):
-    """ Get the noise associated to the 5-sigma limit magnitude.
+    """Get the noise associated to the 5-sigma limiting magnitude.
 
     Parameters
     ----------
-    maglim : float
+    maglim : float or array_like
         5-sigma limiting magnitude.
 
     zp : float, optional
-        Zero point. Default is 30.
+        Zero point. The default is 30.
 
     Returns
     -------
-    float
-        Sky noise.
-    
+    float or numpy.ndarray
+        Sky noise, in flux units consistent with `zp`.
     """
     flux_5sigma = 10**(-0.4*(maglim - zp))
     skynoise = flux_5sigma/5.
@@ -44,26 +41,32 @@ def get_skynoise_from_maglimit(maglim, zp=30):
 #  Noise Generator  #
 # ================= #
 def build_covariance(as_dataframe=False, **kwargs):
-    """ Convert kwargs into covariance matrix.
+    """Convert kwargs into a covariance matrix.
 
     Parameters
     ----------
-    as_dataframe: bool
-        should this return a np.array (False) or build a dataframe
-        from it ? (True)
+    as_dataframe : bool, optional
+        If True, the covariance matrix is returned as a pandas.DataFrame
+        indexed by parameter names; otherwise as a numpy.ndarray.
+        The default is False.
 
-    kwargs: 
-        the format is the following:
+    **kwargs
+        Errors and covariances, with the following format::
 
             {'{key1}': err,
-            '{key2}': err,
-            'cov_{key1}{key2}': covariance, # or 'cov_{key2}{key1}' both are looked for
-            }
-        
+             '{key2}': err,
+             'cov_{key1}{key2}': covariance,  # or 'cov_{key2}{key1}'
+             }
+
+        Both 'cov_{key1}{key2}' and 'cov_{key2}{key1}' are looked for.
+
     Returns
     -------
-    array or dataframe, param_names
-        See `as_dataframe`.
+    cov : numpy.ndarray or pandas.DataFrame
+        Covariance matrix. See `as_dataframe`.
+
+    param_names : numpy.ndarray
+        Names of the parameters, in the matrix order.
     """
     param_names, errors = np.stack([[key,val] for key, val in kwargs.items()
                                         if not key.startswith("cov")]).T
@@ -82,26 +85,37 @@ def build_covariance(as_dataframe=False, **kwargs):
     return cov_diag, param_names
 
 def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
-    """ Apply random gaussian noise to the target.
-    
-    Pass the entries error and covariance as kwargs 
-    following this format:
-    
+    """Apply random Gaussian noise to the target.
+
+    Pass the entries error and covariance as kwargs following this format::
+
         {'{key1}': err,
-        '{key2}': err,
-        'cov_{key1}{key2}': covariance, # or 'cov_{key2}{key1}' both are looked for
-        }
-    
+         '{key2}': err,
+         'cov_{key1}{key2}': covariance,  # or 'cov_{key2}{key1}'
+         }
+
+    Both 'cov_{key1}{key2}' and 'cov_{key2}{key1}' are looked for.
+
     Parameters
     ----------
-    target_or_data: ``skysurvey.Target`` or `pandas.DataFrame`
-        a target (of child of) or directly it's `target.data`
-        This will affect what is returned.
+    target_or_data : skysurvey.Target or pandas.DataFrame
+        A target (or child of) or directly its `target.data`. This affects
+        what is returned.
+
+    seed : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator, passed to
+        :func:`numpy.random.default_rng`. The default is None.
+
+    **kwargs
+        Errors and covariances of the entries (see format above), passed to
+        :func:`build_covariance`.
 
     Returns
     -------
-    target or dataframe
-        According to input.
+    skysurvey.Target or pandas.DataFrame
+        Noisy target or data, according to the input type. The noisy data
+        contain `{key}_true` columns (input values) and `{key}_err` columns
+        (input errors).
     """
     import pandas
     if type(target_or_data) is pandas.DataFrame:
@@ -146,37 +160,40 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
 def random_radec(size=None, skyarea=None,
                 ra_range=[0, 360], dec_range=[-90,90],
                 rng=None):
-    """ Draw the sky positions.
+    """Draw random sky positions.
 
     Parameters
     ----------
-    size: int, None
-        number of draw
+    size : int, optional
+        Number of draws. The default is None.
 
-    ra_range: 2d-array
-        = ignored if skyarea given =    
-        right-accension boundaries (min, max)
+    skyarea : shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
+        Area to consider. If given, positions are drawn within the
+        intersection of `skyarea` with the `ra_range`/`dec_range` box.
+        The default is None.
 
-    dec_range: 2d-array
-        = ignored if skyarea given =
-        declination boundaries
-            
-    skyarea: `shapely.geometry.(Multi)Polyon`
-        Area to consider. Default is None.
-        If skyarea is given, ra_range, dec_range is ignored.
+    ra_range : list, optional
+        Right ascension boundaries (min, max), in degrees.
+        The default is [0, 360].
 
-    rng : None, int, `(Bit)Generator`, optional
-        seed for the random number generator.
-        (doc adapted from numpy's `np.random.default_rng` docstring. 
-        See that documentation for details.)
-        If None, an unpredictable entropy will be pulled from the OS.
-        If an ``int``, (>0), it will set the initial `BitGenerator` state.
-        If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+    dec_range : list, optional
+        Declination boundaries (min, max), in degrees.
+        The default is [-90, 90].
+
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator (see
+        :func:`numpy.random.default_rng` for details). If None, an
+        unpredictable entropy will be pulled from the OS. If an int (>0), it
+        will set the initial BitGenerator state. If a (Bit)Generator, it will
+        be returned as a Generator unaltered. The default is None.
 
     Returns
     -------
-    2d-array
-        list of ra, list of dec.
+    ra : numpy.ndarray
+        Right ascensions, in degrees.
+
+    dec : numpy.ndarray
+        Declinations, in degrees.
     """
     rng = np.random.default_rng(rng)
     # => MultiPolygon    
@@ -226,22 +243,24 @@ def random_radec(size=None, skyarea=None,
     return ra, dec
 
 def surface_of_skyarea(skyarea, incl_projection=True):
-    """ Convert input skyarea into deg**2.
+    """Convert input skyarea into deg**2.
 
     Parameters
-    ----------    
-    skyarea: `shapely.geometry.(Multi)Polyon`
-        Area to consider. 
-    
+    ----------
+    skyarea : shapely.geometry.Polygon, str, or float
+        Area to consider. If a str other than "full", None is returned.
+        Non-shapely inputs are returned unchanged.
+
     incl_projection : bool, optional
-        If True, correct for spherical sky projection before computing the area, returning the true solid angle.
-        If False, return the raw area in flat Ra/Dec space. 
-        Default is True.
+        If True, correct for spherical sky projection before computing the
+        area, returning the true solid angle. If False, return the raw area in
+        flat RA/Dec space. The default is True.
 
     Returns
     -------
-    float 
-        Area in deg**2 of the input skyarea, with or without sky projection correction.
+    float or None
+        Area in deg**2 of the input skyarea, with or without sky projection
+        correction.
     """
     if  type(skyarea) is str and skyarea != "full":
         return None
@@ -258,17 +277,17 @@ def surface_of_skyarea(skyarea, incl_projection=True):
     return skyarea
     
 def parse_skyarea(skyarea):
-    """ Pass through the skyarea as a shapely geometry.
+    """Pass through the skyarea as a shapely geometry.
 
     Parameters
-    ----------    
-    skyarea: `shapely.geometry.(Multi)Polyon`
-        Area to consider.
+    ----------
+    skyarea : shapely.geometry.Polygon, shapely.geometry.MultiPolygon, or str
+        Area to consider. If a str other than "full", None is returned.
 
     Returns
     -------
-    `shapely.geometry.(Multi)Polygon`
-        The input skyarea unchanged.
+    shapely.geometry.Polygon, shapely.geometry.MultiPolygon, str, or None
+        The input skyarea unchanged (None for a str other than "full").
     """
     if  type(skyarea) is str and skyarea != "full":
         return None
@@ -283,61 +302,73 @@ def random_radecz_skymap(size=None,skymap={},
                          ra_range=None,dec_range=None,
                          zcmb_range=None, cosmo=Planck15, batch_size=1000,
                          rng=None):
-    """ Draw random (RA, Dec, redshift) coordinates from a 3D gravitational wave sky map.
+    """Draw random (RA, Dec, redshift) coordinates from a 3D GW sky map.
 
     Parameters
     ----------
-    size : int
-        Number of samples to draw. Default is None.
+    size : int, optional
+        Number of samples to draw. The default is None.
 
-    skymap : dict or astropy Table, optional
-        Pre-loaded sky map in moc format (as returned by `ligo.skymap.io.read_sky_map`).
-        Ignored if `filename` is provided. 
+    skymap : dict or astropy.table.Table, optional
+        Pre-loaded sky map in moc format (as returned by
+        :func:`ligo.skymap.io.read_sky_map`). Ignored if `filename` is
+        provided. The default is {}.
 
     filename : str, optional
-        Path to a LIGO/Virgo sky map fits file. If provided, the sky map is loaded
-        from this file. Default is None.
+        Path to a LIGO/Virgo sky map fits file. If provided, the sky map is
+        loaded from this file. The default is None.
 
     do_3d : bool, optional
-        If True, load the sky map with 3D distance information. Default is True.
+        If True, load the sky map with 3D distance information.
+        The default is True.
 
     nside : int, optional
-        HEALPix resolution parameter used to rasterize the sky map. Default is 512.
+        HEALPix resolution parameter used to rasterize the sky map.
+        The default is 512.
 
-    ra_range : 2-element array, optional
+    ra_range : array_like, optional
         Right ascension range [min, max] in degrees to restrict the draw.
-        Pixels outside this range have their probability set to 0. Default is None.
+        Pixels outside this range have their probability set to 0.
+        The default is None.
 
-    dec_range : 2-element array, optional
+    dec_range : array_like, optional
         Declination range [min, max] in degrees to restrict the draw.
-        Pixels outside this range have their probability set to 0. Default is None.
+        Pixels outside this range have their probability set to 0.
+        The default is None.
 
-    zcmb_range : 2-element array, optional
+    zcmb_range : array_like, optional
         Redshift range [zmin, zmax] to restrict the distance sampling.
-        If None, no redshift restriction is applied. Default is None.
+        If None, no redshift restriction is applied. The default is None.
 
-    cosmo : `astropy.cosmology`, optional
+    cosmo : astropy.cosmology.Cosmology, optional
         Cosmology used to convert luminosity distances to redshifts.
-        Default is Planck15.
+        The default is Planck15.
 
     batch_size : int, optional
-        Number of pixels drawn per batch (to avoid memory issues for large `size`).
-        Default is 1000.
+        Number of pixels drawn per batch (to avoid memory issues for large
+        `size`). The default is 1000.
 
-    rng : None, int, or `(Bit)Generator`, optional
-        Seed for the random number generator.
-        If None, an unpredictable entropy will be pulled from the OS.
-        If an int (>0), it sets the initial BitGenerator state.
-        If a (Bit)Generator, it is returned unaltered.
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator. If None, an unpredictable
+        entropy will be pulled from the OS. If an int (>0), it sets the
+        initial BitGenerator state. If a (Bit)Generator, it is returned
+        unaltered. The default is None.
 
     Returns
     -------
-    ra : array
+    ra : numpy.ndarray
         Right ascension of the sampled positions, in degrees.
-    dec : array
+
+    dec : numpy.ndarray
         Declination of the sampled positions, in degrees.
-    zs : array
+
+    zs : numpy.ndarray
         Redshifts of the sampled positions.
+
+    Raises
+    ------
+    ImportError
+        If ligo.skymap is not installed.
     """
 
     if not LIGO_SKYMAP_IMPORTED:

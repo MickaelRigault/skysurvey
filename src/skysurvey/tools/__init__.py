@@ -1,3 +1,3 @@
-""" useful tools """
+"""Useful tools."""
 
 from .utils import random_radec, apply_gaussian_noise # noqa: F401

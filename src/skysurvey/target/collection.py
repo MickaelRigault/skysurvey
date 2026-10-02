@@ -1,6 +1,4 @@
-"""
-This module defines collection objects for grouping and operating on multiple targets or transients simultaneously.
-"""
+"""Collection objects to group and operate on multiple targets at once."""
 
 import pandas
 import warnings
@@ -13,6 +11,16 @@ from .core import Target, Transient
 
 def targets_from_collection(transientcollection):
     """Get targets from a transient collection.
+
+    Parameters
+    ----------
+    transientcollection : TransientCollection
+        Collection of transients.
+
+    Raises
+    ------
+    NotImplementedError
+        Always; this function is not implemented yet.
     """
     raise NotImplementedError
 
@@ -22,7 +30,7 @@ def broadcast_mapping(value, ntargets):
 
     Parameters
     ----------
-    value : array or scalar
+    value : array_like or scalar
         Input value to broadcast. If the input has more than one
         dimension, broadcasting is applied along the first axis.
 
@@ -31,13 +39,12 @@ def broadcast_mapping(value, ntargets):
 
     Returns
     -------
-    ndarray
+    numpy.ndarray
         Broadcasted array of shape:
 
-        - (ntargets,) if `value` is 1D or scalar
+        - (ntargets,) if `value` is 1D or scalar.
         - (ntargets, N) if `value` is 2D or higher, where N is the
           size of the last dimension of `value`.
-
     """
     value = np.atleast_1d(value)
     if np.ndim(value)>1:
@@ -50,28 +57,48 @@ def broadcast_mapping(value, ntargets):
 
 
 class TargetCollection( object ):
-    """
-    A collection of targets.
+    """A collection of targets.
 
     Parameters
     ----------
     targets : list, optional
         A list of targets. The default is None.
 
-    _COLLECTION_OF : type, optional
+    Attributes
+    ----------
+    _COLLECTION_OF : type
         The type of target in the collection. The default is `Target`.
-    _TEMPLATES : list, optional
+
+    _TEMPLATES : list
         A list of templates. The default is [].
     """
     _COLLECTION_OF = Target
     _TEMPLATES = []
 
     def __init__(self, targets=None):
-        """Initialize the TargetCollection."""
+        """Initialize the TargetCollection.
+
+        Parameters
+        ----------
+        targets : list, optional
+            A list of targets. The default is None.
+        """
         self.set_targets(targets)
 
     def as_targets(self):
-        """Convert the collection into a list of same-template targets."""
+        """Convert the collection into a list of same-template targets.
+
+        Returns
+        -------
+        list
+            One target (of type `_COLLECTION_OF`) per template, built from
+            the corresponding subset of `data`.
+
+        Raises
+        ------
+        AttributeError
+            If `data` has no 'template' column.
+        """
         if "template" not in self.data:
             raise AttributeError("self.data has no 'template' column")
 
@@ -84,7 +111,31 @@ class TargetCollection( object ):
     #  Collection   #
     # ============= #
     def call_down(self, which, margs=None, allow_call=True, **kwargs):
-        """Call a method on each target in the collection."""
+        """Call a method (or get an attribute) on each target in the collection.
+
+        Parameters
+        ----------
+        which : str
+            Name of the method or attribute to access on each target.
+
+        margs : array_like, optional
+            Per-target positional argument, broadcast to `ntargets` (see
+            :func:`broadcast_mapping`). If given, ``target.which(marg, **kwargs)``
+            is called for each target. The default is None.
+
+        allow_call : bool, optional
+            If True, callable attributes are called with `kwargs`; otherwise
+            the attribute itself is returned. Ignored if `margs` is given.
+            The default is True.
+
+        **kwargs
+            Passed to the called method.
+
+        Returns
+        -------
+        list
+            The result for each target.
+        """
         if margs is not None:
             margs = broadcast_mapping(margs, self.ntargets)
             return [getattr(t, which)(marg_, **kwargs)
@@ -98,16 +149,58 @@ class TargetCollection( object ):
     #  Methods      #
     # ============= #
     def set_targets(self, targets):
-        """Set the targets in the collection."""
+        """Set the targets in the collection.
+
+        Parameters
+        ----------
+        targets : list or None
+            A list of targets. If None, an empty list is set.
+        """
         self._targets = np.atleast_1d(targets) if targets is not None else []
 
     def get_model_parameters(self, entry, key, default=None):
-        """Get the model parameters for each target in the collection."""
+        """Get the model parameters for each target in the collection.
+
+        Parameters
+        ----------
+        entry : str
+            Name of the model entry.
+
+        key : str
+            Name of the parameter within the model entry.
+
+        default : optional
+            Value returned if the entry or key does not exist.
+            The default is None.
+
+        Returns
+        -------
+        list
+            The model parameter of each target.
+        """
         return self.call_down("get_model_parameter",
                               entry=entry, key=key, default=default)
 
     def get_data(self, keys="_KIND", colname="kind"):
-        """Get a concatenated dataframe of the data from each target."""
+        """Get a concatenated dataframe of the data from each target.
+
+        Parameters
+        ----------
+        keys : str or list, optional
+            Keys used to label each target's data in the concatenation. If a
+            str, it is the name of the attribute fetched on each target (see
+            :meth:`call_down`). If None, no labelling is applied.
+            The default is "_KIND".
+
+        colname : str, optional
+            Name of the column storing the keys. If None, `keys` is used.
+            Ignored if `keys` is None. The default is "kind".
+
+        Returns
+        -------
+        pandas.DataFrame
+            The concatenated data.
+        """
         if keys is not None and type(keys) is str:
             keys = self.call_down(keys)
 
@@ -121,7 +214,7 @@ class TargetCollection( object ):
         return data
 
     def get_target_template(self, index, as_model=False, set_magabs=False):
-        """ Get the template for a given target.
+        """Get the template for a given target.
 
         Parameters
         ----------
@@ -130,20 +223,19 @@ class TargetCollection( object ):
             parameters to that of the target.
 
         as_model : bool, optional
-            should this return the `sncosmo.Model` (True) or the
-            skysurvey.Template (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
+            Whether to return the `sncosmo.Model` (True) or the
+            `skysurvey.Template` (False). For info, the `sncosmo.Model` is
+            ``skysurvey.Template.sncosmo_model``. The default is False.
 
-        set_magabs: bool, optional
-            should the peal magnitude of the template be set to magabs ?
-
-        **kwargs
-            Goes to `seld.template.get()` and passed to `sncosmo.Model`.
+        set_magabs : bool, optional
+            Whether to set the peak magnitude of the template to the
+            target's `magabs`. The default is False.
 
         Returns
         -------
-        ``skysurvey.Template`` or `sncosmo.Model`
-            An instance of the template (or its associated `sncosmo.Model`).
-            (see ``as_model``)
+        skysurvey.Template or sncosmo.Model
+            An instance of the template (or its associated `sncosmo.Model`,
+            see `as_model`).
         """
 
         data_index = self.data.loc[index]
@@ -216,12 +308,14 @@ class TargetCollection( object ):
             The index of the target.
 
         params : dict, optional
-            Parameters to pass to ``get_target_template``. The default is {}.
+            Parameters to pass to :meth:`get_target_template` and to the
+            template's ``show_lightcurve``. If None, ``{}`` is used.
+            The default is None.
 
-        ax : `matplotlib.axes.Axes`, optional
+        ax : matplotlib.axes.Axes, optional
             The axes to plot on. The default is None.
 
-        fig : `matplotlib.figure.Figure`, optional
+        fig : matplotlib.figure.Figure, optional
             The figure to plot on. The default is None.
 
         colors : list, optional
@@ -252,11 +346,11 @@ class TargetCollection( object ):
             Whether to invert the magnitude axis. The default is True.
 
         **kwargs
-            Additional keyword arguments to pass to ``template.show_lightcurve``.
+            Passed to the template's ``show_lightcurve``.
 
         Returns
         -------
-        `matplotlib.figure.Figure`
+        matplotlib.figure.Figure
             The figure containing the plot.
         """
 
@@ -275,7 +369,22 @@ class TargetCollection( object ):
 
 
     def to_transient(self, keys=None, **kwargs):
-        """Convert the collection to a `Transient` object."""
+        """Convert the collection to a `Transient` object.
+
+        Parameters
+        ----------
+        keys : str or list, optional
+            Keys used to label each target's data (see :meth:`get_data`).
+            The default is None.
+
+        **kwargs
+            Passed to :meth:`Transient.from_data`.
+
+        Returns
+        -------
+        skysurvey.Transient
+            A transient containing the concatenated data.
+        """
         data = self.get_data(keys=keys)
         return Transient.from_data(data, **kwargs)
 
@@ -336,6 +445,7 @@ class TargetCollection( object ):
 
     @property
     def template_names(self):
+        """The source names of the targets' templates."""
         if not hasattr(self, "_template_names") or self._template_names is None:
             self._template_names = [
                 target.template.source.name for target in self.targets
@@ -343,15 +453,16 @@ class TargetCollection( object ):
         return self._template_names
 
 class TransientCollection( TargetCollection ):
-    """
-    A collection of transients.
+    """A collection of transients.
 
     Parameters
     ----------
     targets : list, optional
         A list of targets. The default is None.
 
-    _COLLECTION_OF : type, optional
+    Attributes
+    ----------
+    _COLLECTION_OF : type
         The type of transient in the collection. The default is `Transient`.
     """
     _COLLECTION_OF = Transient
@@ -365,21 +476,49 @@ class TransientCollection( TargetCollection ):
         ----------
         float_or_func : float or callable
             If a float is given, it is assumed to be the number of targets per
-            Gpc3. If a callable is given, it is supposed to be a function of z that
-            returns the volumetric rate as a function of redshift.
+            Gpc3. If a callable is given, it is supposed to be a function of z
+            that returns the volumetric rate as a function of redshift.
 
         H0 : float, optional
             Hubble constant (in km/s/Mpc) assumed when deriving the rate.
-            If None, each target's `_RATE_H0` is used. By default None.
+            If None, each target's `_RATE_H0` is used. The default is None.
         """
         _ = self.call_down("set_rate", float_or_func, H0=H0)
 
     def update_model(self, rate_update=True, **kwargs):
-        """Call `update_model` for each target in the collection."""
+        """Call `update_model` for each target in the collection.
+
+        Parameters
+        ----------
+        rate_update : bool, optional
+            Whether to update the rate entry of each model.
+            The default is True.
+
+        **kwargs
+            Passed to each target's `update_model`.
+        """
         _ = self.call_down("update_model", rate_update=rate_update, **kwargs)
 
     def get_rates(self, z, relative=False, **kwargs):
-        """Get the rates for each target in the collection."""
+        """Get the rates for each target in the collection.
+
+        Parameters
+        ----------
+        z : float or array_like
+            Redshift(s) at which the rates are evaluated; broadcast to the
+            number of targets (see :func:`broadcast_mapping`).
+
+        relative : bool, optional
+            If True, rates are normalized to sum to one. The default is False.
+
+        **kwargs
+            Passed to each target's `get_rate`.
+
+        Returns
+        -------
+        list or numpy.ndarray
+            The rate of each target.
+        """
         rates = self.call_down("get_rate", margs=z, **kwargs)
         if relative:
             rates /= np.nansum(rates)
@@ -395,16 +534,47 @@ class TransientCollection( TargetCollection ):
                  **kwargs):
         """Draw the transients in the collection.
 
+        Parameters
+        ----------
+        size : int, optional
+            Total number of targets to draw. If given, the number of targets
+            per template is randomly drawn following the relative rates
+            (evaluated at z=0.1). If None, each target's `draw` default is
+            used. The default is None.
 
-        rng : None, int, `(Bit)Generator`, optional
-            = ignored if size is None =
-            seed for the random number generator.
-            (doc adapted from numpy's `np.random.default_rng` docstring.
-            See that documentation for details.)
-            If None, an unpredictable entropy will be pulled from the OS.
-            If an ``int``, (>0), it will set the initial `BitGenerator` state.
-            If a `(Bit)Generator`, it will be returned as a `Generator` unaltered.
+        zmin, zmax : float, optional
+            Minimum and maximum redshift to be simulated. The default is None.
 
+        tstart, tstop : float or str, optional
+            Starting and ending time of the simulation. The default is None.
+
+        nyears : float, optional
+            Number of years of simulation (see each target's `draw`).
+            The default is None.
+
+        inplace : bool, optional
+            Whether to store the drawn data as the collection's `data`.
+            The default is True.
+
+        shuffle : bool, optional
+            Whether to shuffle the rows of the output data.
+            The default is True.
+
+        rng : None, int, or numpy.random.Generator, optional
+            Seed for the random number generator used to split `size` among
+            templates; ignored if `size` is None. (Doc adapted from
+            :func:`numpy.random.default_rng`.) If None, an unpredictable
+            entropy will be pulled from the OS. If an int (>0), it will set
+            the initial `BitGenerator` state. If a `(Bit)Generator`, it will
+            be returned as a `Generator` unaltered. The default is None.
+
+        **kwargs
+            Passed to each target's `draw`.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The drawn data, with a 'template' column.
         """
         if size is not None:
             relat_rate = np.asarray( self.get_rates(0.1, relative=True) ).reshape(self.ntargets)
@@ -439,24 +609,29 @@ class TransientCollection( TargetCollection ):
         return data
 
 class CompositeTransient( TransientCollection ):
-    """
-    A composite transient.
+    """A composite transient.
 
     Parameters
     ----------
     targets : list, optional
         A list of targets. The default is None.
 
-    _COLLECTION_OF : type, optional
+    Attributes
+    ----------
+    _COLLECTION_OF : type
         The type of transient in the collection. The default is `Transient`.
-    _KIND : str, optional
+
+    _KIND : str
         The kind of transient. The default is "unknown".
-    _RATE : float, optional
+
+    _RATE : float
         The rate of the transient. The default is 1e5.
-    _RATE_H0 : float, optional
+
+    _RATE_H0 : float
         Hubble constant (in km/s/Mpc) assumed when deriving `_RATE`.
         The default is 70.
-    _MAGABS : tuple, optional
+
+    _MAGABS : tuple
         The absolute magnitude of the transient. The default is (-18, 1).
     """
     _COLLECTION_OF = Transient
@@ -482,73 +657,79 @@ class CompositeTransient( TransientCollection ):
         Parameters
         ----------
         size : int, optional
-            Number of target you want to sample. If None, 1 is assumed.
-            Ignored if `nyears` is given. By default None.
+            Number of targets you want to sample. If None, 1 is assumed.
+            Ignored if `nyears` is given. The default is None.
 
         model : dict, optional
             Defines how template parameters are drawn and how they are
-            connected. The model will update the default `cls._MODEL` if any.
-            If None, `cls._MODEL` is used as default. By default None.
+            connected. It updates the model of each target (see
+            `update_model`). The default is None.
 
-        templates : str, optional
-            Name of the template (`sncosmo.Model(source)`). If None,
-            `cls._TEMPLATE` is used as default. By default None.
+        templates : list of str, optional
+            Names of the templates (`sncosmo.Model(source)`). If None,
+            `cls._TEMPLATES` is used. The default is None.
 
         zmax : float, optional
-            Maximum redshift to be simulated. By default None.
+            Maximum redshift to be simulated. The default is None.
 
-        tstart : float, str, optional
+        tstart : float or str, optional
             Starting time of the simulation. If a string is given, it is
-            converted to mjd. By default None.
+            converted to mjd. The default is None.
 
-        tstop : float, str, optional
+        tstop : float or str, optional
             Ending time of the simulation. If a string is given, it is
             converted to mjd. If `tstart` and `nyears` are both given,
-            `tstop` will be overwritten by `tstart + 365.25 * nyears`.
-            By default None.
+            `tstop` will be overwritten by ``tstart + 365.25 * nyears``.
+            The default is None.
 
         zmin : float, optional
-            Minimum redshift to be simulated. By default 0.
+            Minimum redshift to be simulated. The default is 0.
 
         nyears : float, optional
             If given, `nyears` will set:
 
-            - `size`: it will be the number of target expected up to `zmax`
+            - `size`: it will be the number of targets expected up to `zmax`
               in the given number of years. This uses `get_rate(zmax)`.
-            - `tstop`: `tstart + 365.25 * nyears`
+            - `tstop`: ``tstart + 365.25 * nyears``.
 
-            By default None.
-        skyarea : None, str, geometry, optional
+            The default is None.
+
+        skyarea : None, str, or shapely.geometry.Polygon, optional
             Sky area to be considered.
 
-            - str: 'full' (equivalent to None), ['extra-galactic', not implemented yet]
-            - geometry: shapely.Geometry
-            - None: full sky
+            - str: 'full' (equivalent to None), ['extra-galactic', not
+              implemented yet].
+            - geometry: shapely geometry.
+            - None: full sky.
 
-            By default None.
-        rate : float, callable, optional
+            The default is None.
+
+        rate : float or callable, optional
             If a float is given, it is assumed to be the number of targets per
-            Gpc3. If a callable is given, it is supposed to be a function of z that
-            returns the volumetric rate as a function of wavelength.
+            Gpc3. If a callable is given, it is supposed to be a function of z
+            that returns the volumetric rate as a function of redshift.
+            The default is None.
 
-            By default None.
         rate_H0 : float, optional
             Hubble constant (in km/s/Mpc) assumed when deriving `rate`.
             Ignored if `rate` is None. If None, each target's `_RATE_H0`
-            is used. By default None.
-        effect : [type], optional
-            [description]. By default None.
+            is used. The default is None.
+
+        effect : skysurvey.Effect, optional
+            Effect added to each target (see `add_effect`).
+            The default is None.
+
         **kwargs
-            Goes to `self.draw()`.
+            Passed to `update_model_parameter` (with ``rate_update=False``).
 
         Returns
         -------
-        `CompositeTransient`
+        CompositeTransient
             The loaded instance.
 
         See Also
         --------
-        ``from_setting``: loads an instance given model parameters (dict)
+        from_setting : Load an instance given model parameters (dict).
         """
         this = cls()
 
@@ -613,15 +794,16 @@ class CompositeTransient( TransientCollection ):
 
 
 class TSTransientCollection( TransientCollection ):
-    """
-    A collection of time-series transients.
+    """A collection of time-series transients.
 
     Parameters
     ----------
     targets : list, optional
         A list of targets. The default is None.
 
-    _COLLECTION_OF : type, optional
+    Attributes
+    ----------
+    _COLLECTION_OF : type
         The type of transient in the collection. The default is `TSTransient`.
     """
     _COLLECTION_OF = TSTransient
@@ -630,7 +812,41 @@ class TSTransientCollection( TransientCollection ):
     def from_draw(cls, sources, size=None, nyears=None,
                       rates=1e3, magabs=None, magscatter=None,
                       **kwargs):
-        """Load the instance from a random draw of targets given the model."""
+        """Load the instance from a random draw of targets given the model.
+
+        Parameters
+        ----------
+        sources : list
+            List of sncosmo sources (or source names).
+
+        size : int, optional
+            Total number of targets to draw (see :meth:`draw`).
+            The default is None.
+
+        nyears : float, optional
+            Number of years of simulation (see :meth:`draw`).
+            The default is None.
+
+        rates : float or array_like, optional
+            Volumetric rate(s) of the transients, broadcast to the number of
+            sources. The default is 1e3.
+
+        magabs : float or array_like, optional
+            Mean absolute magnitude(s) (``magabs`` ``loc``), broadcast to
+            the number of sources. The default is None.
+
+        magscatter : float or array_like, optional
+            Absolute magnitude scatter(s) (``magabs`` ``scale``), broadcast
+            to the number of sources. The default is None.
+
+        **kwargs
+            Passed to :meth:`draw`.
+
+        Returns
+        -------
+        TSTransientCollection
+            The loaded instance.
+        """
         this = cls.from_sncosmo(sources, rates=rates,
                                         magabs=magabs,
                                         magscatter=magscatter)
@@ -641,7 +857,30 @@ class TSTransientCollection( TransientCollection ):
     @classmethod
     def from_sncosmo(cls, sources, rates=1e3,
                         magabs=None, magscatter=None):
-        """Load the instance from a list of sources (and relative rates)."""
+        """Load the instance from a list of sources (and relative rates).
+
+        Parameters
+        ----------
+        sources : list
+            List of sncosmo sources (or source names).
+
+        rates : float or array_like, optional
+            Volumetric rate(s) of the transients, broadcast to the number of
+            sources. The default is 1e3.
+
+        magabs : float or array_like, optional
+            Mean absolute magnitude(s) (``magabs`` ``loc``), broadcast to
+            the number of sources. The default is None.
+
+        magscatter : float or array_like, optional
+            Absolute magnitude scatter(s) (``magabs`` ``scale``), broadcast
+            to the number of sources. The default is None.
+
+        Returns
+        -------
+        TSTransientCollection
+            The loaded instance.
+        """
         # make sure the sizes match
         rates = broadcast_mapping(rates, len(sources))
         transients = [cls._COLLECTION_OF.from_sncosmo(source_, rate_)

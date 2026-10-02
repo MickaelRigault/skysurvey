@@ -1,6 +1,4 @@
-"""
-This module defines the default photometric band colors and a utility function to retrieve them.
-"""
+"""Default photometric band colors and a utility function to retrieve them."""
 
 import numpy as np
 
@@ -18,15 +16,16 @@ def get_band_color(bands, fill_value=None):
 
     Parameters
     ----------
-    bands: str or list of str
+    bands : str or list of str
         Band or list of bands.
-    fill_value: str or None, optional
-        Value to fill if the band is not found.
+
+    fill_value : str or None, optional
+        Value to return if the band is not found. The default is None.
 
     Returns
     -------
-    str or list
-        Color or list of colors.
+    str or list of str
+        Color (if `bands` is a str) or list of colors.
     """
     squeeze = isinstance(bands, (str, np.str_))
     colors = [BAND_COLORS.get(band_, fill_value) for band_ in np.atleast_1d(bands)]

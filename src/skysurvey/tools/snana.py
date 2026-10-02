@@ -1,6 +1,4 @@
-"""
-This module provides utilities to help `SNANA` users.
-"""
+"""Utilities to help SNANA users."""
 
 import numpy as np
 import pandas
@@ -8,20 +6,25 @@ import warnings
 
 
 def parse_simlib(simlib):
-    """ Parse a single snana simlib file.
+    """Parse a single SNANA simlib file.
 
     Parameters
     ----------
-    simlib: str
+    simlib : str
         Path to the simlib file.
-       
+
     Returns
     -------
-    data: `pandas.DataFrame`
+    data : pandas.DataFrame
         Concatenated DataFrame of all blocks.
 
-    metadata: `pandas.DataFrame`
+    metadata : pandas.DataFrame
         DataFrame of metadata for each block.
+
+    Raises
+    ------
+    ValueError
+        If the file does not contain exactly one 'BEGIN LIBGEN' line.
     """
     file_ = open(simlib, "r").read().splitlines()
     i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
@@ -43,19 +46,30 @@ def parse_simlib(simlib):
     return data, metadata
 
 def parse_simlib_block(block):
-    """ Parse a single snana simlib block.
+    """Parse a single SNANA simlib block.
 
     Parameters
     ----------
-    block: list of str
-        Lines corresponding to a single block. If no 'READ' line or multiple 'READ' line, will raise a ValueError.
+    block : list of str
+        Lines corresponding to a single block.
 
     Returns
     -------
-    dataframe: `pandas.DataFrame`
-    
-    meta: `pandas.Series` or None
-        Returns None if metadata parsing fails.
+    dataframe : pandas.DataFrame
+        Observing data of the block, one row per data line.
+
+    meta : pandas.Series or None
+        Metadata of the block. None if metadata parsing fails.
+
+    Raises
+    ------
+    ValueError
+        If the block contains no 'READ' line or multiple 'READ' lines.
+
+    Notes
+    -----
+    If a data line cannot be parsed, a warning is issued and None is returned
+    (instead of the (dataframe, meta) tuple).
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
     if len(read_start) == 0:
@@ -102,20 +116,25 @@ def parse_simlib_block(block):
 
 ### DES ####
 def parse_simlib_des(simlib):
-    """ Parse a single snana simlib file adapted for a DES simlib file.
+    """Parse a single SNANA simlib file adapted for DES.
 
     Parameters
     ----------
-    simlib: str
+    simlib : str
         Path to the simlib file.
-       
+
     Returns
     -------
-    data: `pandas.DataFrame`
+    data : pandas.DataFrame
         Concatenated DataFrame of all blocks.
 
-    metadata: `pandas.DataFrame`
+    metadata : pandas.DataFrame
         DataFrame of metadata for each block.
+
+    Raises
+    ------
+    ValueError
+        If the file does not contain exactly one 'BEGIN LIBGEN' line.
     """
     file_ = open(simlib, "r").read().splitlines()
     i_start = [ i for i, f_ in enumerate(file_) if f_.startswith("BEGIN LIBGEN") ]
@@ -137,19 +156,30 @@ def parse_simlib_des(simlib):
     return data, metadata
 
 def parse_simlib_block_des(block):
-    """  Parse a single snana simlib block, adapted for DES simlib blocks.
+    """Parse a single SNANA simlib block, adapted for DES.
 
     Parameters
     ----------
-    block: list of str
+    block : list of str
         Lines corresponding to a single block.
 
     Returns
     -------
-    dataframe: `pandas.DataFrame`
-    
-    meta: `pandas.Series` or None
-        Returns None if metadata parsing fails.
+    dataframe : pandas.DataFrame
+        Observing data of the block, one row per data line.
+
+    meta : pandas.Series or None
+        Metadata of the block. None if metadata parsing fails.
+
+    Raises
+    ------
+    ValueError
+        If the block contains no 'READ' line or multiple 'READ' lines.
+
+    Notes
+    -----
+    If a data line cannot be parsed, a warning is issued and None is returned
+    (instead of the (dataframe, meta) tuple).
     """
     read_start = [ i for i, f_ in enumerate(block) if " READ " in f_]
     if len(read_start) == 0:
