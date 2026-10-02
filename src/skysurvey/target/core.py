@@ -16,7 +16,7 @@ from ..tools.utils import parse_skyarea
 
 
 class Target( object ):
-    """ 
+    """
     Base class for targets.
 
     This class provides a framework for representing astronomical targets,
@@ -33,10 +33,10 @@ class Target( object ):
     _MAGSYS : str
         The photometric magnitude system. Defaults to "ab".
     _PEAK_ABSMAG_BAND : str
-        The bandpass in which the peak absolute magnitude is defined. 
+        The bandpass in which the peak absolute magnitude is defined.
         Defaults to "bessellb".
     _AMPLITUDE_NAME : str
-        The name of the parameter used to scale the model flux. 
+        The name of the parameter used to scale the model flux.
         Defaults to "amplitude".
     _COSMOLOGY : astropy.cosmology, optional
         The cosmology to use, by default cosmology.Planck18
@@ -49,22 +49,22 @@ class Target( object ):
     _KIND = "unknow"
     _TEMPLATE = None
     _MODEL = None # dict config
-    
+
     # Params to set peak amplitude
     _MAGSYS = "ab"
     _PEAK_ABSMAG_BAND = "bessellb"
     _AMPLITUDE_NAME = "amplitude"
-    
+
     # - Cosmo
     _COSMOLOGY = cosmology.Planck18
 
     def __init__(self):
         pass
-        
+
 #    def __repr__(self):
-#        """ String representation of the instance. """        
+#        """ String representation of the instance. """
 #        return self.__str__()
-    
+
 #    def __str__(self):
 #        """ String representation of the instance. """
 #        return self.__class__
@@ -137,12 +137,13 @@ class Target( object ):
 
         this.set_data(data)
         return this
-        
+
     @classmethod
     def from_draw(cls, size=None, model=None, template=None,
                       zmax=None, tstart=None, tstop=None,
                       zmin=0, nyears=None,
-                      skyarea=None, rate=None,
+                      skyarea=None,
+                      rate=None, rate_H0=None,
                       effect=None,
                       cosmology=None,
                       verbose=False,
@@ -153,7 +154,7 @@ class Target( object ):
         kwargs may hold specific transient options like:
         - magabs for TSTransient(){self._additional_input}
         (see class.__init__).
-        
+
         Parameters
         ----------
         size : int, optional
@@ -208,6 +209,12 @@ class Target( object ):
             Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
 
+        rate_H0 : float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving `rate`.
+            The rate is rescaled by (H0 / rate_H0)**3 to match the H0 of
+            the simulation cosmology. Ignored if `rate` is None.
+            If None, `cls._RATE_H0` is used. By default None.
+
         effect : [type], optional
             [description]. By default None.
 
@@ -235,13 +242,13 @@ class Target( object ):
         # backward compatibility
         if cosmology is not None:
             this.set_cosmology(cosmology)
-            
+
         if template is not None:
             this.set_template(template)
-            
+
         if rate is not None:
-            this.set_rate(rate)
-            
+            this.set_rate(rate, H0=rate_H0)
+
         if model is not None:
             this.update_model(**model, rate_update=False) # will update any model entry.
 
@@ -253,7 +260,7 @@ class Target( object ):
 
         # cleaning rate automatic feeding in model
         this._update_rate_in_model_()
-        
+
         _ = this.draw( size=size,
                        zmin=zmin, zmax=zmax,
                        tstart=tstart, tstop=tstop,
@@ -280,10 +287,10 @@ class Target( object ):
         ----------
         cosmology: astropy.Cosmology
              the cosmology to be used.
-        
+
         """
         self._cosmology = cosmology
-        
+
     # ------------- #
     #   Template    #
     # ------------- #
@@ -312,7 +319,7 @@ class Target( object ):
         if rate_update:
             warnings.warn("rate_update in set_template is not implemented. If you see this message, contact Mickael")
 
-        
+
     def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
         """Get a template (`sncosmo.Model`).
 
@@ -324,7 +331,7 @@ class Target( object ):
             `sncosmo.Model` parameters will be used. By default None.
 
         as_model : bool, optional
-            should this return the sncosmo.Model (True) or the 
+            should this return the sncosmo.Model (True) or the
             skysurvey.Template (for info sncosmo.Model => skysurvey.Template.sncosmo_model)
 
         data: `pandas.DataFrame`, None, optional
@@ -347,10 +354,10 @@ class Target( object ):
         ``get_target_template``: get a template set to the target parameters.
         ``get_template_parameters``: get the template parameters for the given target
         """
-        
+
         if data is None:
             data = self.data
-        
+
         if index is not None:
             prop = self.get_template_parameters(index, data=data).to_dict()
             kwargs = prop | kwargs
@@ -372,7 +379,7 @@ class Target( object ):
         if not as_model:
             from ..template import Template
             return Template.from_sncosmo(sncosmo_model)
-        
+
         return sncosmo_model
 
     def get_target_template(self, index, as_model=False, **kwargs):
@@ -387,7 +394,7 @@ class Target( object ):
             parameters to that of the target.
 
         as_model : bool, optional
-            should this return the `sncosmo.Model` (True) or the 
+            should this return the `sncosmo.Model` (True) or the
             ``skysurvey.Template`` (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
 
         **kwargs
@@ -405,7 +412,7 @@ class Target( object ):
         ``get_template_parameters``: get the template parameters for the given target
         """
         return self.get_template(index=index, as_model=as_model, **kwargs)
-    
+
     def get_target_flux(self, index, band, phase, zp=None, zpsys=None, restframe=True):
         """Flux through the given bandpass(es) at the given time(s).
 
@@ -469,7 +476,7 @@ class Target( object ):
         """
         sncosmo_model = self.get_template(index=index, set_magabs=True, as_model=True)
         return sncosmo_model.bandmag(band, magsys, sncosmo_model.get("t0") + sncosmo_model._source.peakphase(band))
-    
+
     def get_target_mag(self, index, band, phase, magsys="ab", restframe=True):
         """Magnitude through the given bandpass(es) at the given time(s).
 
@@ -501,7 +508,7 @@ class Target( object ):
         sncosmo_model = self.get_template(index=index, set_magabs=True, as_model=True)
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
         return sncosmo_model.bandmag(band=band, time=sncosmo_model.get('t0')+phase_obs, magsys=magsys)
-        
+
     def clone_target_change_entry(self, index, name, values, as_dataframe=False):
         """Get a clone of the given target at the given redshifts.
 
@@ -539,9 +546,9 @@ class Target( object ):
         data = self.model.redraw_from(name, dd, incl_name=False)
         if as_dataframe:
             return data
-        
+
         return self.__class__.from_data(data, model=self.model.model, template=self.template)
-    
+
     # -------------- #
     #   Getter       #
     # -------------- #
@@ -569,12 +576,12 @@ class Target( object ):
         """
         if data is None:
             data = self.data
-            
+
         known = self.get_template_columns(data=data)
         prop = data[known]
         if index is not None:
             return prop.loc[index]
-        
+
         return prop
 
     def get_template_columns(self, data=None):
@@ -625,22 +632,22 @@ class Target( object ):
         ...             "magobs": {"func": stats.lognorm.rvs, "kwargs":{"s":0.9, "loc":0.03, "scale":0.01}},
         ...             }
         >>> snia = skysurvey.SNeIa.from_draw(1000)
-        >>> snia = snia.apply_gaussian_noise(errmodel, data=snia.data) 
+        >>> snia = snia.apply_gaussian_noise(errmodel, data=snia.data)
         """
         from modeldag.tools import apply_gaussian_noise
-        
+
         if data is None:
             data = self.data
             as_dataframe = False
         else:
             as_dataframe = True
-            
+
         new_data = apply_gaussian_noise(errmodel, data=data)
         if as_dataframe:
             return new_data
-        
+
         return self.__class__.from_data(new_data, model=self.model.model, template=self.template)
-    
+
     # -------------- #
     #   Converts     #
     # -------------- #
@@ -659,7 +666,7 @@ class Target( object ):
 
         cosmology: `astropy.Cosmology`, None
             specify the cosmology to use to convert observed- to absolute-magnitude.
-            If None, self.cosmology is used. 
+            If None, self.cosmology is used.
             *Careful* with specifying the cosmology, in a self consistant why.
 
         Returns
@@ -669,9 +676,9 @@ class Target( object ):
         """
         if cosmology is None:
             cosmology = self.cosmology
-            
+
         return self._magabs_to_magobs(z, magabs, cosmology=cosmology)
-    
+
     @staticmethod
     def _magabs_to_magobs(z, magabs, cosmology):
         """Convert absolute magnitude into observed magnitude.
@@ -730,9 +737,9 @@ class Target( object ):
         from modeldag import ModelDAG
         if type( model ) is dict:
             model = ModelDAG(model, self)
-            
+
         self._model = model
-        
+
         if rate_update:
             self._update_rate_in_model_()
 
@@ -760,7 +767,7 @@ class Target( object ):
             data["template"] = templatename
 
         self._data = data
-        
+
     def get_model(self, **kwargs):
         """Get a copy of the model (dict).
 
@@ -815,18 +822,18 @@ class Target( object ):
         """
         if model is None:
             model = self.model
-            
+
         return model.model[entry]["kwargs"].get(key, default)
 
     def update_model_parameter(self, rate_update=True, **kwargs):
         """Change the kwargs entry of a model."""
-        # use copy to avoid classmethod issues        
+        # use copy to avoid classmethod issues
         for k, v in kwargs.items():
             self.model.model[k]["kwargs"] = self.model.model[k].get("kwargs",{}) | v
 
         if rate_update:
             self._update_rate_in_model_()
-            
+
     def update_model(self, rate_update=True, **kwargs):
         """Change the given entries of the model.
 
@@ -852,7 +859,7 @@ class Target( object ):
         keys = self.model.get_func_with_args("rate")
         if len(keys)>warn_if_more:
             warnings.warn(f"more than {warn_if_more} entries have 'rate' in their options ({keys=})")
-            
+
         self.update_model_parameter(**{k: {"rate": self.rate} for k in keys},
                                         rate_update=False)
 
@@ -897,7 +904,7 @@ class Target( object ):
         # update the model
         if model is not None:
             effect._model = model
-            
+
         if effect.model is not None:
             self.update_model(**effect.model, rate_update=False)
 
@@ -908,7 +915,7 @@ class Target( object ):
             else:
                 new_data = self.data.merge(data, **kwargs)
                 self.set_data(new_data)
-            
+
         elif effect.model is not None and self.data is not None:
             # if not self.data, this will be drawn along with the data on time.
             keys_to_draw = list(effect.model.keys())
@@ -920,11 +927,11 @@ class Target( object ):
 
         # update the template from this effect
         _ = self.template.add_effect(effect)
-        
+
     # -------------- #
     #   Plotter      #
     # -------------- #
-    def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None, 
+    def show_scatter(self, xkey, ykey, ckey=None, ax=None, fig=None,
                          index=None, data=None, colorbar=True,
                          bins=None, bcolor="0.6", err_suffix="_err",
                          **kwargs):
@@ -980,7 +987,7 @@ class Target( object ):
         # ------- #
         if data is None:
             data = self.data if index is None else self.data.loc[index]
-            
+
         xvalue = data[xkey]
         yvalue = data[ykey]
         cvalue = None if ckey is None else data[ckey]
@@ -999,7 +1006,7 @@ class Target( object ):
         # scatter
         prop = {**dict(zorder=3), **kwargs}
         sc = ax.scatter(xvalue, yvalue, c=cvalue, **prop)
-        # errorbar        
+        # errorbar
         if f"{xkey}{err_suffix}" in data or f"{ykey}{err_suffix}" in data:
             xerr = data.get(f"{xkey}{err_suffix}")
             yerr = data.get(f"{ykey}{err_suffix}")
@@ -1007,7 +1014,7 @@ class Target( object ):
             _ = ax.errorbar(xvalue, yvalue, xerr=xerr, yerr=yerr,
                                 ls="None", marker="None",
                                 zorder=zorder, ecolor="0.7")
-           
+
         if cvalue is not None and colorbar:
             fig.colorbar(sc, ax=ax)
 
@@ -1022,12 +1029,12 @@ class Target( object ):
             # get the bin centroid
             bincentroid = gbins["xbins"].apply(lambda x: x.mid)
             # and show the bins
-            ax.errorbar(bincentroid.values, gbins["mean"], yerr=gbins["std"]/np.sqrt(gbins["size"]-1), 
+            ax.errorbar(bincentroid.values, gbins["mean"], yerr=gbins["std"]/np.sqrt(gbins["size"]-1),
                         ls="None", marker="s", mfc=to_rgba(bcolor, 0.8),
                         mec=bcolor, zorder=9, ms=7, ecolor=bcolor)
-            
+
         return fig
-            
+
     # =============== #
     #   Draw Methods  #
     # =============== #
@@ -1085,7 +1092,7 @@ class Target( object ):
 
         model : [type], optional
             [description]. By default None.
-            
+
         set_amplitude: bool
             should the template amplitude be computed.
 
@@ -1096,14 +1103,14 @@ class Target( object ):
         """
         #
         # Drawn model
-        # 
+        #
         if model is None:
             drawn_model = self.model # a modelDAG
         else:
             from modeldag import ModelDAG
             current_model_dict = self.model.model
-            drawn_model = ModelDAG( current_model_dict | model, obj=self)            
-            
+            drawn_model = ModelDAG( current_model_dict | model, obj=self)
+
         # => tstart, tstop format
         if type(tstart) is str:
             tstart = time.Time(tstart).mjd
@@ -1114,20 +1121,20 @@ class Target( object ):
             tstop = time.Time(tstop).mjd
         elif type(tstop) is time.Time:
             tstop = tstop.mjd
-        
-        # => nyears and times    
+
+        # => nyears and times
         if nyears is None and (tstart is not None and tstop is not None):
             nyears = (tstop-tstart)/365.25
-                
+
         if nyears is not None and (tstart is not None and tstop is None):
             tstop = tstart + nyears*365.25
 
         if nyears is not None and (tstart is  None and tstop is not None):
             tstart = tstop - nyears*365.25
-                
+
         if nyears is None and size is None:
             raise ValueError(" You must provide either nyears or size")
-        
+
         if nyears is not None and size is not None:
             nyears = None # its job is done.
 
@@ -1140,10 +1147,10 @@ class Target( object ):
         for zkey in key_redshift:
             if zmax is not None:
                 kwargs.setdefault(zkey, {}).update({"zmax": zmax})
-            
+
             elif nyears is not None:
                 zmax = self.get_model_parameter(zkey, "zmax", None, model=drawn_model)
-            
+
         # zmin
         # -> get forward entries that have 'zmin' as parameters
         key_redshift = drawn_model.get_func_with_args("zmin")
@@ -1151,7 +1158,7 @@ class Target( object ):
             # note: Why condition "on redshift" ?
             if zmin is not None and "redshift" in self.model.model:
                 kwargs.setdefault(zkey, {}).update({"zmin": zmin})
-            
+
             elif nyears is not None:
                 zmin = self.get_model_parameter(zkey, "zmin", None, model=drawn_model)
 
@@ -1167,15 +1174,15 @@ class Target( object ):
         if tstart is not None:
             if type( tstart ) is str:
                 tstart = time.Time(tstart).mjd
-                
+
             kwargs.setdefault("t0",{}).update({"low": tstart})
             if tstop is None and nyears is None: # do 1 year by default
                 kwargs.setdefault("t0",{}).update({"high": tstart+365.25})
-                
+
         # tstart is None, then what ?
         elif tstop is not None and nyears is not None:
             tstart = tstop - 365.25*nyears # fixed later
-            
+
         elif nyears is not None:
             tstart = self.get_model_parameter("t0", "low", None, model=drawn_model)
 
@@ -1189,7 +1196,7 @@ class Target( object ):
                 warnings.warn("radec in model, skyarea given, but the radec func does not accept skyarea.")
             if len(param_affected) ==0:
                 warnings.warn("skyarea given but no model have skyarea as parameters. This is ignored.")
-            
+
             for k in param_affected:
                 kwargs.setdefault(k, {}).update({"skyarea": skyarea})
 
@@ -1201,7 +1208,7 @@ class Target( object ):
             from .rates import get_ntargets
             from ..tools.projection import radecmodel_to_skysurface
             if "radec" in drawn_model.model.keys():
-                # radec model 
+                # radec model
                 radec_model = deepcopy(drawn_model.model["radec"])
                 # as updated by requested kwargs
                 radec_model["kwargs"] |= kwargs.get("radec", {})
@@ -1209,23 +1216,25 @@ class Target( object ):
             else:
                 if skyarea is not None:
                     warnings.warn("skyarea given, but no radec not in model | *nyears* will not account for skyarea.")
-                    
+
                 f_area = 1
-            
+
             # redefine timing given nyears
             kwargs.setdefault("t0", {}).update({"low": tstart, "high": tstart + 365.25*nyears})
 
             if zmin is None:
                 zmin = 0
-                
+
             # get_ntargets is full sky. f_area corrects that.
-            ntarget_per_year = get_ntargets(zmax, rate=self.rate, zmin=zmin, zstep=1e-4, astype="float",
+            ntarget_per_year = get_ntargets(zmax, rate=self.rate,
+                                            rate_H0=self._rateh0,
+                                            zmin=zmin, zstep=1e-4, astype="float",
                                             cosmology=self.cosmology)
             size = int(ntarget_per_year * nyears * f_area)
-            
+
         # actually draw the data
         data = drawn_model.draw(size=size, **kwargs)
-        
+
         # patch the missing `amplitude` back to .data
         if set_amplitude:
             amplitudes = np.zeros( len(data) )
@@ -1233,7 +1242,7 @@ class Target( object ):
                 sncosmo_model_i = self.get_template(index=i, as_model=True, data=data, set_magabs=True)
                 amplitude = sncosmo_model_i.get(self.amplitude_name)
                 amplitudes[i] = amplitude
-            
+
             data[self.amplitude_name] = amplitudes
 
         # shall data be attached to the object?
@@ -1243,7 +1252,7 @@ class Target( object ):
             self.set_data(data)
             # since this is inplace, let's update stored model kwargs
             self.update_model_parameter(**kwargs)
-            
+
         return data
 
     # ============== #
@@ -1263,7 +1272,7 @@ class Target( object ):
         if not hasattr(self, "_peak_absmag_band"):
             self._peak_absmag_band = self._PEAK_ABSMAG_BAND
         return self._peak_absmag_band
-    
+
     @classproperty
     def magsys(self):
         """The magnitude system used for the peak absolute magnitude."""
@@ -1276,9 +1285,9 @@ class Target( object ):
         """The kind of target."""
         if not hasattr(self,"_kind"):
             self._kind = self._KIND
-            
+
         return self._kind
-            
+
     @property
     def cosmology(self):
         """The cosmology to use."""
@@ -1294,9 +1303,9 @@ class Target( object ):
         if not hasattr(self, "_model") or self._model is None:
             from copy import deepcopy
             self.set_model( deepcopy(self._MODEL) if self._MODEL is not None else {} )
-            
+
         return self._model
-    
+
     @property
     def data(self):
         """The data of the target."""
@@ -1321,14 +1330,14 @@ class Target( object ):
     def template_parameters(self):
         """The parameters of the template."""
         return self.template.parameters
-    
+
     @property
     def template_effect_parameters(self):
         """The effect parameters of the template."""
-        return self.template.effect_parameters  
+        return self.template.effect_parameters
 
 
-    
+
 class Transient( Target ):
     """
     A transient target.
@@ -1339,15 +1348,20 @@ class Transient( Target ):
     ----------
     _RATE : float, optional
         The rate of the transient, by default None
+
+    _RATE_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `_RATE`,
+        by default 70.
     """
     # - Transient
-    _RATE = None    
-    
+    _RATE = None
+    _RATE_H0 = 70 # default H0 for rate definition included in skysurvey
+
     # ============== #
     #  Methods       #
     # ============== #
-    # Rates    
-    def set_rate(self, float_or_func):
+    # Rates
+    def set_rate(self, float_or_func, H0=None):
         """Set the transient rate.
 
         Parameters
@@ -1356,14 +1370,23 @@ class Transient( Target ):
             If a float is given, it is assumed to be the number of targets per
             Gpc3. If a callable is given, it is supposed to be a function of z that
             returns the volumetric rate as a function of wavelength.
+
+        H0 : float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving the rate.
+            If None, `self._RATE_H0` is used. By default None.
         """
         if callable(float_or_func):
             self._rate = float_or_func
         else:
             self._rate = float(float_or_func)
 
-    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, rate=None, **kwargs):
+        self._hrateh0 = float(H0) if H0 is not None else H0
+
+    def draw_redshift(self, zmax, zmin=0, zstep=1e-4, size=None, **kwargs):
         """Draw redshift based on the rate (see `get_rate()`).
+
+        This uses `self.rate`, rescaled from `self._rateh0` to the H0 of
+        `self.cosmology`.
 
         Parameters
         ----------
@@ -1379,12 +1402,6 @@ class Transient( Target ):
         size : int, optional
             Number of redshifts to draw. By default None.
 
-        rate : float, callable, optional
-            The transient rate. If None, `self.rate` is used. By default None.
-            If a float is given, it is assumed to be the number of targets per
-            Gpc3. If a callable is given, it is supposed to be a function of z that
-            returns the volumetric rate as a function of wavelength.
-
         **kwargs
             Additional keyword arguments to pass to ``draw_redshift``.
 
@@ -1394,47 +1411,42 @@ class Transient( Target ):
             The drawn redshifts.
         """
         from .rates import draw_redshift
-        if rate is None:
-            rate = self.rate
-            
-        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, cosmology=self.cosmology, **kwargs)
-    
+        return draw_redshift(size=size, rate=self.rate,
+                            zmax=zmax, zmin=zmin, zstep=zstep,
+                            rate_H0=self._rateh0,
+                            cosmology=self.cosmology, **kwargs)
+
     # ------- #
     #  GETTER #
     # ------- #
-    def get_rate(self, z, rate=None, **kwargs):
-        """Get the number of target (per year) up to the given redshift.
+    def get_rate(self, z, **kwargs):
+        """Get the volumetric rate (per Gpc3 per year) at the given redshift.
+
+        This uses `self.rate`, rescaled from `self._rateh0` to the H0 of
+        `self.cosmology`.
 
         Parameters
         ----------
-        z : float
+        z : float, array
             Redshift.
-
-        rate : float, callable, optional
-            If None, `self.rate` is used.
-
-            If a float is given, it is assumed to be the number of targets per
-            Gpc3. If a callable is given, it is supposed to be a function of z that
-            returns the volumetric rate as a function of wavelength.
 
         **kwargs
             Goes to the rate function (if a function, not a number).
 
         Returns
         -------
-        int
-            The number of targets.
+        float, array
+            The volumetric rate.
 
         See Also
         --------
         ``draw_redshift``: draws redshifts from rate distribution.
         """
         from .rates import get_rate
-        if rate is None:
-            rate = self.rate
-            
-        return get_rate(z, rate=rate, **kwargs)
-    
+        return get_rate(z, rate=self.rate,
+                        rate_H0=self._rateh0, H0=self.cosmology.H0.value,
+                        **kwargs)
+
     def get_lightcurve(self, band, times,
                            sncosmo_model=None, index=None,
                            in_mag=False, zp=25, zpsys="ab",
@@ -1460,7 +1472,7 @@ class Transient( Target ):
 
         zp : float, optional
             The zeropoint to use. By default 25.
-            
+
         zpsys : str, optional
             The zeropoint system to use. By default "ab".
 
@@ -1472,14 +1484,14 @@ class Transient( Target ):
         ndarray
             1 lightcurve per band.
         """
-        # get the template            
+        # get the template
         if index is not None:
             if sncosmo_model is None:
                 sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
                 kwargs = prop | kwargs
-            
+
         return self.template.get_lightcurve(band, times,
                                             sncosmo_model=sncosmo_model,
                                             in_mag=in_mag, zp=zp, zpsys=zpsys,
@@ -1520,19 +1532,19 @@ class Transient( Target ):
         ``get_lightcurve``: get the transient lightcurve
         """
         prop = {}
-        # get the template            
+        # get the template
         if index is not None:
             if sncosmo_model is None:
                 sncosmo_model = self.get_template(index=index, as_model=True, set_magabs=True)
             else:
                 prop = self.get_template_parameters(index).to_dict()
 
-        kwargs = prop | kwargs                
+        kwargs = prop | kwargs
         return self.template.get_spectrum(time, lbdas,
                                           sncosmo_model=sncosmo_model,
                                           as_phase=as_phase,
                                           **kwargs)
-            
+
     # ------------ #
     #  Show LC     #
     # ------------ #
@@ -1540,7 +1552,7 @@ class Transient( Target ):
                             ax=None, fig=None, colors=None,
                             phase_range=None, npoints=500,
                             zp=25, zpsys="ab",
-                            format_time=True, t0_format="mjd", 
+                            format_time=True, t0_format="mjd",
                             in_mag=False, invert_mag=True, **kwargs):
         """Show the lightcurve.
 
@@ -1599,20 +1611,20 @@ class Transient( Target ):
         # get the template
         if params is None:
             params = {}
-            
+
         template = self.get_target_template(index, set_magabs=True, **params)
         return template.show_lightcurve(band, params=params,
                                              ax=ax, fig=fig, colors=colors,
                                              phase_range=phase_range, npoints=npoints,
                                              zp=zp, zpsys=zpsys,
                                              format_time=format_time,
-                                             t0_format=t0_format, 
+                                             t0_format=t0_format,
                                              in_mag=in_mag, invert_mag=invert_mag,
                                              **kwargs)
-            
+
     # ============== #
     #   Properties   #
-    # ============== #  
+    # ============== #
     # Rate
     @property
     def rate(self):
@@ -1623,6 +1635,21 @@ class Transient( Target ):
         returns the volumetric rate as a function of wavelength.
         """
         if not hasattr(self,"_rate"):
-            self.set_rate( self._RATE ) # default
-            
+            self.set_rate( self._RATE, H0=self._RATE_H0 ) # default
+
         return self._rate
+
+    @property
+    def _rateh0(self,):
+        """Hubble constant (in km/s/Mpc) assumed when deriving the rate.
+
+        If not set by `set_rate()`, `self._RATE_H0` is used.
+        """
+        if not hasattr(self,"_hrateh0") or self._hrateh0 is None:
+            if hasattr(self, "_RATE_H0"):
+                self._hrateh0 = self._RATE_H0
+            else:
+                warnings.warn("No _RATE_H0 attribute found. Using 70 km/s/Mpc as default.")
+                self._hrateh0 = 70.0
+
+        return self._hrateh0

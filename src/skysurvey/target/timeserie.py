@@ -1,5 +1,5 @@
 """
-This module defines `TSTransient` and `MultiTemplateTSTransient` classes, enabling simulation of transients from any sncosmo 
+This module defines `TSTransient` and `MultiTemplateTSTransient` classes, enabling simulation of transients from any sncosmo
 time-series source, including multi-template populations.
 """
 
@@ -28,17 +28,17 @@ class TSTransient( Transient ):
         - `sncosmo.Source`: a loaded `sncosmo.Source`
         - `sncosmo.Model`: a  loaded `sncosmo.Model`
             this is eventually converted into a generic ``skysurvey.Template``.
-        
+
         Default is None.
 
     magabs: list
         define the absolute magnitude parameters. Could be 2 or 3 values:
-            
-        - len(magabs)==2 => drawn from normal distribution: 
+
+        - len(magabs)==2 => drawn from normal distribution:
             loc, scale = magabs
-        - len(magabs)==3 => drawn from asymetric normal distribution: 
+        - len(magabs)==3 => drawn from asymetric normal distribution:
             loc, scale_low, scale_high = magabs
-        
+
             Default is None.
 
     _RATE : float, optional
@@ -60,31 +60,30 @@ class TSTransient( Transient ):
     >>> snii = TSTransient.from_draw("snana-2004fe", 4000)
     >>> _ = snii.show_lightcurve(["ztfg","ztfr"], index=10, in_mag=True)
     """
-    _RATE = 0.001
+    _RATE = 0.001  # this assumes H0=70, see Transient._RATE_H0
     _MAGABS = None # None to be ignored.
     # Format:
     # - Gaussian: (loc, scatter)
     # - skewed Gaussian: (loc, scatter_low, scatter_high)
-    _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05}, 
+    _MODEL = dict( redshift = {"kwargs": {"zmax": 0.05},
                                "as": "z"},
                    t0 = {"func": RNG.uniform,
                          "kwargs": {"low": 56_000, "high": 56_200}
                         },
-                         
+
                    magabs = {"func": RNG.normal,
                              "kwargs": {"loc": np.nan, "scale": 1} # forcing loc to be given
                             },
-                             
+
                    magobs = {"func": "magabs_to_magobs",
                              "kwargs": {"z":"@z", "magabs": "@magabs"}
                             },
-                               
+
                    # This you need to match with the survey
                    radec = {"func": random_radec,
                             "as": ["ra","dec"]
                             }
                  )
-
 
     def __init__(self, template=None, magabs=None, *args, **kwargs):
         """ Initialize the TimeSerie Transient. """
@@ -92,7 +91,7 @@ class TSTransient( Transient ):
             self.set_template(template)
 
         super().__init__(*args, **kwargs)
-        
+
         if magabs is not None:
             self.set_magabs(magabs)
         elif self._MAGABS is not None: #
@@ -110,10 +109,11 @@ class TSTransient( Transient ):
     @classmethod
     def from_sncosmo(cls, template,
                          rate=None,
+                         rate_H0=None,
                          model=None,
                          magabs=None, **kwargs):
         """ Loads an instance from a sncosmo TimeSeriesSource source.
-        (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources) 
+        (see https://sncosmo.readthedocs.io/en/stable/source-list.html#list-of-built-in-sources)
 
         Parameters
         ----------
@@ -129,23 +129,27 @@ class TSTransient( Transient ):
         rate: float, func
             the transient rate, can be either:
             - float: assumed volumetric rate
-            - func: function of redshift rate(z) 
+            - func: function of redshift rate(z)
+
+        rate_H0: float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving `rate`.
+            Ignored if `rate` is None. If None, `cls._RATE_H0` is used.
 
         model: dict
-            provide the model graph structure on how transient parameters are drawn. 
+            provide the model graph structure on how transient parameters are drawn.
 
         magabs: list
             define the absolute magnitude parameters. Could be 2 or 3 values:
 
-            - len(magabs)==2 => drawn from normal distribution: 
+            - len(magabs)==2 => drawn from normal distribution:
                 loc, scale = magabs
-            - len(magabs)==3 => drawn from asymetric normal distribution: 
-                loc, scale_low, scale_high = magabs   
+            - len(magabs)==3 => drawn from asymetric normal distribution:
+                loc, scale_low, scale_high = magabs
 
         Returns
         -------
         instance
-            loaded instance. 
+            loaded instance.
 
         See also
         --------
@@ -155,11 +159,11 @@ class TSTransient( Transient ):
         this = cls(**init_kwargs)
 
         if rate is not None:
-            this.set_rate(rate)
-            
+            this.set_rate(rate, H0=rate_H0)
+
         if template is not None:
             this.set_template(template)
-            
+
         if model is not None:
             this.update_model(**model) # will update any model entry.
 
@@ -171,15 +175,15 @@ class TSTransient( Transient ):
 
     def set_magabs(self, magabs):
         """ Update the model for the loc *and* scale of the absolute magnitude distribution.
-        
+
         Parameters
         ----------
         magabs: list
             define the absolute magnitude parameters. Could be 2 or 3 values:
 
-            - len(magabs)==2 => drawn from normal distribution: 
+            - len(magabs)==2 => drawn from normal distribution:
                 loc, scale = magabs
-            - len(magabs)==3 => drawn from asymetric normal distribution: 
+            - len(magabs)==3 => drawn from asymetric normal distribution:
                 loc, scale_low, scale_high = magabs
 
         """
@@ -194,15 +198,15 @@ class TSTransient( Transient ):
                                 "kwargs": {"xx": f"{loc-scale[0]*10}:{loc+scale[1]*10}:10000j",
                                            "loc": loc, "scale_low": scale[0], "scale_high": scale[1]}
                                 }
-                
+
             self.update_model(magabs=model_magabs)
-        
+
 
 
 class MultiTemplateTSTransient( TSTransient ):
     """
     A class to model time-series transient drawn from multiple templates simultaneously.
-    
+
     Parameters
     ----------
     template: str, `sncosmo.Source`, `sncosmo.Model`, ``skysurvey.Template``
@@ -212,17 +216,17 @@ class MultiTemplateTSTransient( TSTransient ):
         - `sncosmo.Source`: a loaded `sncosmo.Source`
         - `sncosmo.Model`: a  loaded `sncosmo.Model`
             this is eventually converted into a generic ``skysurvey.Template``.
-        
+
         Default is None.
 
     magabs: list
         define the absolute magnitude parameters. Could be 2 or 3 values:
-            
-        - len(magabs)==2 => drawn from normal distribution: 
+
+        - len(magabs)==2 => drawn from normal distribution:
             loc, scale = magabs
-        - len(magabs)==3 => drawn from asymetric normal distribution: 
+        - len(magabs)==3 => drawn from asymetric normal distribution:
             loc, scale_low, scale_high = magabs
-        
+
             Default is None.
     """
 
@@ -230,7 +234,7 @@ class MultiTemplateTSTransient( TSTransient ):
         """ Convert the collection in a list of same-template targets. """
         if "template" not in self.data:
             raise AttributeError("self.data has no 'template' column")
-        
+
         gtemplates = self.data.groupby("template")
         targets = []
         for template_name, indices in gtemplates.groups.items():
@@ -242,7 +246,7 @@ class MultiTemplateTSTransient( TSTransient ):
             )
             targets.append(target)
         return targets
-    
+
     def set_template(self, template, force_uniquetype=True):
         """ Set a collection of templates.
 
@@ -260,10 +264,10 @@ class MultiTemplateTSTransient( TSTransient ):
         templatecol = TemplateCollection.from_list(template)
         if force_uniquetype and not templatecol.is_uniquetype:
             raise ValueError("input templates are of multiple class. This is not allowed (force_uniquetype set to True)")
-            
+
         self._template = templatecol
 
-    def set_rate(self, rate):
+    def set_rate(self, rate, H0=None):
         """ Set the transient rate.
 
         Parameters
@@ -271,31 +275,39 @@ class MultiTemplateTSTransient( TSTransient ):
         rate: float, func or list of
             func: a function that takes as input an array or redshift "z"
             float: number of targets per Gpc3. could be a list.
+
+        H0: float, optional
+            Hubble constant (in km/s/Mpc) assumed when deriving the rate.
+            If None, `self._RATE_H0` is used. Default is None.
         """
         rate = np.atleast_1d(rate)
         if len(rate) == 1: # as usual
             rate = rate[0]
             if not callable(rate): # func or float
                 rate = float(rate)
-                
+
         else: # as list
             rate = np.asarray([float(rate_) if not callable(rate_) else rate_
                                for rate_ in rate])
-            
+
             # does it broadcast with existing templates ?
             if hasattr(self, "_template") and self._template is not None:
                 rate = np.broadcast_to(rate, (self.template.ntemplates,))[:,None]
-                
+
         # set it
         self._rate = rate
+        self._hrateh0 = float(H0) if H0 is not None else None
 
     # =========== #
     # 2D drawing  #
     # =========== #
-    def draw_redshift(self, zmax, zmin=0, 
+    def draw_redshift(self, zmax, zmin=0,
                       zstep=1e-4,
-                      size=None, rate=None, **kwargs):
+                      size=None, **kwargs):
         """ Draw redshifts based on the rate (see ``get_rate()``).
+
+        This uses ``self.rate``, rescaled from ``self._rateh0`` to the H0 of
+        ``self.cosmology``.
 
         Parameters
         ----------
@@ -311,8 +323,8 @@ class MultiTemplateTSTransient( TSTransient ):
         size : int, optional
             Number of redshifts to draw. Default is None.
 
-        rate : float or callable, optional
-            The transient rate. If None, ``self.rate`` is used. Default is None.
+        **kwargs
+            Goes to ``skysurvey.target.rates.draw_redshift``.
 
         Returns
         -------
@@ -320,10 +332,11 @@ class MultiTemplateTSTransient( TSTransient ):
             The drawn redshifts.
         """
         from .rates import draw_redshift
-        if rate is None:
-            rate = self.rate
-
-        return draw_redshift(size=size, rate=rate, zmax=zmax, zmin=zmin, zstep=zstep, flatten_ndim=True, **kwargs)
+        return draw_redshift(size=size, rate=self.rate,
+                            rate_H0=self._rateh0,
+                            cosmology=self.cosmology,
+                            zmax=zmax, zmin=zmin, zstep=zstep, flatten_ndim=True,
+                            **kwargs)
 
     def get_template(self, index=None, as_model=False, data=None, set_magabs=False, **kwargs):
         """Get a template (`sncosmo.Model`).
@@ -336,7 +349,7 @@ class MultiTemplateTSTransient( TSTransient ):
             `sncosmo.Model` parameters will be used. By default None.
 
         as_model : bool, optional
-            should this return the `sncosmo.Model` (True) or the 
+            should this return the `sncosmo.Model` (True) or the
             ``skysurvey.Template`` (for info `sncosmo.Model` => ``skysurvey.Template.sncosmo_model``)
 
         data: `pandas.DataFrame`, None, optional
@@ -384,7 +397,7 @@ class MultiTemplateTSTransient( TSTransient ):
         if not as_model:
             from ..template import Template
             return Template.from_sncosmo(sncosmo_model)
-        
+
         return sncosmo_model
 
     # =========== #
@@ -421,12 +434,12 @@ class MultiTemplateTSTransient( TSTransient ):
 
         # flatted all shapes
         fullnames = np.full( (self.template.ntemplates, size), np.asarray(self.template.names)[:,None]).reshape(-1)
-        
+
         # convert rates into weight of being drawn | so rate=0 templates are never drawn.
         weights = self.get_rate(redshift).reshape(-1)
-        
+
         return rng.choice(fullnames, size=size, p=weights/weights.sum())
-        
+
     @property
     def model(self):
         """The model of the transient"""
@@ -435,7 +448,7 @@ class MultiTemplateTSTransient( TSTransient ):
             basicmodel = deepcopy(self._MODEL) if self._MODEL is not None else {}
             basicmodel |= {"template": {"func": "draw_template", "kwargs": {"redshift":"@z"}} }
             self.set_model( basicmodel )
-            
+
         return self._model
 
     @property

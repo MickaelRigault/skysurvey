@@ -1,5 +1,5 @@
 """
-This module defines the `Afterglow` transient class, modelling afterglows using afterglowpy 
+This module defines the `Afterglow` transient class, modelling afterglows using afterglowpy
 to generate the spectral time series template.
 """
 
@@ -34,7 +34,7 @@ grb_params = {'jetType':     afterglowpy.jet.TopHat,     # Top-Hat jet
               'xi_N':        1.0,    # Fraction of electrons accelerated
               'd_L':         1.0e28, # Luminosity distance in cm
               'z':           0.55}   # redshift
-     
+
 # explicitly case E0 and d_L as float as they like to be an int
 grb_params["E0"] = float(grb_params["E0"])
 grb_params["d_L"] = float(grb_params["d_L"])
@@ -72,7 +72,7 @@ class Afterglow( Transient ):
 
     _KIND = "afterglow"
     _TEMPLATE = template
-    _RATE = 20
+    _RATE = 20  # this assumes H0=70, see Transient._RATE_H0
     _MODEL = dict( redshift = {"kwargs":{"zmax":0.2},
                                   "as":"z"},
 
@@ -80,4 +80,3 @@ class Afterglow( Transient ):
                          "kwargs": {"low":56_000, "high":56_200} },
 
                    )
-

@@ -7,7 +7,8 @@ import numpy as np
 from astropy.cosmology import Planck18
 
 def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
-                  cosmology=Planck18, rng=None, **kwargs):
+                    rate_H0=70,
+                    cosmology=Planck18, rng=None, **kwargs):
     """Draw random redshift following the given rate.
 
     Parameters
@@ -29,6 +30,10 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     zstep : float, optional
         Sampling of the redshift. The default is 1e-5.
 
+    rate_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
+        is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
+
     cosmology: `astropy.Cosmology`, optional
         Cosmology to use to compute volume, as the rate are "volumetric rates".
 
@@ -49,7 +54,9 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
         A list of redshifts.
     """
     # force number of target per redshift shell to be a float to avoid rounding errors.
-    xx, pdf = get_ntargets_per_shell(zmin=zmin, zmax=zmax, zstep=zstep, rate=rate, astype="float",
+    xx, pdf = get_ntargets_per_shell(zmin=zmin, zmax=zmax, zstep=zstep, rate=rate,
+                                          astype="float",
+                                          rate_H0=rate_H0,
                                           cosmology=cosmology, **kwargs)
 
     # sets the random number generator
@@ -65,8 +72,9 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     else:
         raise ValueError(f"ndim of pdf should be 1 or 2, not {np.ndim(pdf)=}")
 
-def get_rate(z, rate, **kwargs):
+def get_rate(z, rate, H0, rate_H0=70, **kwargs):
     """Get the (volumetric) rate as a function of redshift.
+
 
     Parameters
     ----------
@@ -78,6 +86,13 @@ def get_rate(z, rate, **kwargs):
         Gpc3. If a callable is given, it is supposed to be a function of z that
         returns the volumetric rate as a function of redshift.
 
+    H0 : float
+        Hubble constant (in km/s/Mpc) of the cosmology the rate is used with.
+
+    rate_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
+        is rescaled by (H0 / rate_H0)**3. The default is 70.
+
     **kwargs
         Rate options if rate is a function.
         ignored otherwise.
@@ -85,7 +100,7 @@ def get_rate(z, rate, **kwargs):
     Returns
     -------
     rate
-        the rate per Gpc, array (if func) or float
+        the rate per Gpc3, array (if func) or float
     """
     # specified rate function or volumetric rate ?
     if callable(rate): # function
@@ -96,9 +111,14 @@ def get_rate(z, rate, **kwargs):
         else:
             n_per_gpc3 = rate / (1+z)
 
+    # we need to account for the fact that rate may be given assuming the same h0 than the current cosmo
+    n_per_gpc3 = n_per_gpc3 * (H0 / rate_H0)**3 # **3 as this is a volume effect (not in-place: rate(z) output may be int or reused)
+
     return n_per_gpc3
 
-def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, astype="int", **kwargs):
+def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
+                            rate_H0 = 70,
+                            cosmology=Planck18, astype="int", **kwargs):
     """ Get the total number of target expected in the given volume.
 
     Parameters
@@ -116,12 +136,16 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
     zmin: float
         inner redshift of the volume.
 
+    zstep: float
+        binning of the redshift used for the computation.
+
+    rate_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
+        is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
+
     cosmology : `astropy.Cosmology`, optional
         Cosmology used to get the comoving_volume. The default is
         `Planck18`.
-
-    zstep: float
-        binning of the redshift used for the computation.
 
     astype: bool
         type of the returned number of target per shell.
@@ -139,7 +163,7 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
     # initial binning
     bins_of_redshift = np.arange(zmin, zmax, step=zstep) # [ndim]
 
-    # this define the volume of the universe
+    # this defines the volume of the universe
     volume = cosmology.comoving_volume( bins_of_redshift ).to("Gpc**3").value # len(input_z) (+ 1 if keepsize)
 
     # and this the shell of universe. This is used to compute cases of non-constante rates.
@@ -150,7 +174,11 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
 
     # so this is the rate computed at the effective redshift of the shell
     # it basically assumes the rate to be constant within one shell.
-    n_per_gpc3_of_shell = get_rate(bins_of_redshift_mid, rate, **kwargs) # [ndim-1]
+    # This method accounts for the fact that H0 may vary between input rate and used cosmology.
+    n_per_gpc3_of_shell = get_rate(bins_of_redshift_mid, rate,
+                                    H0=cosmology.H0.value, rate_H0=rate_H0,
+                                    **kwargs) # [ndim-1]
+
     # the total number of target per shell is the volumetric_rate_per_shell * the shell_volume
     if np.ndim(n_per_gpc3_of_shell) == 0 or (np.ndim(n_per_gpc3_of_shell) == 1 and len(n_per_gpc3_of_shell) == len(shell)):
         ntargets_per_shell = n_per_gpc3_of_shell * shell
@@ -159,7 +187,9 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
 
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
 
-def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, astype="int", **kwargs):
+def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18,
+                    rate_H0=70,
+                    zstep=1e-5, astype="int", **kwargs):
     """ Get the total number of target expected in the given volume.
 
     Parameters
@@ -179,11 +209,18 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, astype="int
         Cosmology used to get the comoving_volume. The default is
         `Planck18`.
 
+    rate_H0 : float, optional
+        Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
+        is rescaled by (cosmology.H0 / rate_H0)**3. The default is 70.
+
     zstep: float
         binning of the redshift used for the computation.
 
     astype: bool
         type of the returned value.
+
+    **kwargs
+        goes to :func:`get_ntargets_per_shell()` -> :func:`get_rate()`
 
     Returns
     -------
@@ -194,6 +231,7 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, astype="int
     _, ntargets_per_shell = get_ntargets_per_shell( zmax, rate,
                                                     zmin=zmin, zstep=zstep,
                                                     cosmology=cosmology,
+                                                    rate_H0=rate_H0,
                                                     astype="float", # request astype comes at "return"
                                                     **kwargs)
     ntargets = ntargets_per_shell.sum(axis=-1) # respects rate dimension
