@@ -46,7 +46,6 @@ Homepage = "https://github.com/MickaelRigault/skysurvey"
 docs = [
     "matplotlib",
     "myst-nb",
-    "nbsphinx",
     "numpydoc",
     "pandas-sphinx",
     "sphinx-book-theme",

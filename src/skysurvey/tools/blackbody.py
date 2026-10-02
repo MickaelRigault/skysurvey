@@ -143,7 +143,7 @@ def blackbody_nu(freq, temperature):
     return flux / u.sr  # Add per steradian to output flux unit
 
 def blackbody_lambda(lbda, temperature, normed=True):
-    r"""Like :func:`blackbody_nu` but for :math:`B_{\lambda}(T)`.
+    r"""Like :func:`~skysurvey.tools.blackbody.blackbody_nu` but for :math:`B_{\lambda}(T)`.
 
     Parameters
     ----------

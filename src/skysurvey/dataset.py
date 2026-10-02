@@ -496,7 +496,7 @@ class DataSet(object):
 
         return data
 
-    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False, join_how="firt"):
+    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False, join_how="first"):
         """Get the number of detections for each lightcurve.
 
         Computes the number of datapoints with (flux/fluxerr) >= 5

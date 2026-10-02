@@ -10,7 +10,7 @@ import sncosmo
 def get_obsdata(template, observations, parameters,
                 zpsys="ab", incl_error=True, discard_bands=False,
                 trim_observations=False, phase_range=None):
-    """Get observed data using :func:`realize_lightcurves`.
+    """Get observed data using :func:`~skysurvey.lightcurves.realize_lightcurves`.
 
     Parameters
     ----------
@@ -42,10 +42,10 @@ def get_obsdata(template, observations, parameters,
         that are too blue for now. The default is False.
 
     trim_observations : bool, optional
-        Passed to :func:`realize_lightcurves`. The default is False.
+        Passed to :func:`~skysurvey.lightcurves.realize_lightcurves`. The default is False.
 
     phase_range : list or None, optional
-        Rest-frame phase range, passed to :func:`realize_lightcurves`.
+        Rest-frame phase range, passed to :func:`~skysurvey.lightcurves.realize_lightcurves`.
         The default is None.
 
     Returns
