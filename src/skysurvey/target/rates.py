@@ -106,15 +106,11 @@ def get_rate(z, rate, H0, rate_H0=70, **kwargs):
     if callable(rate): # function
         n_per_gpc3 = rate(z, **kwargs)
     else: # volumetric
-        if np.asarray(rate).ndim > 0: # array to broacast with z
-            n_per_gpc3 = rate[..., None] / (1+z)
-        else:
-            n_per_gpc3 = rate / (1+z)
+        n_per_gpc3 = rate if np.asarray(rate).ndim == 0 else rate[..., None]
 
     # we need to account for the fact that rate may be given assuming the same h0 than the current cosmo
     n_per_gpc3 = n_per_gpc3 * (H0 / rate_H0)**3 # **3 as this is a volume effect (not in-place: rate(z) output may be int or reused)
-
-    return n_per_gpc3
+    return n_per_gpc3 / (1+z) # include frame change.
 
 def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
                             rate_H0 = 70,
