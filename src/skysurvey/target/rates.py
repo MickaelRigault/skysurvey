@@ -91,7 +91,10 @@ def get_rate(z, rate, **kwargs):
     if callable(rate): # function
         n_per_gpc3 = rate(z, **kwargs)
     else: # volumetric
-        n_per_gpc3 = rate / (1+z)
+        if np.asarray(rate).ndim > 0: # array to broacast with z
+            n_per_gpc3 = rate[..., None] / (1+z)
+        else:
+            n_per_gpc3 = rate / (1+z)
 
     return n_per_gpc3
 
@@ -156,7 +159,7 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5, cosmology=Planck18, a
 
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
 
-def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell=False, astype="int", **kwargs):
+def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, astype="int", **kwargs):
     """ Get the total number of target expected in the given volume.
 
     Parameters
@@ -179,9 +182,6 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
     zstep: float
         binning of the redshift used for the computation.
 
-    force_shell: bool
-        If the input rate is a constant, should this force the use of shell computation ?
-
     astype: bool
         type of the returned value.
 
@@ -191,23 +191,10 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18, zstep=1e-5, force_shell
         number(s) of target.
     """
     # function or forced, hence shell computation
-    if callable(rate) or force_shell:
-        bins_of_redshift_mid, ntargets_per_shell = get_ntargets_per_shell(zmax, rate,
-                                                                          zmin=zmin, zstep=zstep,
-                                                                          cosmology=cosmology,
-                                                                          astype="float", # request astype comes at "return"
-                                                                          **kwargs)
-        ntargets = ntargets_per_shell.sum(axis=-1) # respects rate dimension
-
-    # simple constant volumetric rate, so "V(zmax)-V(zmin) * Constant"
-    else:
-        volume_zmax = cosmology.comoving_volume( zmax ).to("Gpc**3").value
-        volume_zmin = cosmology.comoving_volume( zmin ).to("Gpc**3").value
-        rate = np.atleast_1d(rate)
-        if np.ndim(rate) == 1:
-            ntargets = (volume_zmax-volume_zmin) * rate
-        else:
-            ntargets = (volume_zmax-volume_zmin) * rate[:,None]
-
-    # squeeze() will be [float] => float
+    _, ntargets_per_shell = get_ntargets_per_shell( zmax, rate,
+                                                    zmin=zmin, zstep=zstep,
+                                                    cosmology=cosmology,
+                                                    astype="float", # request astype comes at "return"
+                                                    **kwargs)
+    ntargets = ntargets_per_shell.sum(axis=-1) # respects rate dimension
     return ntargets.astype(astype).squeeze()

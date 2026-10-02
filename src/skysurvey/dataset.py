@@ -101,129 +101,118 @@ class DataSet(object):
         dataset
             instance of a `DataSet` loaded from the given targets.
         """
-        if progress_bar:
-            from tqdm import tqdm
-        # if input targets is a list, create a TemplateCollection
-        if type(targets) in [list, tuple]:
-            targets = TargetCollection(targets)
-
-        # fields in which target fall into
-        dfieldids_ = survey.radec_to_fieldid(targets.data[["ra", "dec"]])
-
-        # make sure index of dfieldids_ corresponds to the input one.
-        _data_index = targets.data.index.name
-        if _data_index is None:
-            _data_index = "index"
-
-        dfieldids_.index.name = _data_index
-
-        # merge target dataframe with matching fields.
-        # note: pandas.merge conserves dtypes of fieldids, not pandas.join
-        targets_data = targets.data.merge(dfieldids_, left_index=True, right_index=True)
-        target_fields = np.stack(targets_data[survey.fieldids.names].values, dtype="int")
-        #### IS THAT NECESSARY ? ####
-        # =========== #
-
-        survey_data = survey.data[["mjd", "band", "skynoise", "gain", "zp"] + survey.fieldids.names].copy()
-        if survey_data.index.name is None:
-            survey_data.index.name = "index_obs"
-
-        field_names = survey.fieldids.names
-        gsurvey_indexed = survey_data.groupby(field_names, observed=True, group_keys=False)
-
-        #
-        # check which fields have been observed
-        # to avoid looping over un-observed targets.
-        #
-        nobs = gsurvey_indexed.size()
-        fields_observed = np.stack(nobs.index.values, dtype="int")
-
-        # build boolean mask to see which "target" could have data
-        # given the "field" (all field_names) that have been observed.
-        if (nfields := len(field_names)) == 2:
-            # speed tricks for matching pairs
-            is_target_observed = speedutils.isin_pair_elements(target_fields, fields_observed)
-        elif nfields == 1:
-            is_target_observed = np.isin(target_fields, fields_observed)
+        from .template import Template
+        lc_prop = dict(progress_bar=progress_bar,
+                        incl_error=incl_error,
+                        phase_range=phase_range,
+                        seed=seed, discard_bands=discard_bands,
+                        single_model=True)
+        # single target:
+        if "skysurvey" in str(type(targets)) and type(targets.template) is Template:
+            lcs = cls.lightcurve_from_targets_and_survey(targets, survey, **lc_prop)
         else:
-            raise NotImplementedError("more than 2 entries for {field_names=}. Not implemented.")
+            if type(targets) in [list, tuple]:
+                targets = TargetCollection(targets)
 
-        # List of observed targets
-        targets_data_observed = targets_data[is_target_observed]
-
-        #
-        # for lop on targets:
-        #
-        # each lightcurve's flux and associated error are stored
-        # inside `bandflux`. which is then converted into a unique
-        # pandas.DataFrame, using the faster `eff_concat` trick.
-        #
-
-        # make sure phase_range is an array to multiple by (1+z)
-        if phase_range is not None:
-            phase_range = np.asarray(phase_range)
-
-        bandflux = []
-        targets_observed = targets_data_observed.index.unique()
-        for index_target in (tqdm(targets_observed) if progress_bar else targets_observed):
-            # get the target model, that will be used to generate the flux
-            # this model is set to the target parameters.
-            model = targets.get_target_template(index=index_target, as_model=True, set_magabs=True)
-
-            # grab the target information (could be several rows)
-            this_target = targets_data_observed.loc[[index_target]]
-
-            # logs associated to this target.
-            this_target_logs = pandas.concat(
-                [
-                    gsurvey_indexed.get_group(tuple(entry_))
-                    for entry_ in this_target[field_names].values
-                ]
-            )
-
-            # limit the logs to the given restframe phase range
-            if phase_range is not None:
-                # to limit per phase:
-                # 1. get the model t0 and redshift to get rest-frame phase
-                t0 = model.parameters[model.param_names.index("t0")]
-                redshift = model.parameters[model.param_names.index("z")]
-                # 2. create the mjd range to consider for this target.
-                this_mjd_range = t0 + phase_range * (1 + redshift)
-                # 3. limit the logs to mjd matching this condition.
-                used_logs = this_target_logs[this_target_logs["mjd"].between(*this_mjd_range)].copy()
-            else:
-                used_logs = this_target_logs.copy()
-
-            if discard_bands:
-                bands = np.unique(used_logs['band'])
-                for band in bands:
-                    bandpass = sncosmo.get_bandpass(band)
-                    if bandpass.minwave() < model.minwave() or bandpass.maxwave() > model.maxwave():
-                        used_logs = used_logs[used_logs['band'] != band]
-
-            used_logs = used_logs.sort_values("mjd")
-            # realise the flux lightcurves and its error
-            used_logs["flux"] = model.bandflux(
-                    used_logs["band"], used_logs["mjd"], zp=used_logs["zp"], zpsys="ab"
-            )
-            used_logs["fluxerr"] = np.sqrt(
-                    used_logs["skynoise"] ** 2
-                    + np.abs(used_logs["flux"]) / used_logs["gain"]
-                )
-                # and store.
-            bandflux.append(used_logs)
-
-        # create a dataframe concatenating all lightcurves
-        lcs = speedutils.eff_concat(bandflux, int(np.sqrt(len(targets_observed))), keys=targets_observed.values)
-
-        lcs.index.set_names("index", level=0, inplace=True)
-        # if incl_error, the true flux is converted into an observed flux
-        if incl_error:
-            rng = np.random.default_rng(seed)
-            lcs["flux"] += rng.normal(loc=0, scale=lcs["fluxerr"])
+            single_model_targets = targets.as_targets()
+            lcs_ = [cls.lightcurve_from_targets_and_survey(target_, survey, **lc_prop)
+                    for target_ in single_model_targets]
+            lcs = pandas.concat(lcs_)
 
         return cls(lcs, targets=targets, survey=survey)
 
+    @classmethod
+    def lightcurve_from_targets_and_survey(cls, targets, survey, progress_bar=False,
+                                    incl_error=True, phase_range=[-50, 200],
+                                    seed=None, discard_bands=True,
+                                    single_model=True):
+        """ Loads a dataset (observed data) given targets and a survey."""
+        if progress_bar:
+            from tqdm import tqdm
+
+        field_names = survey.fieldids.names
+
+        # --- 1. one merge: one row per (target, observation)
+        dfieldids_ = survey.radec_to_fieldid(targets.data[["ra", "dec"]])
+        dfieldids_.index.name = "index"
+        tdata = targets.data[["t0", "z"]].copy()
+        tdata.index.name = "index"
+        tdata = tdata.merge(dfieldids_, left_index=True, right_index=True).reset_index()
+        logs = survey.data[["mjd", "band", "skynoise", "gain", "zp"] + field_names]
+        logs = logs.rename_axis("index_obs").reset_index()
+        lc = tdata.merge(logs, on=field_names, how="inner")
+
+        # --- 2. vectorised phase cut
+        if phase_range is not None:
+            # produce phase cut already now
+            # to have the smallest Dataframe to carry on.
+            # Phases are to be understood "rest-frame".
+            lc = lc[ ( (lc["mjd"]-lc["t0"]) / (1+lc["z"]) ).between(*phase_range, inclusive='both')]
+
+        # --- 3. sort once -> contiguous blocks
+        lc = lc.sort_values(["index", "mjd"], kind="stable")
+        tindex = lc["index"].to_numpy()
+        uindex, starts = np.unique(tindex, return_index=True)
+        stops = np.append(starts[1:], len(tindex))
+        bands = lc["band"].to_numpy(dtype=object)
+        mjd = lc["mjd"].to_numpy()
+        zp = lc["zp"].to_numpy()
+        flux = np.full(len(lc), np.nan)
+        keep = np.ones(len(lc), dtype=bool)
+
+        # --- 5. bandpass wavelength table
+        if discard_bands:
+            ubands, band_id = np.unique(bands, return_inverse=True)
+            bps = [sncosmo.get_bandpass(b) for b in ubands]
+            bminw = np.array([b.minwave() for b in bps])
+            bmaxw = np.array([b.maxwave() for b in bps])
+
+        # --- 4. parameters extracted once, one model
+        if single_model:
+            model = targets.template.get()
+            cols = list(targets.get_template_columns())
+            params = targets.data.loc[uindex, cols].to_numpy()
+            magabs = targets.data.loc[uindex, "magabs"].to_numpy()
+            pband, pmagsys, cosmo = targets.peak_absmag_band, targets.magsys, targets.cosmology
+
+        # --- the only loop: sncosmo work
+        niters = len(uindex)
+        for i, (idx, start, stop) in tqdm( enumerate(zip(uindex, starts, stops)), total=niters) if progress_bar else enumerate(zip(uindex, starts, stops)):
+
+            if single_model:
+                model.set(**dict(zip(cols, params[i])))
+                model.set_source_peakabsmag(absmag=magabs[i], band=pband, magsys=pmagsys, cosmo=cosmo)
+            else:
+                model = targets.get_target_template(index=idx, as_model=True, set_magabs=True)
+
+            if discard_bands:
+                bid = band_id[start:stop]
+                ok = (bminw[bid] >= model.minwave()) & (bmaxw[bid] <= model.maxwave())
+                keep[start:stop] = ok
+                sel = start + np.flatnonzero(ok)
+            else:
+                sel = np.arange(start, stop)
+
+            if len(sel) > 0:
+                flux[sel] = model.bandflux(bands[sel], mjd[sel], zp=zp[sel], zpsys="ab")
+
+        # --- 6. build the output once
+        out = lc.loc[keep, ["index", "index_obs", "mjd", "band", "skynoise", "gain", "zp"] + field_names].copy()
+        out["flux"] = flux[keep]
+        out["fluxerr"] = np.sqrt(out["skynoise"]**2 + np.abs(out["flux"]) / out["gain"])
+        out = out.set_index(["index", "index_obs"])
+        if incl_error:
+            rng = np.random.default_rng(seed)
+            out["flux"] += rng.normal(loc=0, scale=out["fluxerr"])
+
+        return out
+
+
+
+
+
+
+# =================== #
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
         """Loads a stored dataset.
