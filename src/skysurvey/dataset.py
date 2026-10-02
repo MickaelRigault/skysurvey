@@ -10,16 +10,12 @@ import sncosmo
 import warnings
 
 from .target.collection import TargetCollection
-from .tools import speedutils
-
 
 # ================== #
 #                    #
 #    DataSet         #
 #                    #
 # ================== #
-
-
 class DataSet(object):
     """
     A class for managing and realistic transient light curves given true data and survey observing logs.
