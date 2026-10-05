@@ -10,7 +10,7 @@ _version.py
 
 # Sphinx
 _build
-docs/api
+docs/api/generated/
 docs/data
 
 # Packages/installer info
@@ -60,5 +60,3 @@ pip-wheel-metadata/
 ehthumbs.db
 Thumbs.db
 
-# sphinx autosummary output
-docs/api/generated/
