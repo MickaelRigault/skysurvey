@@ -31,6 +31,5 @@ def test_peakabsmag_equals_peakmag(sn_class, template):
         model_peakmag.set(z=z)
         model_peakmag.set_source_peakmag(magobs, band, magsys)
 
-        # magabs_to_magobs computes distmod with z in float32
         assert np.isclose(model_absmag.get(target.amplitude_name),
                           model_peakmag.get(target.amplitude_name), rtol=1e-6, atol=0)
