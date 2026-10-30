@@ -214,7 +214,9 @@ class DataSet(object):
             model = targets.template.get()
             cols = list(targets.get_template_columns())
             params = targets.data.loc[uindex, cols].to_numpy()
-            magabs = targets.data.loc[uindex, "magabs"].to_numpy()
+            # magobs is part of the model dag: use it directly if available
+            use_magobs = "magobs" in targets.data
+            peakmag = targets.data.loc[uindex, "magobs" if use_magobs else "magabs"].to_numpy()
             pband, pmagsys, cosmo = targets.peak_absmag_band, targets.magsys, targets.cosmology
 
         # --- the only loop: sncosmo work
@@ -223,7 +225,10 @@ class DataSet(object):
 
             if single_model:
                 model.set(**dict(zip(cols, params[i])))
-                model.set_source_peakabsmag(absmag=magabs[i], band=pband, magsys=pmagsys, cosmo=cosmo)
+                if use_magobs:
+                    model.set_source_peakmag(m=peakmag[i], band=pband, magsys=pmagsys)
+                else:
+                    model.set_source_peakabsmag(absmag=peakmag[i], band=pband, magsys=pmagsys, cosmo=cosmo)
             else:
                 model = targets.get_target_template(index=idx, as_model=True, set_magabs=True)
 
