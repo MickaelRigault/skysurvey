@@ -384,7 +384,8 @@ class Target( object ):
 
         set_magabs : bool, optional
             Should the peak magnitude of the template be set to the target's
-            `magabs`? Ignored if `index` is None. The default is False.
+            `magobs` (or `magabs` if there is no `magobs` in data)?
+            Ignored if `index` is None. The default is False.
 
         **kwargs
             Goes to ``self.template.get()`` and passed to `sncosmo.Model`.
@@ -412,16 +413,23 @@ class Target( object ):
         sncosmo_model = self.template.get(**kwargs)
 
         if index is not None and set_magabs:
-            peak_absmag = data.loc[index, "magabs"]
             peak_absmag_band = self.peak_absmag_band
             peak_absmag_magsys = self.magsys
 
-            sncosmo_model.set_source_peakabsmag(
-                absmag=peak_absmag,
-                band=peak_absmag_band,
-                magsys=peak_absmag_magsys,
-                cosmo=self.cosmology
-            )
+            # magobs is part of the model dag: use it directly if available
+            if "magobs" in data:
+                sncosmo_model.set_source_peakmag(
+                    m=data.loc[index, "magobs"],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys
+                )
+            else:
+                sncosmo_model.set_source_peakabsmag(
+                    absmag=data.loc[index, "magabs"],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys,
+                    cosmo=self.cosmology
+                )
         if not as_model:
             from ..template import Template
             return Template.from_sncosmo(sncosmo_model)
