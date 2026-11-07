@@ -30,10 +30,10 @@ def fit_salt_jax(dataset, indexes=None, modelcov=True, phase_range=[-10, 40], gu
 
     guess : {'data', 'truth'}, optional
         Initial guess: from the data (default) or the true t0, x1 and c.
-        See :func:`saltjax.fit_salt`. The default is 'data'.
+        See :func:`saltjax.fit_lc`. The default is 'data'.
 
     **kwargs
-        Passed to :func:`saltjax.fit_salt` (e.g. ``progress_bar``,
+        Passed to :func:`saltjax.fit_lc` (e.g. ``progress_bar``,
         ``batch_points``, ``c_max``, ``dz``, ``minsnr``, ``nrefit``).
 
     Returns
@@ -47,7 +47,7 @@ def fit_salt_jax(dataset, indexes=None, modelcov=True, phase_range=[-10, 40], gu
     Raises
     ------
     ImportError
-        If saltjax is not installed.
+        If saltjax (>= 0.4) is not installed.
 
     NotImplementedError
         If the targets use another source than SALT2, or effects other than
@@ -62,6 +62,10 @@ def fit_salt_jax(dataset, indexes=None, modelcov=True, phase_range=[-10, 40], gu
     except ImportError as e:
         raise ImportError("fit_salt_jax requires saltjax: "
                           "pip install saltjax") from e
+
+    if not hasattr(saltjax, "fit_lc"):      # saltjax < 0.4 (fit_salt, now saltjax.fit_lc)
+        raise ImportError(f"fit_salt_jax requires saltjax >= 0.4, got {saltjax.__version__}: "
+                          "pip install -U saltjax")
 
     if indexes is None:
         indexes = dataset.obs_index
@@ -78,7 +82,6 @@ def fit_salt_jax(dataset, indexes=None, modelcov=True, phase_range=[-10, 40], gu
         else:
             raise NotImplementedError(f"effect {type(effect).__name__} ({frame}) not supported")
 
-    return saltjax.fit_salt(dataset.data, dataset.targets.data, indexes=indexes,
-                            modelcov=modelcov, phase_range=phase_range, guess=guess,
-                            source=template.source, mwebv_key=mwebv_key, mw_r_v=mw_r_v,
-                            **kwargs)
+    return saltjax.fit_lc(dataset.data, dataset.targets.data, source=template.source,
+                          indexes=indexes, modelcov=modelcov, phase_range=phase_range,
+                          guess=guess, mwebv_key=mwebv_key, mw_r_v=mw_r_v, **kwargs)
