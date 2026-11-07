@@ -53,6 +53,7 @@ docs = [
     "sphinx-design",
 ]
 tests = ["pytest", "coverage", "pytest-remotedata"]
+saltjax = ["saltjax>=0.4"]
 
 [tool.setuptools]
 include-package-data = true
