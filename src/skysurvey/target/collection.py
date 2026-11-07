@@ -229,7 +229,8 @@ class TargetCollection( object ):
 
         set_magabs : bool, optional
             Whether to set the peak magnitude of the template to the
-            target's `magabs`. The default is False.
+            target's `magobs` (or `magabs` if there is no `magobs` in data).
+            The default is False.
 
         Returns
         -------
@@ -276,12 +277,20 @@ class TargetCollection( object ):
         target_template.sncosmo_model.set(**target_params)
 
         if set_magabs:
-            target_template.sncosmo_model.set_source_peakabsmag(
-                absmag=data_index['magabs'],
-                band=peak_absmag_band,
-                magsys=peak_absmag_magsys,
-                cosmo=cosmology
-                )
+            # magobs is part of the model dag: use it directly if available
+            if "magobs" in data_index:
+                target_template.sncosmo_model.set_source_peakmag(
+                    m=data_index['magobs'],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys
+                    )
+            else:
+                target_template.sncosmo_model.set_source_peakabsmag(
+                    absmag=data_index['magabs'],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys,
+                    cosmo=cosmology
+                    )
 
         if as_model:
             output_template = target_template.sncosmo_model

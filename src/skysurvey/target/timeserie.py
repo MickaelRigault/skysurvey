@@ -448,7 +448,8 @@ class MultiTemplateTSTransient( TSTransient ):
 
         set_magabs : bool, optional
             Whether to set the peak magnitude of the template to the
-            target's `magabs`. The default is False.
+            target's `magobs` (or `magabs` if there is no `magobs` in data).
+            The default is False.
 
         **kwargs
             Passed to ``self.template.get()`` and to `sncosmo.Model`; they
@@ -476,16 +477,23 @@ class MultiTemplateTSTransient( TSTransient ):
         sncosmo_model = self.template.get(ref_index=templateindex, **kwargs)
 
         if set_magabs:
-            peak_absmag = data.loc[index, "magabs"]
             peak_absmag_band = self.peak_absmag_band
             peak_absmag_magsys = self.magsys
 
-            sncosmo_model.set_source_peakabsmag(
-                absmag=peak_absmag,
-                band=peak_absmag_band,
-                magsys=peak_absmag_magsys,
-                cosmo=self.cosmology
-                )
+            # magobs is part of the model dag: use it directly if available
+            if "magobs" in data:
+                sncosmo_model.set_source_peakmag(
+                    m=data.loc[index, "magobs"],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys
+                    )
+            else:
+                sncosmo_model.set_source_peakabsmag(
+                    absmag=data.loc[index, "magabs"],
+                    band=peak_absmag_band,
+                    magsys=peak_absmag_magsys,
+                    cosmo=self.cosmology
+                    )
 
         if not as_model:
             from ..template import Template
