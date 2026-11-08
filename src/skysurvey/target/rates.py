@@ -14,10 +14,12 @@ def draw_redshift(size, rate, zmin=0., zmax=2., zstep=1e-4,
     size : int
         Number of targets to draw.
 
-    rate : float or callable
+    rate : float, list, array_like or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3. If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of redshift.
+        Gpc3. If a list or an array is given, each element is such a rate
+        (several rates): the output then has one row per rate. If a callable
+        is given, it is supposed to be a function of z that returns the
+        volumetric rate as a function of redshift.
 
     zmin : float, optional
         Minimum redshift. The default is 0.
@@ -86,10 +88,12 @@ def get_rate(z, rate, H0, rate_H0=70, **kwargs):
     z : array_like
         Array of redshifts.
 
-    rate : float or callable
+    rate : float, list, array_like or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3. If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of redshift.
+        Gpc3. If a list or an array is given, each element is such a rate
+        (several rates): the output then has one row per rate. If a callable
+        is given, it is supposed to be a function of z that returns the
+        volumetric rate as a function of redshift.
 
     H0 : float
         Hubble constant (in km/s/Mpc) of the cosmology the rate is used with.
@@ -104,13 +108,14 @@ def get_rate(z, rate, H0, rate_H0=70, **kwargs):
     Returns
     -------
     float or numpy.ndarray
-        The rate per Gpc3, including the 1/(1+z) frame change.
+        The rate per Gpc3, including the 1/(1+z) frame change. For several
+        rates (list or array), shape (nrates, nz).
     """
     # specified rate function or volumetric rate ?
     if callable(rate): # function
         n_per_gpc3 = rate(z, **kwargs)
-    else: # volumetric
-        n_per_gpc3 = rate if np.asarray(rate).ndim == 0 else rate[..., None]
+    else: # volumetric: float, or several rates (list or array) -> one row per rate
+        n_per_gpc3 = rate if np.ndim(rate) == 0 else np.asarray(rate, dtype=float)[..., None]
 
     # we need to account for the fact that rate may be given assuming the same h0 than the current cosmo
     n_per_gpc3 = n_per_gpc3 * (H0 / rate_H0)**3 # **3 as this is a volume effect (not in-place: rate(z) output may be int or reused)
@@ -126,13 +131,12 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
     zmax : float
         Outer redshift of the volume.
 
-    rate : float, array_like or callable
+    rate : float, list, array_like or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3. If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of redshift.
-        If an array is given and it broadcasts with the shell size, then it
-        multiplies the shells; if not, an axis is added and the pdf has shape
-        (rates.shape, nbins).
+        Gpc3. If a list or an array is given, each element is such a rate
+        (several rates): the output then has shape (nrates, nshells). If a callable
+        is given, it is supposed to be a function of z that returns the
+        volumetric rate as a function of redshift.
 
     zmin : float, optional
         Inner redshift of the volume. The default is 0.
@@ -184,10 +188,9 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
                                     **kwargs) # [ndim-1]
 
     # the total number of target per shell is the volumetric_rate_per_shell * the shell_volume
-    if np.ndim(n_per_gpc3_of_shell) == 0 or (np.ndim(n_per_gpc3_of_shell) == 1 and len(n_per_gpc3_of_shell) == len(shell)):
-        ntargets_per_shell = n_per_gpc3_of_shell * shell
-    else:
-        ntargets_per_shell = np.atleast_1d(n_per_gpc3_of_shell)[:, None] * shell
+    # n_per_gpc3_of_shell is a float or (nshells,) for one rate, (nrates, nshells) for
+    # several rates (get_rate already broadcasts them with the shells).
+    ntargets_per_shell = n_per_gpc3_of_shell * shell
 
     return bins_of_redshift_mid, ntargets_per_shell.astype(astype)
 
@@ -201,10 +204,12 @@ def get_ntargets(zmax, rate, zmin=0, cosmology=Planck18,
     zmax : float
         Outer redshift of the volume.
 
-    rate : float or callable
+    rate : float, list, array_like or callable
         If a float is given, it is assumed to be the number of targets per
-        Gpc3. If a callable is given, it is supposed to be a function of z that
-        returns the volumetric rate as a function of redshift.
+        Gpc3. If a list or an array is given, each element is such a rate
+        (several rates): the output then has one row per rate. If a callable
+        is given, it is supposed to be a function of z that returns the
+        volumetric rate as a function of redshift.
 
     zmin : float, optional
         Inner redshift of the volume. The default is 0.

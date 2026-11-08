@@ -1,18 +1,5 @@
-import numpy as np
 import pandas
-from skysurvey.tools.speedutils import isin_pair_elements, chunk_dfs, concat_chunk, eff_concat
-
-# tests for the func isinpair_elements
-def test_isin_pair_elements():
-    elements = np.array([[1,2], [3,4], [5,6] , [7,8]])
-    test_elements = np.array([[3,4], [7,8], [9,10]])
-
-    output = isin_pair_elements(elements, test_elements)
-    output_expected = np.array([False, True, False, True])
-
-    assert isinstance(output, np.ndarray)
-    output.shape == len(elements)
-    assert np.array_equal(output, output_expected)
+from skysurvey.tools.speedutils import chunk_dfs, concat_chunk, eff_concat
 
 # tests for the func chunk_dfs
 def test_chunk_dfs_not_multiple_of_chunk_size():

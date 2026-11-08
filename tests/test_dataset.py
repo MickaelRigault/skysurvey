@@ -39,16 +39,45 @@ class FakeModel:
     def bandflux(self, band, mjd, **kwargs):
         return np.ones(len(mjd)) * 100.0
 
+    def set(self, **kwargs):
+        pass
+
+    def set_source_peakabsmag(self, absmag, band, magsys, cosmo=None):
+        pass
+
+    def set_source_peakmag(self, m, band, magsys):
+        pass
+
+
+class FakeTemplate:
+    """ as skysurvey.Template: get() returns the (sncosmo) model """
+    def get(self, **kwargs):
+        return FakeModel()
+
 
 class FakeTargets:
+    """ single-model targets, with the interface used by DataSet.from_targets_and_survey """
+    peak_absmag_band = "bessellb"
+    magsys = "ab"
+    cosmology = None
+
     def __init__(self):
         self.data = pandas.DataFrame({
             "ra": [10., 20.],
             "dec": [10., 20.],
             "t0": [0.0, 0.0],
-            "z": [1.0, 1.0]
+            "z": [1.0, 1.0],
+            "magabs": [-19.3, -19.3]
         })
         self.data.index.name = "index"
+        self.template = FakeTemplate()
+
+    def as_targets(self):
+        """ as TargetCollection.as_targets: list of single-model targets """
+        return [self]
+
+    def get_template_columns(self):
+        return ["t0", "z"]
 
     def get_target_template(self, index=None, as_model=True, set_magabs=True):
         return FakeModel()
@@ -106,6 +135,9 @@ def test_from_targets_and_survey_triggers_target_collection(monkeypatch, survey)
         def get_target_template(self, index=None, as_model=True, set_magabs=True):
             return FakeModel()
 
+        def as_targets(self):
+            return [FakeTargets()]
+
     monkeypatch.setattr("skysurvey.dataset.TargetCollection", DummyTargetCollection)
     DataSet.from_targets_and_survey(targets=[1, 2], survey=survey, discard_bands=False)
 
@@ -146,13 +178,31 @@ class FakeSurvey2D():
         return pandas.DataFrame({"fieldids1": [1], "fieldids2": [1]}, index=coords.index)
 
 def test_from_targets_and_survey_2d_fields():
+    """ targets are matched to the logs on all the field ids """
     targets = FakeTargets()
     survey = FakeSurvey2D()
 
-    with patch("skysurvey.tools.speedutils.isin_pair_elements", return_value= np.array([True]*len(targets.data))) as mock:
-        DataSet.from_targets_and_survey(targets, survey, discard_bands=False)
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None,
+                                              discard_bands=False)
+    # each target (fields 1, 1) sees the 2 observations of (fields 1, 1)
+    assert len(dataset.data) == len(targets.data) * len(survey.data)
+    assert set(dataset.data.index.get_level_values("index")) == set(targets.data.index)
 
-        mock.assert_called_once()
+class FakeSurvey2DPartial(FakeSurvey2D):
+    """ 2 field ids; the second exposure only shares the first field id with the targets """
+    def __init__(self):
+        super().__init__()
+        self.data["fieldids2"] = [1, 2]
+
+def test_from_targets_and_survey_matches_all_field_ids():
+    """ an exposure is matched only if all the field ids match """
+    targets = FakeTargets()            # targets in fields (1, 1)
+    survey = FakeSurvey2DPartial()     # exposures in (1, 1) and (1, 2)
+
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None,
+                                              discard_bands=False)
+    assert len(dataset.data) == len(targets.data)           # one exposure per target
+    assert set(dataset.data["fieldids2"]) == {1}
 
 class FakeFieldIDs3D:
     names = ["fieldids1", "fieldids2", "fieldids3"]
@@ -175,12 +225,14 @@ class FakeSurvey3D():
     def radec_to_fieldid(self, coords):
         return pandas.DataFrame({"fieldids1": [1], "fieldids2": [1], "fieldids3": [1]}, index=coords.index)
 
-def test_from_targets_and_survey_fields_not_implemented():
+def test_from_targets_and_survey_3d_fields():
+    """ any number of field ids is supported (merge on all of them) """
     targets = FakeTargets()
     survey = FakeSurvey3D()
 
-    with pytest.raises(NotImplementedError):
-        DataSet.from_targets_and_survey(targets, survey, discard_bands=False)
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None,
+                                              discard_bands=False)
+    assert len(dataset.data) == len(targets.data) * len(survey.data)
 
 def test_from_targets_and_survey_progress_bar(targets, survey):
     with patch("tqdm.tqdm") as mock_tqdm:
@@ -328,7 +380,8 @@ def test_get_ndetection(dataset):
         mock_get.return_value = dataset.data.iloc[:1]
         dataset.get_ndetection(join_bandday=True)
 
-        mock_get.assert_called_once_with(phase_range=None, detection=True, join_bandday=True)
+        mock_get.assert_called_once_with(phase_range=None, detection=True, join_bandday=True,
+                                         join_how="first")
 
 @pytest.fixture
 def dataset_ndetection(targets, survey):

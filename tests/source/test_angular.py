@@ -29,7 +29,10 @@ def test_AngularTimeSeriesSource_initialization():
     assert angular._phase is phase
     assert angular._wave is wave
     assert angular._cos_theta is cos_theta
-    assert angular._flux_array is flux
+    # the flux is copied and cleaned (<=0 -> 1e-10, normalised to its max): the input is not modified
+    assert angular._flux_array is not flux
+    np.testing.assert_array_equal(angular._flux_array, flux / flux.max())
+    np.testing.assert_array_equal(flux, np.ones((2, 2, 2)))
     assert angular._current_theta == 0.
     assert angular._zero_before is False
     assert angular._zero_after is False
