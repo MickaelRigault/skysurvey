@@ -1,5 +1,4 @@
 import numpy as np
-import pytest
 
 from astropy.cosmology import Planck18
 from skysurvey.target.rates import get_ntargets_per_shell, get_rate, draw_redshift, get_ntargets
@@ -7,13 +6,6 @@ from skysurvey.target.rates import get_ntargets_per_shell, get_rate, draw_redshi
 
 constant_rate = 1.0e4
 z = np.array([0.1, 0.2, 0.3])
-
-# known bugs of the rates code (not of the tests): the tests below are expected to fail until fixed
-BUG_RATE_LIST = ("get_rate does rate[..., None] on the raw input: a rate given as a list raises "
-                 "TypeError (list indices must be integers or slices, not tuple)")
-BUG_RATE_ARRAY = ("get_rate already broadcasts an array of rates with z (nrates, nz); "
-                  "get_ntargets_per_shell adds another axis: (nrates, 1, nshells), "
-                  "so draw_redshift with several rates fails (pdf ndim 3)")
 
 
 def expected_ntargets(zmax, rate, zmin=0., cosmology=Planck18, rate_H0=70, npoints=200_000):
@@ -37,7 +29,6 @@ def constante_rate(z, c=1e3):
 
 
 
-@pytest.mark.xfail(strict=True, reason=BUG_RATE_ARRAY)
 def test_get_ntargets_per_shell():
     """ """
     # test that it works as well as the returned format.
@@ -90,7 +81,6 @@ def test_get_ntargets_multirates():
         assert np.isclose(ntargets_2, expected_ntargets(ztest, 2e4), rtol=1e-3)
 
 
-@pytest.mark.xfail(strict=True, reason=BUG_RATE_LIST)
 def test_get_ntargets_rate_list():
     """ several rates given as a list: same as an array """
     ntargets_list = get_ntargets(0.2, rate=[1e3, 2e4])
@@ -135,7 +125,6 @@ def test_draw_redshift_constantrate():
     kstest = ks_2samp(redshifts_float, redshifts_funcflat)
     assert kstest.pvalue>0.1
 
-@pytest.mark.xfail(strict=True, reason=f"{BUG_RATE_LIST}; and with an array: {BUG_RATE_ARRAY}")
 def test_draw_redshift_ndim2():
     """ """
     # ks test specify if two sample are drawn
@@ -171,6 +160,22 @@ def test_volumetric_rate_func():
     n_per_gpc3_returned = get_rate(redshifts, constante_rate, c=constante,
                                     H0=70, rate_H0=70)
     assert np.allclose(n_per_gpc3_returned, constante / (1 + redshifts))
+
+def test_volumetric_rate_float_list_array():
+    """ a rate can be a float, or several rates as a list or an array """
+    rate_float = get_rate(z, 10., H0=70, rate_H0=70)
+    rate_list = get_rate(z, [10., 20.], H0=70, rate_H0=70)
+    rate_array = get_rate(z, np.asarray([10., 20.]), H0=70, rate_H0=70)
+    assert rate_list.shape == rate_array.shape == (2, len(z))
+    assert np.allclose(rate_list, rate_array)
+    assert np.allclose(rate_list[0], rate_float)
+
+    # same for the number of targets and the redshift draws
+    ntargets_list = get_ntargets(0.2, rate=[10., 20.], astype="float")
+    assert ntargets_list.shape == (2,)
+    assert np.isclose(ntargets_list[0], get_ntargets(0.2, rate=10., astype="float"))
+    redshifts = draw_redshift(100, rate=[10., 20.], zmax=0.2, rng=1)
+    assert len(redshifts) == 2 and all(len(redshifts_) == 100 for redshifts_ in redshifts)
 
 def test_volumetric_rate_h0():
     """ a rate given for rate_H0 is rescaled by (H0 / rate_H0)^3 (volume effect) """
