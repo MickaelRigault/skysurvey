@@ -33,6 +33,8 @@ automatically. Some features need optional packages:
      - All the ``show_*`` plotting methods.
    * - ``iminuit``
      - Lightcurve fitting (:func:`skysurvey.lcfit.fit_salt`, through ``sncosmo.fit_lc``).
+   * - ``saltjax``
+     - Fast batched SALT2 fitting with JAX (:func:`skysurvey.lcfit.fit_salt_jax`).
    * - ``ztfcosmo``
      - Loading the real ZTF observing logs with :meth:`skysurvey.ZTF.from_logs`.
    * - ``dask``, ``dask-geopandas``
