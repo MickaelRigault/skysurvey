@@ -157,6 +157,78 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
     
     return newdata
 
+def random_uniform(low=0., high=1., size=None, rng=None):
+    """Draw samples from a uniform distribution in [low, high[.
+
+    This is `numpy.random.Generator.uniform` with an explicit `rng`
+    argument, such that model entries using it get a fresh (or seeded)
+    random generator at each draw (see e.g. ``Target.draw(rng=)``).
+
+    Parameters
+    ----------
+    low : float or array_like, optional
+        Lower boundary of the output interval. The default is 0.
+
+    high : float or array_like, optional
+        Upper boundary of the output interval. The default is 1.
+
+    size : int, optional
+        Number of draws. The default is None.
+
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator (see
+        :func:`numpy.random.default_rng` for details). If None, an
+        unpredictable entropy will be pulled from the OS.
+        The default is None.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The drawn samples.
+
+    See Also
+    --------
+    random_normal : Draw samples from a normal distribution.
+    """
+    rng = np.random.default_rng(rng)
+    return rng.uniform(low=low, high=high, size=size)
+
+def random_normal(loc=0., scale=1., size=None, rng=None):
+    """Draw samples from a normal distribution.
+
+    This is `numpy.random.Generator.normal` with an explicit `rng`
+    argument, such that model entries using it get a fresh (or seeded)
+    random generator at each draw (see e.g. ``Target.draw(rng=)``).
+
+    Parameters
+    ----------
+    loc : float or array_like, optional
+        Mean of the distribution. The default is 0.
+
+    scale : float or array_like, optional
+        Standard deviation of the distribution. The default is 1.
+
+    size : int, optional
+        Number of draws. The default is None.
+
+    rng : None, int, or numpy.random.Generator, optional
+        Seed for the random number generator (see
+        :func:`numpy.random.default_rng` for details). If None, an
+        unpredictable entropy will be pulled from the OS.
+        The default is None.
+
+    Returns
+    -------
+    float or numpy.ndarray
+        The drawn samples.
+
+    See Also
+    --------
+    random_uniform : Draw samples from a uniform distribution.
+    """
+    rng = np.random.default_rng(rng)
+    return rng.normal(loc=loc, scale=scale, size=size)
+
 def random_radec(size=None, skyarea=None,
                 ra_range=[0, 360], dec_range=[-90,90],
                 rng=None):

@@ -9,9 +9,8 @@ import numpy as np
 import sncosmo
 
 from .core import Transient
-from ..tools.utils import random_radec
+from ..tools.utils import random_radec, random_uniform, random_normal
 
-RNG = np.random.default_rng()
 
 def read_possis_file(filename):
     """Read in a spectral model created by POSSIS (1906.04205).
@@ -131,14 +130,14 @@ class Kilonova( Transient ):
     _TEMPLATE = _KILONOVA_MODEL
     _RATE = 1e3 # event per Gyr**3
     _MODEL = dict( # when
-                   t0 = {"func": RNG.uniform,
+                   t0 = {"func": random_uniform,
                          "kwargs": {"low":56_000, "high":56_200}
                         },
 
                    # what
                    redshift = {"kwargs":{"zmax":0.2}, "as":"z"},
 
-                   magabs = {"func": RNG.normal,
+                   magabs = {"func": random_normal,
                              "kwargs": {"loc": -18, "scale": 1}
                             },
 
@@ -146,7 +145,7 @@ class Kilonova( Transient ):
                              "kwargs": {"z":"@z", "magabs": "@magabs"}
                             },
 
-                   theta = {"func": RNG.uniform,
+                   theta = {"func": random_uniform,
                             "kwargs": {"low":0., "high":90.}
                             },
                    # where

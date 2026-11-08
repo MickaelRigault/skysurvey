@@ -37,8 +37,9 @@ def test_get_ntargets_per_shell():
     zbins_array, pdf_array = get_ntargets_per_shell(0.145, zmin=0, zstep=1e-4, rate=rate_array)
 
     assert (zbins_float == zbins_array).all()
-    assert zbins_float.shape == (1449,)
-    assert pdf_array.shape == (rate_array.shape[0], 1449)
+    # 0.145 / 1e-4 = 1450 shells covering [0, 0.145] exactly
+    assert zbins_float.shape == (1450,)
+    assert pdf_array.shape == (rate_array.shape[0], 1450)
     assert (pdf_float == pdf_array[0]).all()
 
 def test_get_ntargets_constantrate():
@@ -205,3 +206,33 @@ def test_nyears_and_radec():
     snia_northsky = skysurvey.SNeIa.from_draw(zmax=0.1, nyears=1., rate=1e3, radec={"dec_range": [0, 90]})
 
     assert np.isclose( len(snia_northsky.data)/len(snia_fullsky.data), 0.5, rtol=0.01)
+
+
+# tests for the shells of get_ntargets_per_shell
+def test_get_ntargets_per_shell_covers_zmax():
+    # the outermost shell [zmax-zstep, zmax] must be included
+    zbins, _ = get_ntargets_per_shell(0.05, rate=1e4, zmin=0, zstep=1e-4)
+    assert len(zbins) == 500
+    assert np.isclose(zbins[0], 0.5e-4), "first shell is [0, 1e-4]"
+    assert np.isclose(zbins[-1], 0.05 - 0.5e-4), "last shell is [0.0499, 0.05]"
+
+def test_get_ntargets_per_shell_zmax_not_multiple_of_zstep():
+    # 0.12345 / 1e-4 = 1234.5 -> 1235 shells, slightly thinner than zstep, ending at zmax
+    zbins, _ = get_ntargets_per_shell(0.12345, rate=1e4, zmin=0, zstep=1e-4)
+    zstep_ = 0.12345 / 1235
+    assert len(zbins) == 1235
+    assert np.isclose(zbins[-1], 0.12345 - zstep_ / 2)
+
+def test_get_ntargets_per_shell_float_noise():
+    # (0.035 - 0.008) / 0.001 = 27.000000000000004 in float: still 27 shells
+    zbins, _ = get_ntargets_per_shell(0.035, rate=1e4, zmin=0.008, zstep=1e-3)
+    assert len(zbins) == 27
+    assert np.allclose(np.diff(zbins), 1e-3)
+
+def test_get_ntargets_volume_matches_comoving_volume():
+    # constant rate, H0=rate_H0, no time dilation removed: sum of shells x (1+z)
+    # is the comoving volume between zmin and zmax.
+    zbins, ntargets = get_ntargets_per_shell(0.1, rate=1., zmin=0.02, zstep=1e-4,
+                                             rate_H0=Planck18.H0.value, astype="float")
+    volume = (Planck18.comoving_volume(0.1) - Planck18.comoving_volume(0.02)).to("Gpc^3").value
+    assert np.isclose(np.sum(ntargets * (1 + zbins)), volume, rtol=1e-6)

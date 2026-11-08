@@ -13,9 +13,9 @@ except ImportError:
 
 
 from .core import Transient
+from ..tools.utils import random_uniform
 
 
-RNG = np.random.default_rng()
 
 phases = np.linspace(1.0e3, 1.0e7, 300)
 wave = np.linspace(3600,6600,300)
@@ -79,7 +79,7 @@ class Afterglow( Transient ):
     _MODEL = dict( redshift = {"kwargs":{"zmax":0.2},
                                   "as":"z"},
 
-                   t0 = {"func": RNG.uniform,
+                   t0 = {"func": random_uniform,
                          "kwargs": {"low":56_000, "high":56_200} },
 
                    )
