@@ -60,8 +60,10 @@ class DataSet(object):
 
         This first matches the targets (given ``targets.data[['ra', 'dec']]``)
         with the survey to find which target has been observed with which
-        field. Then it simulates the targets lightcurves given the observing
-        data (``survey.data``).
+        field. The match uses all the field identifiers of the survey
+        (``survey.fieldids.names``, e.g. a field and a CCD id): any number of
+        them is supported. Then it simulates the targets lightcurves given the
+        observing data (``survey.data``).
 
         Parameters
         ----------

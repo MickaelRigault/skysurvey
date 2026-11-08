@@ -188,6 +188,22 @@ def test_from_targets_and_survey_2d_fields():
     assert len(dataset.data) == len(targets.data) * len(survey.data)
     assert set(dataset.data.index.get_level_values("index")) == set(targets.data.index)
 
+class FakeSurvey2DPartial(FakeSurvey2D):
+    """ 2 field ids; the second exposure only shares the first field id with the targets """
+    def __init__(self):
+        super().__init__()
+        self.data["fieldids2"] = [1, 2]
+
+def test_from_targets_and_survey_matches_all_field_ids():
+    """ an exposure is matched only if all the field ids match """
+    targets = FakeTargets()            # targets in fields (1, 1)
+    survey = FakeSurvey2DPartial()     # exposures in (1, 1) and (1, 2)
+
+    dataset = DataSet.from_targets_and_survey(targets, survey, incl_error=False, phase_range=None,
+                                              discard_bands=False)
+    assert len(dataset.data) == len(targets.data)           # one exposure per target
+    assert set(dataset.data["fieldids2"]) == {1}
+
 class FakeFieldIDs3D:
     names = ["fieldids1", "fieldids2", "fieldids3"]
 

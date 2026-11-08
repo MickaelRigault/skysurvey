@@ -83,7 +83,9 @@ exposure. The required columns are:
 
 Each exposure also carries a pointing (``ra``, ``dec``) or a field identifier
 (``fieldid``), and the survey knows the camera footprint. This lets it tell
-which exposures observed which part of the sky. There are two flavours:
+which exposures observed which part of the sky. A field can be identified by
+one or several columns (e.g. a field and a CCD id): targets are matched to the
+exposures on all of them. There are two flavours:
 
 - :class:`~skysurvey.Survey` accepts any observing pattern and matches sky
   positions with HEALPix.

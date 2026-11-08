@@ -1,30 +1,8 @@
-"""Utilities for efficient DataFrame concatenation and array pair matching."""
+"""Utilities for efficient DataFrame concatenation."""
 
 import itertools
 import pandas
-import numpy as np
 
-
-def isin_pair_elements(elements, test_elements):
-    """Test whether each pair of integers in `elements` is in `test_elements`.
-
-    Parameters
-    ----------
-    elements : array_like
-        Array of integer pairs to test, with shape (N, 2).
-
-    test_elements : array_like
-        Array of integer pairs defining the reference set, with shape (M, 2).
-
-    Returns
-    -------
-    isin : numpy.ndarray
-        Boolean array. True if the corresponding pair in `elements` is present
-        in `test_elements`, False otherwise.
-    """
-    elements_combined = (elements[:, 0] << 16) | elements[:, 1]
-    test_elements_combined = (test_elements[:, 0] << 16) | test_elements[:, 1]
-    return np.isin(elements_combined, test_elements_combined)
 
 # pandas concat tricks suggested by: AntoineGillesLordet (https://github.com/MickaelRigault/skysurvey/issues/35)
 # aranged by: Mickael Rigault
