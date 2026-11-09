@@ -142,7 +142,9 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
         Inner redshift of the volume. The default is 0.
 
     zstep : float, optional
-        Binning of the redshift used for the computation. The default is 1e-5.
+        Binning of the redshift used for the computation. The shells cover
+        [zmin, zmax] exactly, so they are slightly thinner than `zstep` if
+        `zmax - zmin` is not a multiple of `zstep`. The default is 1e-5.
 
     rate_H0 : float, optional
         Hubble constant (in km/s/Mpc) assumed when deriving `rate`. The rate
@@ -162,14 +164,20 @@ def get_ntargets_per_shell(zmax, rate, zmin=0, zstep=1e-5,
     Returns
     -------
     zbins : numpy.ndarray
-        Mid value of the redshift corresponding to the shells.
+        Mid value of the redshift corresponding to the shells
+        (``ceil((zmax - zmin) / zstep)`` shells).
 
     pdf : numpy.ndarray
         Number of targets per shell. 1D array if the rate broadcasts with the
         shells, else an nD array with n the rate shape.
     """
     # initial binning
-    bins_of_redshift = np.arange(zmin, zmax, step=zstep) # [ndim]
+    # - linspace (not arange) such that the last edge is exactly zmax:
+    #   arange excludes zmax and would drop the outermost (most populated) shell.
+    # - round() removes float noise, e.g. (0.035-0.008)/0.001 = 27.000000000000004
+    #   would otherwise lead to 28 shells instead of 27.
+    nshells = int(np.ceil(np.round((zmax - zmin) / zstep, 6))) # shells are at most zstep wide
+    bins_of_redshift = np.linspace(zmin, zmax, nshells + 1) # [ndim]
 
     # this defines the volume of the universe
     volume = cosmology.comoving_volume( bins_of_redshift ).to("Gpc**3").value # len(input_z) (+ 1 if keepsize)

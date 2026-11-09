@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 from skysurvey.target.snia import SNeIaColor, SNeIaStretch, SNeIaMagnitude, SNeIa
-from skysurvey.tools.utils import random_radec
+from skysurvey.tools.utils import random_radec, random_uniform
 
 # tests for the class SNeIaColor
 # tests for the func color_rvs 
@@ -225,7 +225,7 @@ def test_sneia_model_keys():
     t0 = model["t0"]
     assert "func" in t0
     assert callable(t0["func"])
-    assert t0["func"].__name__ == "uniform"     
+    assert t0["func"] is random_uniform     
     assert t0["kwargs"] == {"low":56_000, "high":56_200}
 
     magabs = model["magabs"]

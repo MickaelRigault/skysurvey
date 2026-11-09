@@ -1,7 +1,7 @@
 import numpy as np
 import sncosmo
 from skysurvey.target.kilonova import read_possis_file, get_kilonova_model, Kilonova, _KILONOVA_MODEL
-from skysurvey.tools.utils import random_radec
+from skysurvey.tools.utils import random_radec, random_uniform, random_normal
 
 # tests for the func read_possis_file
 def make_fake_possis_file(tmp_path):
@@ -91,7 +91,7 @@ def test_kilonova_model_keys():
     t0 = model["t0"]
     assert "func" in t0
     assert callable(t0["func"])
-    assert t0["func"].__name__ == "uniform"     
+    assert t0["func"] is random_uniform     
     assert t0["kwargs"] == {"low":56_000, "high":56_200}
 
     redshift = model["redshift"]
@@ -101,7 +101,7 @@ def test_kilonova_model_keys():
     magabs = model["magabs"]
     assert "func" in magabs
     assert callable(magabs["func"])
-    assert magabs["func"].__name__ == "normal" 
+    assert magabs["func"] is random_normal 
     assert magabs["kwargs"] ==  {"loc": -18, "scale": 1}
 
     magobs = model["magobs"]
@@ -112,7 +112,7 @@ def test_kilonova_model_keys():
     theta = model["theta"]
     assert "func" in theta
     assert callable(theta["func"])
-    assert theta["func"].__name__ == "uniform"     
+    assert theta["func"] is random_uniform     
     assert theta["kwargs"] == {"low":0., "high":90.}
 
     radec = model["radec"]

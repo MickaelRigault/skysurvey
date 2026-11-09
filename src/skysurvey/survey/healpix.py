@@ -34,25 +34,20 @@ def get_ipix_in_range(nside, ra_range=None, dec_range=None, in_rad=False):
     if ra_range is None and dec_range is None:
         return pixs
     
-    ras,decs = hp.pix2ang(nside, pixs)
-    ras = (np.pi/2-ras)
-    # only dec range
-    if ra_range is None:
-        if not in_rad:
-            dec_range = np.multiply(dec_range, np.pi/180) # works if list given
-        return pixs[(decs>=dec_range[0]) & (decs<=dec_range[1])]
-    
-    # only ra range    
-    if dec_range is None:
-        if not in_rad:
-            ra_range = np.multiply(ra_range, np.pi/180) # works if list given
-        return pixs[(ras>=ra_range[0]) & (ras<=ra_range[1])]
-    
-    # both
-    if not in_rad:
-        ra_range = np.multiply(ra_range, np.pi/180) # works if list given
-        dec_range = np.multiply(dec_range, np.pi/180) # works if list given
-    return pixs[(ras>=ra_range[0]) & (ras<=ra_range[1]) & (decs>=dec_range[0]) & (decs<=dec_range[1])]
+    # lonlat=True returns (ra, dec) in deg, ra in [0, 360[.
+    # (default returns colatitude theta and longitude phi in rad)
+    ras, decs = hp.pix2ang(nside, pixs, lonlat=True)
+    if in_rad:
+        ras, decs = np.radians(ras), np.radians(decs)
+
+    flag = np.ones(npix, dtype=bool)
+    if ra_range is not None:
+        flag &= (ras >= ra_range[0]) & (ras <= ra_range[1])
+
+    if dec_range is not None:
+        flag &= (decs >= dec_range[0]) & (decs <= dec_range[1])
+
+    return pixs[flag]
 
 
 # ================== #
@@ -611,7 +606,7 @@ class HealpixSurvey( BaseSurvey ):
         # no radec limit
         if ra_range is None and dec_range is None:
             npix = hp.nside2npix(nside)
-            ipix = rng.uniform(0, npix, size=size)
+            ipix = rng.integers(0, npix, size=size) # healpix pixel ids are integers
         else:
             ipix_ok = get_ipix_in_range(nside, ra_range=ra_range, dec_range=dec_range)
             ipix = rng.choice(ipix_ok, size=size)

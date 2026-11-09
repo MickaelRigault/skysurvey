@@ -475,6 +475,10 @@ class Target( object ):
         Default return value is flux in photons / s / cm^2. If `zp` and `zpsys`
         are given, flux(es) are scaled to the requested zeropoints.
 
+        The template amplitude is set such that its peak magnitude matches the
+        target's `magobs` (or `magabs` given the cosmology if there is no
+        `magobs`), as in :meth:`skysurvey.DataSet.from_targets_and_survey`.
+
         Parameters
         ----------
         index : int
@@ -506,7 +510,10 @@ class Target( object ):
             zeropoint. Return value is a float if all input parameters are
             scalars, a numpy.ndarray otherwise.
         """
-        sncosmo_model = self.get_target_template(index).sncosmo_model
+        # the amplitude is set from magobs (or magabs if no magobs),
+        # as in DataSet.from_targets_and_survey().
+        set_magabs = "magobs" in self.data or "magabs" in self.data
+        sncosmo_model = self.get_target_template(index, as_model=True, set_magabs=set_magabs)
         phase_obs = phase if not restframe else phase*(1+self.data.loc[index]["z"])
         return sncosmo_model.bandflux(band, sncosmo_model.get('t0')+phase_obs, zp=zp, zpsys=zpsys)
 
@@ -1357,34 +1364,27 @@ class Target( object ):
     #   Properties   #
     # ============== #
 
+    # note: no caching on the class here. Caching (cls._x = cls._X) on the
+    # first class reading it would be inherited by all its subclasses.
     @classproperty
-    def amplitude_name(self):
+    def amplitude_name(cls):
         """Name of the amplitude parameter."""
-        if not hasattr(self, "_amplitude_name"):
-            self._amplitude_name = self._AMPLITUDE_NAME
-        return self._amplitude_name
+        return cls._AMPLITUDE_NAME
 
     @classproperty
-    def peak_absmag_band(self):
+    def peak_absmag_band(cls):
         """Band used to set the peak absolute magnitude."""
-        if not hasattr(self, "_peak_absmag_band"):
-            self._peak_absmag_band = self._PEAK_ABSMAG_BAND
-        return self._peak_absmag_band
+        return cls._PEAK_ABSMAG_BAND
 
     @classproperty
-    def magsys(self):
+    def magsys(cls):
         """Magnitude system used for the peak absolute magnitude."""
-        if not hasattr(self, "_magsys"):
-            self._magsys = self._MAGSYS
-        return self._magsys
+        return cls._MAGSYS
 
     @classproperty
-    def kind(self):
+    def kind(cls):
         """Kind of target."""
-        if not hasattr(self,"_kind"):
-            self._kind = self._KIND
-
-        return self._kind
+        return cls._KIND
 
     @property
     def cosmology(self):

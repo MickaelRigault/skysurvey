@@ -47,9 +47,8 @@ import numpy as np
 from scipy import stats
 from .core import Transient
 
-from ..tools.utils import random_radec
+from ..tools.utils import random_radec, random_uniform
 
-RNG = np.random.default_rng()
 
 
 # ================== #
@@ -449,7 +448,7 @@ class SNeIa( Transient ):
 
                    c = {"func": SNeIaColor.intrinsic_and_dust},
 
-                   t0 = {"func": RNG.uniform,
+                   t0 = {"func": random_uniform,
                          "kwargs": {"low":56_000, "high":56_200} },
 
                    magabs = {"func": SNeIaMagnitude.tripp1998,
