@@ -34,3 +34,4 @@ Effects
    :maxdepth: 1
 
    add_mwebv
+   heliocentric_redshifts
