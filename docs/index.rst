@@ -188,7 +188,7 @@ Where to go next
 
       An end-to-end simulation in five minutes.
 
-   .. grid-item-card:: :octicon:`pulse;1.5em;sd-mr-1` Simulate and fit
+   .. grid-item-card:: :octicon:`pulse;1.5em;sd-mr-1` Survey logs to lightcurve fit
       :link: quickstart/simulate_and_fit
       :link-type: doc
 
