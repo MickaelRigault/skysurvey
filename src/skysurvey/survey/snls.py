@@ -29,7 +29,7 @@ def get_snls_field_coordinates(fieldid_name="fieldid"):
     pandas.DataFrame
         Dataframe indexed by field name with 'ra' and 'dec' columns.
     """
-    
+
     data = pandas.DataFrame(FIELDID).T
     data.index.name = fieldid_name
     return data
@@ -101,14 +101,14 @@ def register_snls_bandpasses(filters=['g', 'r', 'i', 'z', 'y'], prefix="megacamp
     # not well done...
     except: # noqa
         pass
-    
+
     for filter_ in filters:
         megacamband = sncosmo.get_bandpass(f'megacampsf::{filter_}', at_radius)
         megacamband.name = f'{prefix}::{filter_}'
         sncosmo.register(megacamband, force=True)
 
-    
-    
+
+
 class SNLS( GridSurvey ):
     """A class to model the `SNLS` survey.
 
@@ -124,7 +124,7 @@ class SNLS( GridSurvey ):
         """Initialize the SNLS class."""
         footprint = get_snls_footprint()
         fields = self._parse_fields(get_snls_field_coordinates(), footprint)
-        
+
         register_snls_bandpasses() # loads bandpass
         super().__init__(data=data, fields=fields, footprint=footprint,
                           **kwargs)
@@ -162,12 +162,12 @@ class SNLS( GridSurvey ):
             logpath = "https://supernovae.in2p3.fr/snls5/snls_obslogs.csv"
             snls_log = get_weblogs(logpath)
         else:
-            snls_log = pandas.read_cvs(logpath)
+            snls_log = pandas.read_csv(logpath)
             if "fieldid" not in snls_log:
                 raise ValueError("fieldid is not provided in the input log.")
 
         return cls.from_pointings(data=snls_log)
-    
+
     @classmethod
     def from_pointings(cls, data, **kwargs):
         """Load the survey from observing log data.
@@ -192,5 +192,5 @@ class SNLS( GridSurvey ):
         """
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data)
-            
+
         return cls(data=data, **kwargs)
