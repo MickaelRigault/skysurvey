@@ -1,0 +1,7 @@
+/* skysurvey documentation tweaks */
+.bd-article h1 { font-weight: 700; }
+.sd-card-title { font-weight: 600; }
+.sd-card .sd-card-body p:last-child { margin-bottom: 0; }
+/* compact autosummary tables */
+table.autosummary td { padding-top: .25rem; padding-bottom: .25rem; }
+table.autosummary td:first-child { white-space: nowrap; }

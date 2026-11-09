@@ -4,6 +4,14 @@ How-to guides
 Short, task-oriented recipes. Each page answers one "How do I ...?" question.
 They assume you know the basics covered in the :doc:`../quickstart/index`.
 
+Complete chain
+--------------
+
+.. toctree::
+   :maxdepth: 1
+
+   ../quickstart/simulate_and_fit
+
 Targets
 -------
 
@@ -34,3 +42,4 @@ Effects
    :maxdepth: 1
 
    add_mwebv
+   heliocentric_redshifts

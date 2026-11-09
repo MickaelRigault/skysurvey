@@ -3,7 +3,8 @@ Tutorials
 
 These tutorials introduce the three building blocks of skysurvey, one at a
 time. Read them in order. If you are in a hurry, start with
-:doc:`skysurvey_101`.
+:doc:`skysurvey_101`, then see the complete chain on a real survey, up to the
+lightcurve fits, in :doc:`simulate_and_fit`.
 
 .. grid:: 1 1 3 3
    :gutter: 3

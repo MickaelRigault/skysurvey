@@ -188,6 +188,13 @@ Where to go next
 
       An end-to-end simulation in five minutes.
 
+   .. grid-item-card:: :octicon:`pulse;1.5em;sd-mr-1` Survey logs to lightcurve fit
+      :link: quickstart/simulate_and_fit
+      :link-type: doc
+
+      Real ZTF logs, SNe Ia, lightcurves and SALT2 fits (sncosmo or
+      saltjax), step by step and timed.
+
    .. grid-item-card:: :octicon:`mortar-board;1.5em;sd-mr-1` Tutorials
       :link: quickstart/index
       :link-type: doc
@@ -226,6 +233,7 @@ Where to go next
 
    installation
    quickstart/skysurvey_101
+   quickstart/simulate_and_fit
    key_concepts
 
 .. toctree::
