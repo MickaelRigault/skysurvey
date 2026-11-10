@@ -1,6 +1,7 @@
 import numpy as np
 import pandas
 import pytest
+import shapely
 from shapely import geometry
 
 from skysurvey.tools import utils
@@ -156,6 +157,71 @@ def test_random_radec_skyarea_multipolygon():
     assert np.all(in_box1 | in_box2)
     assert np.any(in_box1) and np.any(in_box2), "both regions should be populated"
     assert len(np.unique(ra)) == 500, "the same position should never be drawn twice"
+
+def test_random_radec_skyarea_multipolygon_follows_area():
+    # a 10x10 deg and a 2x2 deg box on the equator: the small one has
+    # 2 x 2 sin(1deg) / (10 x 2 sin(5deg) + 2 x 2 sin(1deg)) = 3.85% of the sky area.
+    big, small = geometry.box(0, -5, 10, 5), geometry.box(100, -1, 102, 1)
+    n = 100_000
+    ra, dec = utils.random_radec(size=n, skyarea=geometry.MultiPolygon([big, small]), rng=1)
+
+    sindeg = lambda deg: np.sin(np.radians(deg))
+    expected = 2 * 2 * sindeg(1) / (10 * 2 * sindeg(5) + 2 * 2 * sindeg(1))
+    frac = np.mean(ra > 50)
+    assert np.abs(frac - expected) < 5 * np.sqrt(expected * (1 - expected) / n), \
+        f"positions do not follow the sky area: {frac=:.4f} vs {expected=:.4f}"
+
+def test_random_radec_skyarea_overlaps_count_once():
+    # the same box given twice and another box of the same area: 50% each.
+    box1, box2 = geometry.box(0, -5, 10, 5), geometry.box(50, -5, 60, 5)
+    n = 50_000
+    ra, dec = utils.random_radec(size=n, skyarea=geometry.MultiPolygon([box1, box1, box2]), rng=1)
+    assert np.abs(np.mean(ra < 30) - 0.5) < 5 * np.sqrt(0.25 / n), "overlapping polygons counted twice"
+
+def test_random_radec_skyarea_slanted_edges():
+    # large triangle with a slanted edge reaching high dec: positions must be
+    # uniform on the sphere within it, i.e. the same as a full-sky draw kept inside.
+    triangle = geometry.Polygon([(0, 0), (60, 0), (0, 80)])
+    small = geometry.box(200, -10, 230, 10)
+    ra_sky, dec_sky = utils.random_radec(size=2_000_000, rng=2) # full sky
+    in_triangle = shapely.contains_xy(triangle, ra_sky, dec_sky).sum()
+    in_small = shapely.contains_xy(small, ra_sky, dec_sky).sum()
+    expected = in_triangle / (in_triangle + in_small)
+
+    n = 100_000
+    ra, dec = utils.random_radec(size=n, skyarea=geometry.MultiPolygon([triangle, small]), rng=3)
+    # errors from both samples
+    sigma = np.sqrt(expected * (1 - expected) * (1 / n + 1 / (in_triangle + in_small)))
+    assert np.abs(np.mean(ra < 100) - expected) < 5 * sigma
+
+def test_random_radec_skyarea_thin_shape():
+    # an annulus fills less than a quarter of its bounding box
+    annulus = geometry.Point(50, 0).buffer(10).difference(geometry.Point(50, 0).buffer(9.5))
+    ra, dec = utils.random_radec(size=5000, skyarea=annulus, rng=1)
+    assert len(ra) == 5000
+    assert shapely.contains_xy(annulus.buffer(1e-9), ra, dec).all()
+
+def test_random_radec_skyarea_with_ranges():
+    # the skyarea is cut by the ra and dec ranges
+    skyarea = geometry.box(0, -10, 20, 10)
+    ra, dec = utils.random_radec(size=1000, skyarea=skyarea, ra_range=[10, 360], dec_range=[0, 90], rng=1)
+    assert np.all((ra >= 10) & (ra <= 20) & (dec >= 0) & (dec <= 10))
+
+def test_random_radec_skyarea_size_none():
+    ra, dec = utils.random_radec(skyarea=geometry.box(10, -5, 30, 5), rng=1)
+    assert np.ndim(ra) == 0 and np.ndim(dec) == 0
+    assert 10 <= ra <= 30 and -5 <= dec <= 5
+
+def test_random_radec_skyarea_seed_reproducible():
+    skyarea = geometry.MultiPolygon([geometry.box(0, -5, 10, 5), geometry.box(50, -5, 60, 5)])
+    ra1, dec1 = utils.random_radec(size=10, skyarea=skyarea, rng=42)
+    ra2, dec2 = utils.random_radec(size=10, skyarea=skyarea, rng=42)
+    np.testing.assert_array_equal(ra1, ra2)
+    np.testing.assert_array_equal(dec1, dec2)
+
+def test_random_radec_skyarea_empty():
+    with pytest.raises(ValueError):
+        utils.random_radec(size=10, skyarea=geometry.box(0, 50, 10, 60), dec_range=[-90, 0])
 
 
 # tests for the func surface_of_skyarea

@@ -7,10 +7,11 @@ import numpy as np
 from astropy.cosmology import Planck15
 from scipy.stats import rv_discrete
 from scipy.interpolate import InterpolatedUnivariateSpline as Spline1d
+import shapely
 from shapely import geometry
 
 try:
-    from ligo.skymap.bayestar import rasterize 
+    from ligo.skymap.bayestar import rasterize
     from ligo.skymap.io import read_sky_map
     import ligo.skymap.distance as ligodist
     LIGO_SKYMAP_IMPORTED = True
@@ -73,14 +74,14 @@ def build_covariance(as_dataframe=False, **kwargs):
     cov_diag = np.diag(np.asarray(errors, dtype="float")**2)
     # not sure I need this for loop though...
     for i, ikey in enumerate(param_names):
-        for j, jkey in enumerate(param_names): 
+        for j, jkey in enumerate(param_names):
             if j==i:
-                continue 
+                continue
             cov_diag[i,j] = kwargs.get(f"cov_{ikey}{jkey}", kwargs.get(f"cov_{jkey}{ikey}", 0))
-    
+
     if as_dataframe:
-        cov_diag = pandas.DataFrame(cov_diag, 
-                                    index=param_names, 
+        cov_diag = pandas.DataFrame(cov_diag,
+                                    index=param_names,
                                     columns=param_names)
     return cov_diag, param_names
 
@@ -124,8 +125,8 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
     else:
         target = target_or_data
         data = target.data
-        
-    
+
+
     # create the covariance matrix
     covmatrix, names = build_covariance(**kwargs)
 
@@ -135,7 +136,7 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
                                     covmatrix,
                                     size=( len(target.data), )
                                     )
-    
+
     # create the noisy data form
     datanoisy = data.copy()
     datanoisy[[f"{k}_true" for k in names]] = datanoisy[names] # set truth
@@ -154,7 +155,7 @@ def apply_gaussian_noise(target_or_data, seed=None, **kwargs):
     # returns a target or a dataframe according to input
     if target is not None:
         return target.__class__.from_data(newdata)
-    
+
     return newdata
 
 def random_uniform(low=0., high=1., size=None, rng=None):
@@ -230,19 +231,25 @@ def random_normal(loc=0., scale=1., size=None, rng=None):
     return rng.normal(loc=loc, scale=scale, size=size)
 
 def random_radec(size=None, skyarea=None,
-                ra_range=[0, 360], dec_range=[-90,90],
+                ra_range=[0, 360], dec_range=[-90, 90],
                 rng=None):
-    """Draw random sky positions.
+    """Draw random sky positions, uniformly distributed on the sphere.
+
+    Positions are uniform in ra and sin(dec), within the `ra_range` x
+    `dec_range` box and, if given, within `skyarea`.
 
     Parameters
     ----------
     size : int, optional
-        Number of draws. The default is None.
+        Number of draws. If None, a single position is returned (as floats).
+        The default is None.
 
     skyarea : shapely.geometry.Polygon or shapely.geometry.MultiPolygon, optional
-        Area to consider. If given, positions are drawn within the
-        intersection of `skyarea` with the `ra_range`/`dec_range` box.
-        The default is None.
+        Area to consider (ra, dec in deg). If given, positions are drawn within
+        the intersection of `skyarea` with the `ra_range`/`dec_range` box.
+        Overlapping polygons are merged first (each sky position counts once),
+        and the number of positions in each (disjoint) polygon follows its sky
+        area. The default is None.
 
     ra_range : list, optional
         Right ascension boundaries (min, max), in degrees.
@@ -261,57 +268,75 @@ def random_radec(size=None, skyarea=None,
 
     Returns
     -------
-    ra : numpy.ndarray
+    ra : numpy.ndarray or float
         Right ascensions, in degrees.
 
-    dec : numpy.ndarray
+    dec : numpy.ndarray or float
         Declinations, in degrees.
+
+    Raises
+    ------
+    ValueError
+        If the sky area within `ra_range` and `dec_range` is empty.
+
+    Notes
+    -----
+    Polygon edges are straight lines in (ra, dec). RA wrapping at 0/360 is
+    not handled.
     """
     rng = np.random.default_rng(rng)
-    # => MultiPolygon    
-    if type(skyarea) is geometry.MultiPolygon:
-        radecs = [random_radec(size=size, 
-                               ra_range=ra_range,
-                               dec_range=dec_range,                               
-                               skyarea=skyarea_,
-                               rng=rng) 
-                  for skyarea_ in skyarea.geoms]
-        
-        # at this stage they are already in.        
-        ra = np.concatenate([radec_[0] for radec_ in radecs])
-        dec = np.concatenate([radec_[1] for radec_ in radecs])
-        # never twice the same
-        indexes = rng.choice(np.arange(len(ra)), size=size, replace=False)
-        ra, dec = ra[indexes], dec[indexes] # limit to exact input request
+
+    # => no skyarea: direct draw in the ra-dec box
+    if skyarea is None:
+        dec_sin_range = np.sin(np.asarray(dec_range) * np.pi / 180)
+        ra = rng.uniform(*ra_range, size=size)
+        dec = np.arcsin( rng.uniform(*dec_sin_range, size=size) ) / (np.pi / 180)
         return ra, dec
 
-    
-    # => Polygon or no skyarea
-    if skyarea is not None: # change the ra_range
-        default_skyrea = geometry.Polygon([ [ra_range[0], dec_range[0]],
-                                            [ra_range[0], dec_range[1]],
-                                            [ra_range[1], dec_range[1]],
-                                            [ra_range[1], dec_range[0]]])
-        skyarea = default_skyrea.intersection(skyarea)
-        size_to_draw = size*4
-        ramin, decmin, ramax, decmax = skyarea.bounds
-        ra_range = [ramin, ramax]
-        dec_range = [decmin, decmax]
-    else:
-        size_to_draw = size
-        
-    # => Draw RA, Dec    
-    dec_sin_range = np.sin(np.asarray(dec_range)*np.pi/180)
-    ra = rng.uniform(*ra_range, size=size_to_draw)
-    dec = np.arcsin( rng.uniform(*dec_sin_range, size=size_to_draw) ) / (np.pi/180)
-    
-    if skyarea is not None:
-        from shapely.vectorized import contains
-        flag = contains(skyarea, ra, dec)
-        ra, dec = ra[flag], dec[flag] # those in the polygon
-        indexes = rng.choice(np.arange( len(ra) ), size=size, replace=False) # never twice the same
-        ra, dec = ra[indexes], dec[indexes] 
-    
+    # => skyarea: merged (overlaps count once) and limited to the ra-dec box
+    from .projection import skyarea_to_skysurface
+    box = geometry.box(ra_range[0], dec_range[0], ra_range[1], dec_range[1])
+    skyarea = shapely.unary_union(skyarea).intersection(box)
+    polygons = [polygon_ for polygon_ in getattr(skyarea, "geoms", [skyarea])
+                if type(polygon_) is geometry.Polygon and not polygon_.is_empty] # drop lines and points
+    if len(polygons) == 0:
+        raise ValueError(f"empty sky area within {ra_range=} and {dec_range=}")
+
+    def get_sky_surface(polygon):
+        """ sky surface [sr]. Edges are straight in (ra, dec), not once projected:
+        densify them (0.1 deg) first, otherwise large polygons with slanted edges
+        get a wrong surface (2% for a 60x80 deg triangle) """
+        return skyarea_to_skysurface(shapely.segmentize(polygon, 0.1), frac=False, in_deg2=False)
+
+    # number of positions per polygon, following their sky surface
+    nsize = 1 if size is None else int(size)
+    surfaces = np.asarray([get_sky_surface(polygon_) for polygon_ in polygons])
+    sizes = rng.multinomial(nsize, surfaces / surfaces.sum())
+
+    # => draw in each polygon: uniform in its ra-dec bounding box, keep those inside.
+    ra, dec = [], []
+    for polygon_, size_ in zip(polygons, sizes):
+        ramin, decmin, ramax, decmax = polygon_.bounds
+        dec_sin_range = np.sin(np.asarray([decmin, decmax]) * np.pi / 180)
+        acceptance = get_sky_surface(polygon_) / get_sky_surface(geometry.box(*polygon_.bounds))
+
+        ra_, dec_ = np.empty(0), np.empty(0)
+        while len(ra_) < size_: # loop until enough positions are inside
+            ndraw = int(1.2 * (size_ - len(ra_)) / acceptance) + 10 # 1.2: (almost) never loops
+            ra_draw = rng.uniform(ramin, ramax, size=ndraw)
+            dec_draw = np.arcsin( rng.uniform(*dec_sin_range, size=ndraw) ) / (np.pi / 180)
+            inside = shapely.contains_xy(polygon_, ra_draw, dec_draw)
+            ra_, dec_ = np.append(ra_, ra_draw[inside]), np.append(dec_, dec_draw[inside])
+
+        ra.append(ra_[:size_])
+        dec.append(dec_[:size_])
+
+    # positions are grouped by polygon: shuffle them.
+    shuffle = rng.permutation(nsize)
+    ra, dec = np.concatenate(ra)[shuffle], np.concatenate(dec)[shuffle]
+    if size is None:
+        return ra[0], dec[0]
+
     return ra, dec
 
 def surface_of_skyarea(skyarea, incl_projection=True):
@@ -345,9 +370,9 @@ def surface_of_skyarea(skyarea, incl_projection=True):
             ra, dec = np.asarray(skyarea.exterior.xy)
             dec = np.sin(dec / 180*np.pi) * 180/np.pi # keeps degree
             return geometry.Polygon( np.vstack([ra, dec]).T).area
-    
+
     return skyarea
-    
+
 def parse_skyarea(skyarea):
     """Pass through the skyarea as a shapely geometry.
 
@@ -365,7 +390,7 @@ def parse_skyarea(skyarea):
         return None
 
     return skyarea
-   
+
 
 def random_radecz_skymap(size=None,skymap={},
                          filename=None,
@@ -449,7 +474,7 @@ def random_radecz_skymap(size=None,skymap={},
     if filename is not None:
         if do_3d:
             skymap = read_sky_map(filename, moc=True, distances=True)
-    
+
             if "PROBDENSITY_SAMPLES" in skymap.columns:
                 skymap.remove_columns(
                     [

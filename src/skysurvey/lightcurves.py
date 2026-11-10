@@ -63,9 +63,9 @@ def get_obsdata(template, observations, parameters,
         observations["zpsys"] = zpsys
 
     dataobs = observations[["band", "mjd", "zp", "zpsys", "gain", "skynoise"]]
-    
+
     # should this discard band not covered by sncosmo ?
-    if not discard_bands:        
+    if not discard_bands:
         # realize lightcurve
         list_of_observations = realize_lightcurves(dataobs, template, parameters,
                                                    scatter=incl_error,
@@ -87,35 +87,12 @@ def get_obsdata(template, observations, parameters,
                                                        scatter=incl_error,
                                                        trim_observations=trim_observations,
                                                        phase_range=phase_range)
-            
+
             if list_of_observations is not None and len(list_of_observations) > 0:
                 lcs.append( list_of_observations )
-            
+
         return pandas.concat(lcs)
-    
-def _get_obsdata_(data, **kwargs):
-    """Call :func:`get_obsdata` with a single input (for map).
 
-    Parameters
-    ----------
-    data : list
-        3 entries passed as positional arguments to :func:`get_obsdata`:
-        ``template`` (sncosmo.Model), ``observations`` (pandas.DataFrame)
-        and ``parameters`` (pandas.DataFrame).
-
-    **kwargs
-        Passed to :func:`get_obsdata`.
-
-    Returns
-    -------
-    pandas.DataFrame or None
-        Multi-index dataframe of all the observations for all targets.
-
-    See Also
-    --------
-    get_obsdata : Get observed data.
-    """
-    return get_obsdata(*data, **kwargs)
 
 
 
@@ -198,7 +175,7 @@ def realize_lightcurves(observations, model, parameters,
 
     # loops over targets
     for target_index, param in parameters.iterrows():
-        
+
         # update the model to the current parameters
         model.set( **param.to_dict() )
 
@@ -222,7 +199,7 @@ def realize_lightcurves(observations, model, parameters,
                               zpsys=snobs['zpsys'])
 
         fluxerr = np.sqrt(snobs['skynoise']**2 + np.abs(flux) / snobs['gain'])
-    
+
         # Scatter fluxes by the fluxerr
         # np.atleast_1d is necessary here because of an apparent bug in
         # np.random.normal: when the inputs are both length 1 arrays,
@@ -230,15 +207,15 @@ def realize_lightcurves(observations, model, parameters,
         if scatter:
             rng = np.random.default_rng(rng)
             flux = np.atleast_1d( rng.normal(flux, fluxerr) )
-            
+
         # output
         data = snobs.merge(pandas.DataFrame({"flux": flux, "fluxerr": fluxerr}, index=snobs.index),
                                  left_index=True, right_index=True)
-                            
+
         lcs.append( data )
         indexes.append( target_index )
 
     if len(lcs)==0:
         return None
-    
+
     return pandas.concat(lcs, keys=pandas.Index(indexes, name=parameters.index.name) )
