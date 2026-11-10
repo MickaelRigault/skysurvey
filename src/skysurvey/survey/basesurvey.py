@@ -407,9 +407,16 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
 
 
     def get_regions(self):
-        """ """
-        # sorted by ra
-        return sorted(self.observed_skyarea.geoms, key=lambda region_: region_.bounds[0])
+        """Get the separate regions of the observed sky area.
+
+        Returns
+        -------
+        list of shapely.geometry.Polygon
+            The disconnected parts of `observed_skyarea`, sorted by R.A.
+        """
+        skyarea = self.observed_skyarea
+        regions = getattr(skyarea, "geoms", [skyarea]) # a single region is a Polygon
+        return sorted(regions, key=lambda region_: region_.bounds[0]) # sorted by ra
 
 
     def get_nvisits_per_regions(self, skyarea, step=0.02, bands=None):
@@ -417,9 +424,6 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
 
         Parameters
         ----------
-        survey : skysurvey.survey.polygon.PolygonSurvey
-            The survey (e.g. ``HSC``).
-
         skyarea : shapely.geometry.Polygon
             The grid covers the bounds of this region (ra, dec in deg).
 
@@ -469,11 +473,11 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
         regions = self.get_regions()
         nregions = len(regions)
 
-        fig, axes = plt.subplots(1, nregions, figsize=(5*nregions, 4.5))
+        fig, axes = plt.subplots(1, nregions, figsize=(5*nregions, 4.5), squeeze=False)
         prop = dict(vmin=0, cmap=cmap) | kwargs
 
         # loop over "regions" (aka isolated skyarea)
-        for ax, region_ in zip(axes, regions):
+        for ax, region_ in zip(axes[0], regions):
             rabins, decbins, nvisits = self.get_nvisits_per_regions(region_)
             nvisits = np.ma.masked_equal(nvisits, 0) # not observed: blank
 
