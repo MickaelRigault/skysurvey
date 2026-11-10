@@ -66,6 +66,7 @@ class Target( object ):
     _COSMOLOGY = cosmology.Planck18
 
     def __init__(self):
+        """See the class docstring; use `from_draw` or `from_data` to build a Target."""
         pass
 
 #    def __repr__(self):
@@ -1121,6 +1122,42 @@ class Target( object ):
                         mec=bcolor, zorder=9, ms=7, ecolor=bcolor)
 
         return fig
+
+    def show_skydistribution(self, data=None, nside=16, **kwargs): # pragma: no cover
+        """Show the number of targets per healpix pixel on a Mollweide map.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame, optional
+            Data to show. It must contain the ``ra`` and ``dec`` columns
+            (in deg). If None, ``self.data`` is used. The default is None.
+
+        nside : int, optional
+            Healpix nside defining the pixel resolution. The default is 16.
+
+        **kwargs
+            Additional keyword arguments passed to `healpy.mollview`.
+
+        Returns
+        -------
+        None
+            The map is drawn on a new figure by `healpy.mollview`.
+        """
+        import healpy as hp
+        if data is None:
+            data = self.data
+
+        # compute the number of targets per healpix bin.
+        ipix = hp.ang2pix(nside, data["ra"], data["dec"], lonlat=True) # lonlat=True: ra, dec in deg
+        counts = np.bincount(ipix, minlength=hp.nside2npix(nside))     # number of targets per pixel
+
+        # show the count into mollview. It assumes float, not int.
+        skymap = counts.astype(float)
+        skymap[skymap == 0] = hp.UNSEEN # empty pixels shown in grey instead of 0
+        hp.mollview(skymap,
+                    title="SNe Ia per healpix pixel",
+                    unit="targets", **kwargs)
+        hp.graticule()
 
     # =============== #
     #   Draw Methods  #

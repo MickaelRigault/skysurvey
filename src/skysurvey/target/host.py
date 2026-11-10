@@ -1,4 +1,4 @@
-# Host 
+"""Host galaxy properties: star formation rate and stellar mass functions."""
 
 import numpy as np
 

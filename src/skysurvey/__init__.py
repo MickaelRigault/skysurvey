@@ -1,3 +1,11 @@
+"""Simulate astronomical transients and the surveys that observe them.
+
+skysurvey combines three objects:
+
+- a `Target` (e.g. `SNeIa`), drawing the true parameters of the transients,
+- a `Survey` (e.g. `GridSurvey`), holding what has been observed when,
+- a `DataSet`, joining both to build realistic lightcurves.
+"""
 __version__ = "1.4.2"
 
 import os

@@ -50,7 +50,7 @@ class _FootPrintHandler_( object ):
         """
         import matplotlib.pyplot as plt
         from matplotlib.colors import to_rgba
-    
+
         if ax is None:
             fig = plt.figure(figsize=[4,4])
             ax = fig.add_subplot(111)
@@ -62,20 +62,20 @@ class _FootPrintHandler_( object ):
 
         # MultiPolygon footprint
         if "MultiPolygon" in str( type(self.footprint) ):
-            from matplotlib.collections import PolyCollection            
+            from matplotlib.collections import PolyCollection
             coll = PolyCollection([np.asarray(p_.exterior.xy).T for p_ in self.footprint.geoms],
                                  **prop)
             ax.add_collection(coll)
-        # Polygon footprint            
+        # Polygon footprint
         else:
             from matplotlib.patches import Polygon
             polygon = Polygon(np.asarray(self.footprint.exterior.xy).T, **prop)
             ax.add_patch(polygon)
-            
+
         if add_text:
-            ax.text(0,0, f"area {self.footprint.area:.1f} deg2", fontsize="large", 
+            ax.text(0,0, f"area {self.footprint.area:.1f} deg2", fontsize="large",
                         color="k", zorder=8, va="center", ha="center")
-            
+
         ax.autoscale_view()
         return fig
 
@@ -98,7 +98,7 @@ class _FootPrintHandler_( object ):
         if as_multipolygon:
             return geometry.MultiPolygon(list_of_geoms)
         return list_of_geoms
-    
+
     # ============== #
     #  Properties    #
     # ============== #
@@ -108,9 +108,9 @@ class _FootPrintHandler_( object ):
         if not hasattr(self,"_footprint") or self._footprint is None:
             if self._FOOTPRINT is None:
                 return None
-            
+
             self._footprint = self._FOOTPRINT
-            
+
         return self._footprint
 
 
@@ -118,7 +118,7 @@ class _FootPrintHandler_( object ):
 #                   #
 #  Generic Survey   #
 #                   #
-# ================= #    
+# ================= #
 class Survey( HealpixSurvey, _FootPrintHandler_ ):
     # A healpixSurvey based on geometry, so contains a footprint
     """Generic healpix-based survey with a camera footprint.
@@ -138,7 +138,7 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
         """Initialize the Survey class."""
         super().__init__(nside=nside, data=data)
         self._footprint = footprint
-        
+
     # ============== #
     #  I/O           #
     # ============== #
@@ -160,7 +160,7 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
             Always.
         """
         raise NotImplementedError(" not implemented ")
-    
+
     @classmethod
     def from_data(cls, data, footprint=None, nside=200):
         """Load an instance given survey data and healpix size (nside).
@@ -182,7 +182,7 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
             The loaded instance.
         """
         return cls(data=data, footprint=footprint, nside=nside)
-        
+
     @classmethod
     def from_pointings(cls, data, footprint=None,
                           rakey="ra", deckey="dec",
@@ -242,14 +242,14 @@ class Survey( HealpixSurvey, _FootPrintHandler_ ):
         """
         if footprint is None:
             footprint = cls._FOOTPRINT
-            
+
         # super() calls HealpixSurvey.
         this = super().from_pointings(nside=nside, data=data, footprint=footprint,
                                     rakey=rakey, deckey=deckey,
                                     backend=backend,
                                     use_pyarrow_extension_array=use_pyarrow_extension_array,
                                     **kwargs)
-        
+
         return cls.from_healpix(healpixsurvey=this, footprint=footprint)
 
     @classmethod
@@ -300,7 +300,7 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
         """Initialize the GridSurvey class."""
         self._footprint = footprint
         super().__init__(data=data, fields=fields)
-        
+
     @classmethod
     def from_pointings(cls, data, fields_or_coords=None, footprint=None, **kwargs):
         """Load an instance given the observing data and the field definitions.
@@ -330,7 +330,7 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
         if type(data) is dict:
             data = pandas.DataFrame.from_dict(data)
 
-        fields = cls._parse_fields(fields_or_coords, footprint)    
+        fields = cls._parse_fields(fields_or_coords, footprint)
         return cls(data=data, fields=fields, footprint=footprint, **kwargs)
 
     @classmethod
@@ -381,11 +381,11 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
             if hasattr(cls, "_DEFAULT_FIELDS"):
                 return cls._DEFAULT_FIELDS
             return None
-        
+
         # this is list of coords
-        if type(fields_or_coords) is dict and "ra" in list(fields_or_coords.values())[0]: 
+        if type(fields_or_coords) is dict and "ra" in list(fields_or_coords.values())[0]:
             fields_or_coords = pandas.DataFrame(fields_or_coords).T
-            # this enters the new if. 
+            # this enters the new if.
 
         if type(fields_or_coords) is pandas.DataFrame and "ra" in fields_or_coords:
             if footprint is None:
@@ -405,6 +405,103 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
 
         return super()._parse_fields(fields)
 
+
+    def get_regions(self):
+        """ """
+        # sorted by ra
+        return sorted(self.observed_skyarea.geoms, key=lambda region_: region_.bounds[0])
+
+
+    def get_nvisits_per_regions(self, skyarea, step=0.02, bands=None):
+        """Get the number of visits (exposures) on a grid of sky positions.
+
+        Parameters
+        ----------
+        survey : skysurvey.survey.polygon.PolygonSurvey
+            The survey (e.g. ``HSC``).
+
+        skyarea : shapely.geometry.Polygon
+            The grid covers the bounds of this region (ra, dec in deg).
+
+        step : float, optional
+            Grid step in deg. The default is 0.02.
+
+        bands : str, list or None, optional
+            Only count the exposures in these bands. If None, all bands.
+            The default is None.
+
+        Returns
+        -------
+        rabins, decbins : numpy.ndarray
+            Edges of the grid cells in deg.
+
+        nvisits : numpy.ndarray
+            Number of visits at the center of each cell, shape (len(decbins)-1, len(rabins)-1).
+        """
+        ramin, decmin, ramax, decmax = skyarea.bounds
+        rabins = np.arange(ramin, ramax + step, step)
+        decbins = np.arange(decmin, decmax + step, step)
+        ra, dec = np.meshgrid(0.5 * (rabins[1:] + rabins[:-1]), 0.5 * (decbins[1:] + decbins[:-1]))
+        radec = pandas.DataFrame({"ra": ra.ravel(), "dec": dec.ravel()})
+
+        # number of exposures per field (pointing, or pointing and CCD)
+        if bands is None:
+            data = self.data
+        else:
+            data = self.data[self.data["band"].isin(np.atleast_1d(bands))]
+
+        fieldkeys = self.fieldids.names
+        nexposures = data.groupby(fieldkeys).size().rename("nvisits")
+
+        # fields covering each position (one row per position and field), summed per position
+        fieldids = self.radec_to_fieldid(radec)
+        nvisits = fieldids.join(nexposures, on=fieldkeys)["nvisits"].fillna(0).groupby(level=0).sum()
+        nvisits = nvisits.reindex(radec.index, fill_value=0).to_numpy().reshape(ra.shape)
+
+        return rabins, decbins, nvisits
+
+
+    def show_nvisits(self, ax=None, cmap="viridis",
+                        incl_colorbar=False, incl_title=True, **kwargs):
+        """ """
+        import matplotlib.pyplot as plt
+
+        regions = self.get_regions()
+        nregions = len(regions)
+
+        fig, axes = plt.subplots(1, nregions, figsize=(5*nregions, 4.5))
+        prop = dict(vmin=0, cmap=cmap) | kwargs
+
+        # loop over "regions" (aka isolated skyarea)
+        for ax, region_ in zip(axes, regions):
+            rabins, decbins, nvisits = self.get_nvisits_per_regions(region_)
+            nvisits = np.ma.masked_equal(nvisits, 0) # not observed: blank
+
+            im = ax.pcolormesh(rabins, decbins, nvisits, **prop)
+            if incl_colorbar:
+                _ = fig.colorbar(im, ax=ax, label="number of visits", shrink=0.8)
+
+            ax.set_xlim(rabins[-1], rabins[0]) # ra increasing to the left
+            ax.set_aspect("equal")
+            if incl_title:
+                ax.set_title(f"median {np.ma.median(nvisits):.0f}, max {nvisits.max()} visits")
+
+            ax.set_xlabel("ra [deg]", fontsize="large")
+            ax.set_ylabel("dec [deg]", fontsize="large")
+
+        fig.tight_layout()
+        return fig
+
+    # internal tricks
+    @staticmethod
+    def _show_skyarea_(skyarea, ax, **kwargs):
+        """Fill the polygons of a (multi)polygon on the given axes."""
+        polygons = getattr(skyarea, "geoms", [skyarea])
+        for polygon_ in polygons:
+            ax.fill(*polygon_.exterior.xy, **kwargs)
+            for interior_ in polygon_.interiors:
+                ax.fill(*interior_.xy, color="w")
+
     # ============== #
     #   Properties   #
     # ============== #
@@ -416,3 +513,11 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
                 return None
             self._fields = self._DEFAULT_FIELDS.copy()
         return self._fields
+
+    @property
+    def observed_skyarea(self):
+        """Union of all the footprint geometries (shapely geometry, in deg)."""
+        if not hasattr(self, "_observed_skyarea") or self._observed_skyarea is None:
+            self._observed_skyarea = self.fields.union_all()
+
+        return self._observed_skyarea

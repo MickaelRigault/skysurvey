@@ -1,3 +1,5 @@
+"""Survey classes (generic and real surveys like ZTF, DES, SNLS, LSST)."""
+
 import warnings
 
 from .basesurvey import * # noqa: F403

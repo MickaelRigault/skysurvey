@@ -1,3 +1,5 @@
+"""Draw subsamples of a dataset given a selection (observation) probability."""
+
 import pandas
 import numpy as np
 

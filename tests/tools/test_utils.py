@@ -223,6 +223,69 @@ def test_random_radec_skyarea_empty():
     with pytest.raises(ValueError):
         utils.random_radec(size=10, skyarea=geometry.box(0, 50, 10, 60), dec_range=[-90, 0])
 
+def test_random_radec_skyarea_size_zero():
+    ra, dec = utils.random_radec(size=0, skyarea=geometry.box(10, -5, 30, 5), rng=1)
+    assert len(ra) == 0 and len(dec) == 0
+
+def test_random_radec_no_skyarea_draw():
+    # without skyarea: ra uniform in ra_range and sin(dec) uniform in sin(dec_range),
+    # drawn in that order (same positions as before the skyarea rewrite for a given rng).
+    ra, dec = utils.random_radec(size=10, ra_range=[200, 250], dec_range=[-20, 10], rng=42)
+
+    rng = np.random.default_rng(42)
+    expected_ra = rng.uniform(200, 250, size=10)
+    expected_dec = np.degrees(np.arcsin(rng.uniform(np.sin(np.radians(-20)), np.sin(np.radians(10)), size=10)))
+    np.testing.assert_allclose(ra, expected_ra)
+    np.testing.assert_allclose(dec, expected_dec)
+
+def test_random_radec_isotropic():
+    # isotropy on the sphere means ra and sin(dec) are uniform.
+    from scipy import stats
+    ra, dec = utils.random_radec(size=100_000, rng=5)
+    assert stats.kstest(ra, stats.uniform(loc=0, scale=360).cdf).pvalue > 1e-3, "ra is not uniform"
+    assert stats.kstest(np.sin(np.radians(dec)), stats.uniform(loc=-1, scale=2).cdf).pvalue > 1e-3, \
+        "sin(dec) is not uniform"
+
+def test_random_radec_dec_range_follows_sindec():
+    # within dec_range=[0, 90], the fraction above dec=30 is (1 - sin(30deg)) / (1 - 0) = 0.5
+    n = 100_000
+    ra, dec = utils.random_radec(size=n, dec_range=[0, 90], rng=2)
+    assert np.all(dec >= 0)
+    assert np.abs(np.mean(dec > 30) - 0.5) < 5 * np.sqrt(0.25 / n)
+
+def test_random_radec_skyarea_uniform_within_polygon():
+    # inside a polygon far from the equator, ra and sin(dec) must still be uniform.
+    from scipy import stats
+    ra, dec = utils.random_radec(size=50_000, skyarea=geometry.box(10, 40, 50, 70), rng=3)
+    sindec_low, sindec_high = np.sin(np.radians([40, 70]))
+    assert stats.kstest(ra, stats.uniform(loc=10, scale=40).cdf).pvalue > 1e-3
+    assert stats.kstest(np.sin(np.radians(dec)),
+                        stats.uniform(loc=sindec_low, scale=sindec_high - sindec_low).cdf).pvalue > 1e-3
+
+def test_random_radec_skyarea_dithered_pointings():
+    # 5x5 dithered pointings: 2x2 deg boxes shifted by 0.5 deg, as survey.get_skyarea()
+    # returns them (overlapping). Their union is the box [0, 4] x [-2, 2]: positions must
+    # be uniform within it, not piled up where many pointings overlap.
+    from scipy import stats
+    offsets = np.arange(5) * 0.5
+    pointings = [geometry.box(ra_, dec_ - 2, ra_ + 2, dec_) for ra_ in offsets for dec_ in offsets]
+    n = 50_000
+    ra, dec = utils.random_radec(size=n, skyarea=geometry.MultiPolygon(pointings), rng=4)
+
+    sindec_low, sindec_high = np.sin(np.radians([-2, 2]))
+    assert stats.kstest(ra, stats.uniform(loc=0, scale=4).cdf).pvalue > 1e-3, "ra is not uniform in the union"
+    assert stats.kstest(np.sin(np.radians(dec)),
+                        stats.uniform(loc=sindec_low, scale=sindec_high - sindec_low).cdf).pvalue > 1e-3, \
+        "sin(dec) is not uniform in the union"
+
+    # mean number of pointings covering a position: sum of the pointing areas / area of the union
+    # (sky area of a ra-dec box: dra x (sin(dec_max) - sin(dec_min)))
+    sky_area = lambda ramin, decmin, ramax, decmax: (ramax - ramin) * (np.sin(np.radians(decmax)) - np.sin(np.radians(decmin)))
+    expected = np.sum([sky_area(*pointing_.bounds) for pointing_ in pointings]) / sky_area(0, -2, 4, 2)
+    coverage = np.sum([shapely.contains_xy(pointing_, ra, dec) for pointing_ in pointings], axis=0)
+    assert np.abs(coverage.mean() - expected) < 5 * coverage.std() / np.sqrt(n), \
+        f"positions pile up where pointings overlap: {coverage.mean()=:.2f} vs {expected=:.2f}"
+
 
 # tests for the func surface_of_skyarea
 def test_surface_of_skyarea_str_not_full():

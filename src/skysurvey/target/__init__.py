@@ -1,4 +1,4 @@
-
+"""Target classes: transients (SNe Ia, SNe CC, kilonovae...) and collections."""
 
 from .core import * # noqa: F403
 from .snia import * # noqa: F403
