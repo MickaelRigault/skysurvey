@@ -7,6 +7,7 @@ from .ztf import * # noqa: F403
 from .des import * # noqa: F403
 from .snls import * # noqa: F403
 from .lsst import * # noqa: F403
+from .subaru import * # noqa: F403
 
 # shortcut
 def get_footprint(which, **kwargs):
