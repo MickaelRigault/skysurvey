@@ -3,7 +3,7 @@ import pandas
 import pytest
 import sncosmo
 
-from skysurvey.lightcurves import get_obsdata, realize_lightcurves, _get_obsdata_
+from skysurvey.lightcurves import get_obsdata, realize_lightcurves
 
 
 # small, hand-built and local source (no download needed)
@@ -132,11 +132,3 @@ def test_get_obsdata_discard_bands(model, observations, parameters):
     expected_b = realize_lightcurves(observations[observations["band"] == "bessellb"],
                                      model, parameters.iloc[:1], scatter=False)
     np.testing.assert_allclose(data[data["band"] == "bessellb"]["flux"], expected_b["flux"])
-
-
-# tests for the func _get_obsdata_
-def test__get_obsdata_(model, observations, parameters):
-    # single-input version of get_obsdata (for map)
-    data = _get_obsdata_([model, observations, parameters], incl_error=False)
-    expected = get_obsdata(model, observations, parameters, incl_error=False)
-    pandas.testing.assert_frame_equal(data, expected)
