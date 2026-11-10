@@ -121,6 +121,15 @@ def test_project_to_radec_preserves_distance_to_center():
         sep = angular_separation(ra0, dec0, pointing[:, 0], pointing[:, 1])
         np.testing.assert_allclose(sep, 1., atol=1e-8)
 
+def test_project_to_radec_single_pointing():
+    # one projection per pointing, also for a single pointing (np.squeeze used to drop that axis)
+    footprint = geometry.box(-1, -1, 1, 1)
+    polygons = projection.project_to_radec(footprint, 100., 0.)
+    assert len(polygons) == 1
+    np.testing.assert_allclose(polygons[0].bounds, [99, -1, 101, 1], atol=1e-3) # equator: a translation
+    verts = np.asarray(footprint.exterior.xy)
+    assert projection.project_to_radec(verts, 100., 0.).shape == (1, verts.shape[1], 2)
+
 def test_project_to_radec_polygon_returns_polygons():
     footprint = geometry.box(-1, -1, 1, 1)
     polygons = projection.project_to_radec(footprint, [100., 200.], [0., 0.])

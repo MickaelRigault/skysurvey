@@ -199,10 +199,12 @@ def project_to_radec(verts_or_polygon, ra, dec):
 
     ra = np.atleast_1d(ra)
     dec = np.atleast_1d(dec)
-    ra_, dec_ = np.squeeze(rot_xz_sph((fra/np.cos(fdec*np.pi/180))[:,None],
-                                            fdec[:,None],
-                                            dec)
-                          )
+    # shape (2, 1, nvertices, npointings): not np.squeeze, which would also
+    # drop the pointing axis for a single pointing.
+    ra_, dec_ = np.asarray(rot_xz_sph((fra/np.cos(fdec*np.pi/180))[:,None],
+                                      fdec[:,None],
+                                      dec)
+                          )[:, 0]
     ra_ += ra
     pointings = np.asarray([ra_, dec_]).T
     if as_polygon:
