@@ -49,7 +49,32 @@ from .core import Transient
 
 from ..tools.utils import random_radec, random_uniform
 
+def frohmaier_rate(z, r0=2.27e4, alpha=1.70):
+    """Get the SN Ia volumetric rate as a function of redshift.
 
+    Power law ``r0 * (1 + z)**alpha`` fitted by Frohmaier et al. (2019,
+    MNRAS 486, 2308, eq. 6) to the PTF, SDSS, SNLS, SDF and CANDELS rates,
+    for z < 1.
+
+    Parameters
+    ----------
+    z : float or array_like
+        Redshift.
+
+    r0 : float, optional
+        Rate at z=0, in SNe Ia per Gpc3 per year (h70^3, i.e. for H0=70, as
+        `Transient._RATE_H0`). The default is 2.27e4 (2.27 +/- 0.19 e-5
+        Mpc-3 yr-1).
+
+    alpha : float, optional
+        Power law index. The default is 1.70 (+/- 0.21).
+
+    Returns
+    -------
+    float or numpy.ndarray
+        Volumetric rate in SNe Ia per Gpc3 per year (rest-frame).
+    """
+    return r0 * (1 + z)**alpha
 
 # ================== #
 #                    #

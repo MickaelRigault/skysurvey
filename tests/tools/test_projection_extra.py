@@ -130,6 +130,23 @@ def test_project_to_radec_single_pointing():
     verts = np.asarray(footprint.exterior.xy)
     assert projection.project_to_radec(verts, 100., 0.).shape == (1, verts.shape[1], 2)
 
+# tests for the func camera_to_sky / sky_to_camera
+def test_camera_to_sky_no_rotation():
+    # rotation=0: camera 'up' (+y) is North, +x is West (East on the left)
+    np.testing.assert_allclose(projection.camera_to_sky(0, 1, 0), [0, 1], atol=1e-12)
+    np.testing.assert_allclose(projection.camera_to_sky(1, 0, 0), [-1, 0], atol=1e-12)
+
+def test_sky_to_camera_north_moves_east():
+    # an increasing rotation makes North move toward East (camera left, x<0)
+    x, y = projection.sky_to_camera(0, 1, 10)
+    assert x < 0 and np.isclose(np.hypot(x, y), 1)
+
+def test_camera_sky_roundtrip():
+    x, y = np.random.default_rng(2).uniform(-2, 2, size=(2, 100))
+    rot = np.random.default_rng(3).uniform(0, 360, size=100)
+    np.testing.assert_allclose(projection.sky_to_camera(*projection.camera_to_sky(x, y, rot), rot), [x, y])
+
+
 def test_project_to_radec_polygon_returns_polygons():
     footprint = geometry.box(-1, -1, 1, 1)
     polygons = projection.project_to_radec(footprint, [100., 200.], [0., 0.])

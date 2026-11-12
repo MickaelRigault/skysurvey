@@ -143,8 +143,8 @@ See :doc:`key_concepts` for details.
 
       .. code-block:: python
 
-         # path to an LSST opsim simulation (large file: loading takes a while)
-         survey = skysurvey.LSST.from_opsim("baseline_v3.3_10yrs.db")
+         # path to an LSST opsim simulation, here the first year of baseline v5.1
+         survey = skysurvey.LSST.from_opsim("baseline_v5.1.0_10yrs.db", sql_where="night < 365")
 
 **3. Get the lightcurves you would have observed.**
 

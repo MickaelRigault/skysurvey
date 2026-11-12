@@ -212,6 +212,66 @@ def project_to_radec(verts_or_polygon, ra, dec):
 
     return pointings
 
+# Camera orientation on the sky. Convention (as for LSST's OpSim rotSkyPos, see
+# skysurvey.survey.lsst): at rotation=0, the camera 'up' (+y) is North and East is on
+# the left (+x is West); an increasing rotation makes North move toward East relative
+# to the camera.
+def camera_to_sky(x, y, rotation):
+    """Convert focal plane positions into sky offsets.
+
+    At ``rotation=0``, the camera 'up' (+y) points North and East is on the
+    left (+x points West). An increasing rotation makes North move toward
+    East relative to the camera (as LSST's OpSim ``rotSkyPos``).
+
+    Parameters
+    ----------
+    x, y : array_like
+        Focal plane positions in deg (y is 'up').
+
+    rotation : float or array_like
+        Camera rotation on the sky in deg.
+
+    Returns
+    -------
+    east, north : numpy.ndarray
+        Offsets on the sky in deg (east: increasing ra).
+
+    See Also
+    --------
+    sky_to_camera : The inverse transformation.
+    """
+    theta = np.radians(rotation)
+    east = -x * np.cos(theta) - y * np.sin(theta)
+    north = -x * np.sin(theta) + y * np.cos(theta)
+    return east, north
+
+def sky_to_camera(east, north, rotation):
+    """Convert sky offsets into focal plane positions.
+
+    This is the inverse of :func:`camera_to_sky` (same convention).
+
+    Parameters
+    ----------
+    east, north : array_like
+        Offsets on the sky in deg (east: increasing ra).
+
+    rotation : float or array_like
+        Camera rotation on the sky in deg.
+
+    Returns
+    -------
+    x, y : numpy.ndarray
+        Focal plane positions in deg (y is 'up').
+
+    See Also
+    --------
+    camera_to_sky : The inverse transformation.
+    """
+    theta = np.radians(rotation)
+    x = -east * np.cos(theta) - north * np.sin(theta)
+    y = -east * np.sin(theta) + north * np.cos(theta)
+    return x, y
+
 def spatialjoin_radec_to_fields(radec, fields,
                                 how="inner", predicate="intersects",
                                 index_radec="index_radec",
