@@ -6,7 +6,7 @@ skysurvey combines three objects:
 - a `Survey` (e.g. `GridSurvey`), holding what has been observed when,
 - a `DataSet`, joining both to build realistic lightcurves.
 """
-__version__ = "1.4.3"
+__version__ = "1.4.4"
 
 import os
 _PACKAGE_PATH = os.path.dirname( os.path.realpath(__file__) )
