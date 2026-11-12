@@ -345,6 +345,124 @@ def test_get_data_join_bandday_first_keeps_columns(dataset_bandday):
     g_night0 = get_g_night0(dataset_bandday.get_data(join_bandday=True, join_how="first", boundary=0.9))
     assert g_night0["skynoise"] == 1., "first: all the columns of the first observation"
 
+# tests for the func get_data (join_bandday over N nights)
+def test_get_data_join_bandday_one_night(dataset_bandday):
+    # join_bandday=1 is join_bandday=True
+    pandas.testing.assert_frame_equal(dataset_bandday.get_data(join_bandday=1, join_how="coadd", boundary=0.9),
+                                      dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.9))
+
+def test_get_data_join_bandday_nnights(dataset_bandday):
+    # nights (boundary=0.9): g at 0.1 and 0.6 and r at 0.2 in night -1, g at 1.3 in night 0.
+    # 2-night windows from the first night (-1): all in the window starting at night -1.
+    data = dataset_bandday.get_data(join_bandday=2, join_how="coadd", boundary=0.9)
+    assert len(data) == 2 # (g, window -1), (r, window -1)
+    g_data = data[data["band"] == "g"].iloc[0]
+    w = np.array([1 / 9, 1 / 16, 1 / 4]) # g at 0.1 (10 +/- 3), 0.6 (20 +/- 4), 1.3 (7 +/- 2)
+    assert np.isclose(g_data["flux"], (10 * w[0] + 20 * w[1] + 7 * w[2]) / w.sum())
+    assert np.isclose(g_data["fluxerr"], 1 / np.sqrt(w.sum()))
+    assert np.isclose(g_data["mjd"], (0.1 * w[0] + 0.6 * w[1] + 1.3 * w[2]) / w.sum())
+    assert (g_data["nvisits"], g_data["night"]) == (3, -1), "night: the first night of the window"
+    # first: the first observation of the window
+    g_first = dataset_bandday.get_data(join_bandday=2, join_how="first", boundary=0.9).query("band == 'g'").iloc[0]
+    assert (g_first["mjd"], g_first["flux"], g_first["nvisits"]) == (0.1, 10., 3)
+
+def test_get_data_join_bandday_nnights_from_survey(dataset_bandday):
+    # the windows start at the first night of the survey logs: mjd=-0.5, i.e. night -2.
+    # 2-night windows: [-2, -1] and [0, 1], so the g-band obs of nights -1 and 0 are not joined.
+    class FakeSurveyLogs:
+        data = pandas.DataFrame({"mjd": [-0.5, 3.]})
+        def get_night_boundary(self):
+            return 0.9
+
+    dataset_bandday.set_survey(FakeSurveyLogs())
+    g_data = dataset_bandday.get_data(join_bandday=2, join_how="coadd").query("band == 'g'")
+    assert list(g_data["night"]) == [-2, 0]
+    assert list(g_data["nvisits"]) == [2, 1]
+
+@pytest.mark.parametrize("join_bandday", [-1, 2.5, "3"])
+def test_get_data_join_bandday_invalid(dataset_bandday, join_bandday):
+    with pytest.raises(ValueError, match="join_bandday"):
+        dataset_bandday.get_data(join_bandday=join_bandday, boundary=0.9)
+
+@pytest.mark.parametrize("join_bandday", [0, False])
+def test_get_data_join_bandday_no_join(dataset_bandday, join_bandday):
+    pandas.testing.assert_frame_equal(dataset_bandday.get_data(join_bandday=join_bandday), dataset_bandday.data)
+
+def test_get_ndetection_join_bandday_nnights():
+    # one 4 sigma observation per night over 3 nights: no detection per night, one over 3 nights (4 x sqrt(3))
+    index = pandas.MultiIndex.from_product([[0], range(3)], names=["index", "index_obs"])
+    data = pandas.DataFrame({"mjd": 100.1 + np.arange(3), "band": "g",
+                             "flux": 4., "fluxerr": 1., "zp": 30.}, index=index)
+    dataset = DataSet(data)
+    assert len(dataset.get_ndetection(join_bandday=True, boundary=0.9)) == 0
+    assert dataset.get_ndetection(join_bandday=3, boundary=0.9).loc[0] == 1
+
+# tests for the func get_data (index)
+@pytest.fixture
+def dataset_two_targets():
+    """ target 0: g-band obs at mjd 0.1, 0.2 (same night) and 1.3; target 1: r-band obs at 0.1 and 0.3.
+    targets t0 and z, with an unnamed index (as SNeIa.data) """
+    index = pandas.MultiIndex.from_tuples([(0, 0), (0, 1), (0, 2), (1, 3), (1, 4)], names=["index", "index_obs"])
+    data = pandas.DataFrame({"mjd": [0.1, 0.2, 1.3, 0.1, 0.3], "band": ["g", "g", "g", "r", "r"],
+                             "flux": [10., 20., 7., 5., 6.], "fluxerr": [3., 4., 2., 1., 1.], "zp": 30.}, index=index)
+
+    class FakeTargets:
+        data = pandas.DataFrame({"t0": [0.5, 0.], "z": [1., 0.5]}) # unnamed index: 0, 1
+
+    return DataSet(data, targets=FakeTargets())
+
+def test_get_data_index_single_target_unchanged(dataset_two_targets):
+    # a single target, as self.data.loc[index]: indexed by observation only
+    pandas.testing.assert_frame_equal(dataset_two_targets.get_data(index=0), dataset_two_targets.data.loc[0])
+
+@pytest.mark.parametrize("join_how", ["first", "coadd"])
+def test_get_data_index_single_target_join(dataset_two_targets, join_how):
+    # the observations of the single target are joined per band and night (target level kept internally)
+    data = dataset_two_targets.get_data(index=0, join_bandday=True, join_how=join_how, boundary=0.9)
+    assert data.index.names == ["index_obs"], "a single target is indexed by observation only"
+    assert sorted(data["nvisits"]) == [1, 2], "the two g-band obs of the first night should be joined"
+    expected = dataset_two_targets.get_data(join_bandday=True, join_how=join_how, boundary=0.9).loc[0]
+    pandas.testing.assert_frame_equal(data, expected)
+
+def test_get_data_index_list_join(dataset_two_targets):
+    data = dataset_two_targets.get_data(index=[0, 1], join_bandday=True, join_how="coadd", boundary=0.9)
+    assert data.index.names == ["index", "index_obs"]
+    assert len(data) == 3 # target 0: 2 nights; target 1: 1 night
+
+@pytest.mark.parametrize("index", [0, [0], None])
+def test_get_data_phase(dataset_two_targets, index):
+    # phase = (mjd - t0) / (1 + z), whatever the way targets are selected (the targets index has no name)
+    data = dataset_two_targets.get_data(index=index, add_phase=True)
+    data_0 = data if index == 0 else data.loc[0]
+    np.testing.assert_allclose(data_0["phase_obs"], [0.1 - 0.5, 0.2 - 0.5, 1.3 - 0.5])
+    np.testing.assert_allclose(data_0["phase"], np.array([0.1 - 0.5, 0.2 - 0.5, 1.3 - 0.5]) / 2.)
+
+def test_get_data_phase_range_single_target(dataset_two_targets):
+    # rest-frame phases of target 0: -0.2, -0.15, 0.4
+    data = dataset_two_targets.get_data(index=0, phase_range=[-0.18, 1])
+    np.testing.assert_allclose(data["mjd"], [0.2, 1.3])
+
+def test_get_data_index_join_bandday_nnights(dataset_two_targets):
+    # the N-night windows do not depend on the selected targets: they start at the first night of
+    # all the data (target 1 at mjd=-1, night -2), not of target 0 (night -1).
+    dataset_two_targets.data.loc[(1, 3), "mjd"] = -1.
+    data = dataset_two_targets.get_data(index=0, join_bandday=2, join_how="coadd", boundary=0.9)
+    assert list(data["night"]) == [-2, 0], "windows [-2, -1] and [0, 1]"
+    expected = dataset_two_targets.get_data(join_bandday=2, join_how="coadd", boundary=0.9).loc[0]
+    pandas.testing.assert_frame_equal(data, expected)
+
+@pytest.mark.parametrize("coadd", [True, 2])
+def test_get_target_lightcurve_coadd_nnights(dataset_two_targets, coadd):
+    lightcurve = dataset_two_targets.get_target_lightcurve(0, coadd=coadd, boundary=0.9)
+    expected = dataset_two_targets.get_data(join_bandday=coadd, join_how="coadd", boundary=0.9).loc[0]
+    pandas.testing.assert_frame_equal(lightcurve, expected)
+
+def test_get_target_lightcurve_coadd(dataset_two_targets):
+    lightcurve = dataset_two_targets.get_target_lightcurve(0, coadd=True, boundary=0.9)
+    expected = dataset_two_targets.get_data(join_bandday=True, join_how="coadd", boundary=0.9).loc[0]
+    pandas.testing.assert_frame_equal(lightcurve, expected)
+
+
 def test_get_ndetection_join_how_default():
     # get_ndetection co-adds by default (join_how="coadd") when joining band and night
     index = pandas.MultiIndex.from_product([[0], range(10)], names=["index", "index_obs"])

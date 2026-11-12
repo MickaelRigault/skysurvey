@@ -35,6 +35,14 @@ Surveys and sky positions
    target_and_skyarea
    load_lsst
 
+DataSets
+--------
+
+.. toctree::
+   :maxdepth: 1
+
+   coadd_detections
+
 Effects
 -------
 

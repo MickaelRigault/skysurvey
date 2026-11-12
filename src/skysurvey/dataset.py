@@ -434,14 +434,21 @@ class DataSet(object):
             If given, convert the flux and fluxerr to this zero point system.
             The default is None.
 
-        join_bandday : bool, optional
+        join_bandday : bool or int, optional
             Join the observations of each target taken in the same band and the
-            same night (see `join_how` and `boundary`). The data then have one
-            row per (target, band, night), with the ``night`` and the number of
-            joined observations ``nvisits``. The default is False.
+            same night (True) or the same `join_bandday` nights (int, e.g. 3; see
+            `join_how` and `boundary`). The data then have one row per (target,
+            band, night), with the ``night`` (first night of the window) and the
+            number of joined observations ``nvisits``. With N nights, the windows
+            are consecutive N-night blocks starting at the first night of the
+            survey logs (or of ``self.data`` without survey): the same for all
+            targets. Co-adding over several nights averages a varying flux: keep N
+            short with respect to the transient timescale (N observer-frame days
+            are N/(1+z) rest-frame days). False (or 0) means no join. The default
+            is False.
 
         join_how : str, optional
-            How the observations of a band and night are joined, if
+            How the observations of a band and night(s) are joined, if
             `join_bandday`:
 
             - "first", "last": the first (last) observation.
@@ -466,7 +473,8 @@ class DataSet(object):
         Raises
         ------
         ValueError
-            If `join_how` is not one of the above.
+            If `join_how` is not one of the above, or if `join_bandday` is
+            neither a bool nor a positive integer.
 
         Warns
         -----
@@ -478,11 +486,13 @@ class DataSet(object):
         if phase_range is not None:
             add_phase = True
 
+        # a single target: selected as a list to keep the (target, observation) index
+        # levels while processing (e.g. join_bandday); the target level is dropped at the end.
+        single_target = index is not None and np.ndim(index) == 0
         if index is not None:
-            data = self.data.loc[index].copy()
+            data = self.data.loc[np.atleast_1d(index)].copy()
         else:
             data = self.data.copy()
-            index = data.index.levels[0]
 
         if zp is not None:
             coef = 10 ** (-(data["zp"].values - zp) / 2.5)
@@ -491,13 +501,14 @@ class DataSet(object):
             data["zp"] = zp
 
         if join_bandday:
-            data = self._join_bandday_(data, join_how=join_how, boundary=boundary)
+            data = self._join_bandday_(data, join_how=join_how, boundary=boundary,
+                                       nnights=join_bandday)
 
         if add_phase:
-            target_info = self.targets.data.loc[index][["t0", redshift_key]]
-            #        target_info.index = self._data_index # for merging
-            data["phase_obs"] = data["mjd"] - target_info["t0"]
-            data["phase"] = data["phase_obs"] / (1 + target_info[redshift_key])
+            # t0 and redshift of the target of each observation (by target id, whatever the index names)
+            target_info = self.targets.data.loc[data.index.get_level_values(0), ["t0", redshift_key]]
+            data["phase_obs"] = data["mjd"].to_numpy() - target_info["t0"].to_numpy()
+            data["phase"] = data["phase_obs"] / (1 + target_info[redshift_key].to_numpy())
 
         if phase_range is not None:
             data = data[data["phase"].between(*phase_range)]
@@ -508,6 +519,9 @@ class DataSet(object):
                 data = data[flag_detection]
             else:
                 data = data[~flag_detection]
+
+        if single_target: # as self.data.loc[index]: indexed by observation only
+            data = data.droplevel(0)
 
         return data
 
@@ -556,8 +570,14 @@ class DataSet(object):
         return coadded.reset_index()
 
 
-    def _join_bandday_(self, data, join_how="first", zp=None, boundary=None):
-        """Join the observations per target, band and night (see :meth:`get_data`)."""
+    def _join_bandday_(self, data, join_how="first", zp=None, boundary=None, nnights=1):
+        """Join the observations per target, band and `nnights` nights (see :meth:`get_data`)."""
+        # True is 1 night; otherwise a whole number of nights.
+        if isinstance(nnights, (bool, np.bool_)):
+            nnights = int(nnights)
+        if not isinstance(nnights, (int, np.integer)) or nnights < 1:
+            raise ValueError(f"join_bandday must be a bool or a positive integer (number of nights), not {nnights!r}")
+
         if boundary is None:
             if self.survey is not None and hasattr(self.survey, "get_night_boundary"):
                 boundary = self.survey.get_night_boundary()
@@ -565,10 +585,19 @@ class DataSet(object):
                 warnings.warn("join_bandday without survey nor boundary: nights change at 0h UT.")
                 boundary = 0
 
-
         index_names = list(data.index.names) # (target, observation)
         data = data.reset_index()
         data["night"] = np.floor(data["mjd"] - boundary).astype(int)
+        if nnights > 1: # N-night windows, from the first night of the survey (the same for all targets)
+            survey_data = getattr(self.survey, "data", None)
+            if isinstance(survey_data, pandas.DataFrame) and "mjd" in survey_data:
+                first_mjd = survey_data["mjd"].min()
+            else:
+                first_mjd = self.data["mjd"].min()
+
+            first_night = int(np.floor(first_mjd - boundary))
+            data["night"] = first_night + (data["night"] - first_night) // nnights * nnights
+
         by = [index_names[0], "band", "night"]
 
         if join_how in ["first", "last"]:
@@ -587,6 +616,7 @@ class DataSet(object):
 
                 coef = 10 ** (-(data["zp"] - zp) / 2.5)
                 data["flux"], data["fluxerr"], data["zp"] = data["flux"] * coef, data["fluxerr"] * coef, zp
+
             first_columns = [index_names[1]] + [k for k in ["zp", "zpsys"] if k in data]
             joined = self._coadd_observations_(data=data, by=by, first_columns=first_columns)
 
@@ -614,10 +644,10 @@ class DataSet(object):
             Whether the computation should be made per band. If True, it is
             made per target *and* per band. The default is False.
 
-        join_bandday : bool, optional
+        join_bandday : bool or int, optional
             Join the observations of each target taken in the same band and the
-            same night before counting (see :meth:`get_data`). The default is
-            False.
+            same night (True) or the same N nights (int) before counting (see
+            :meth:`get_data`). The default is False.
 
         join_how : str, optional
             How the observations of a band and night are joined: "first",
@@ -645,7 +675,8 @@ class DataSet(object):
         ndetection = data.groupby(groupby).size()
         return ndetection
 
-    def get_target_lightcurve(self, index, detection=None, phase_range=None):
+    def get_target_lightcurve(self, index, detection=None, phase_range=None,
+                                coadd=False, **kwargs):
         """Get the observations of the given target.
 
         Shortcut to ``self.get_data(index=index)``.
@@ -668,6 +699,14 @@ class DataSet(object):
             Min and max phases to be returned. Applied on phase (rest-frame).
             The default is None.
 
+        coadd : bool or int, optional
+            Co-add the observations per band and night (True) or per band and N
+            nights (int), i.e. ``join_bandday=coadd, join_how="coadd"`` (see
+            :meth:`get_data`). The default is False.
+
+        **kwargs
+            Passed to :meth:`get_data` (e.g. `boundary`, `zp`).
+
         Returns
         -------
         pandas.DataFrame
@@ -677,12 +716,17 @@ class DataSet(object):
         --------
         get_data : Get the observation data.
         """
-        return self.get_data(index=index, phase_range=phase_range, detection=detection)
+        if coadd:
+            kwargs["join_bandday"] = coadd
+            kwargs["join_how"] = "coadd"
+
+        return self.get_data(index=index, phase_range=phase_range, detection=detection, **kwargs)
 
     # -------- #
     #  PLOTTER #
     # -------- #
-    def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25, lc_prop={}, bands=None, show_truth=True,
+    def show_target_lightcurve(self, ax=None, fig=None, index=None, zp=25, lc_prop={},
+                                bands=None, show_truth=True, coadd=False,
                                format_time=True, t0_format="mjd", phase_window=None, **kwargs):
         """Plot the lightcurve of a target.
 
@@ -717,6 +761,11 @@ class DataSet(object):
         show_truth : bool, optional
             Whether to show the true lightcurve. The default is True.
 
+        coadd : bool or int, optional
+            Show the observations co-added per band and night (True) or per band
+            and N nights (int) (see :meth:`get_target_lightcurve`). The default
+            is False.
+
         format_time : bool, optional
             Whether to format the time axis as dates. The default is True.
 
@@ -748,7 +797,7 @@ class DataSet(object):
             index = rng.choice(self.obs_index)
 
         # Data
-        obs_ = self.get_target_lightcurve(index).copy()
+        obs_ = self.get_target_lightcurve(index, coadd=coadd).copy()
         if phase_window is not None:
             t0 = self.targets.data["t0"].loc[index]
             phase_window = np.asarray(phase_window) + t0
