@@ -109,3 +109,31 @@ def test_radec_to_fieldid_not_implemented(survey):
 def test_show_not_implemented(survey):
     with pytest.raises(NotImplementedError):
         survey.show()
+
+
+# tests for the func get_night_boundary
+def get_survey_at(times_of_day, ndays=30):
+    """ survey observing at the given times of day (fraction of the UT day), every day """
+    mjd = (np.arange(ndays)[:, None] + np.asarray(times_of_day)[None, :]).ravel()
+    return BaseSurvey(pandas.DataFrame({"mjd": mjd, "band": "g", "skynoise": 1., "gain": 1., "zp": 25.}))
+
+def test_get_night_boundary_from_logs():
+    # observing from 1h to 9h UT: the daytime is from 9h to 25h UT, its middle at 17h UT
+    survey = get_survey_at(np.linspace(1, 9, 50) / 24)
+    assert np.isclose(survey.get_night_boundary(), 17 / 24, atol=2 / 1440) # 2 minutes (1 minute bins)
+
+def test_get_night_boundary_daytime_across_midnight():
+    # observing from 14h to 22h UT: the daytime (22h to 14h) crosses 0h UT, its middle at 6h UT
+    survey = get_survey_at(np.linspace(14, 22, 50) / 24)
+    assert np.isclose(survey.get_night_boundary(), 6 / 24, atol=2 / 1440)
+
+def test_get_night_boundary_longitude(survey):
+    # local mean noon: 12h UT at longitude 0, 12h + 70.75/15 h UT at longitude -70.75 (Rubin)
+    assert np.isclose(survey.get_night_boundary(longitude=0), 0.5)
+    assert np.isclose(survey.get_night_boundary(longitude=-70.75), (12 + 70.75 / 15) / 24)
+
+def test_get_night_boundary_all_day():
+    # observations at all times of day (e.g. space telescope): the longitude is needed
+    survey = get_survey_at(np.arange(0, 1, 1 / 1440))
+    with pytest.raises(ValueError):
+        survey.get_night_boundary()

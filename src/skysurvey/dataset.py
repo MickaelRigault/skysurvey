@@ -12,6 +12,12 @@ import warnings
 
 from .target.collection import TargetCollection
 
+__all__ = ["DataSet"]
+
+# ================== #
+#  Building blocks   #
+# ================== #
+
 # ================== #
 #                    #
 #    DataSet         #
@@ -123,6 +129,7 @@ class DataSet(object):
             lcs = pandas.concat(lcs_)
 
         return cls(lcs, targets=targets, survey=survey)
+
 
     @classmethod
     def lightcurve_from_targets_and_survey(cls, targets, survey, progress_bar=False,
@@ -257,11 +264,6 @@ class DataSet(object):
         return out
 
 
-
-
-
-
-# =================== #
     @classmethod
     def read_parquet(cls, parquetfile, survey=None, targets=None, **kwargs):
         """Load a stored dataset.
@@ -354,6 +356,7 @@ class DataSet(object):
         self._data = data
         self._obs_index = None
 
+
     def set_targets(self, targets):
         """Set the targets.
 
@@ -371,6 +374,7 @@ class DataSet(object):
         """
         self._targets = targets
 
+
     def set_survey(self, survey):
         """Set the survey.
 
@@ -387,11 +391,14 @@ class DataSet(object):
         """
         self._survey = survey
 
+
     # -------- #
     #  GETTER  #
     # -------- #
-    def get_data(self, add_phase=False, phase_range=None, index=None, redshift_key="z",
-                detection=None, zp=None, join_bandday=False, join_how="first"):
+    def get_data(self, add_phase=False, phase_range=None,
+                index=None, redshift_key="z",
+                detection=None, zp=None,
+                join_bandday=False, join_how="first", boundary=None):
         """Get the observation data with optional selections and additions.
 
         Parameters
@@ -415,7 +422,7 @@ class DataSet(object):
 
         detection : bool or None, optional
             Whether to limit to (non-)detected points only
-            (detection means flux/fluxerr >= 5):
+            (detection means flux/fluxerr >= 5, after `join_bandday`):
 
             - None: no selection
             - False: only non-detected points
@@ -428,14 +435,28 @@ class DataSet(object):
             The default is None.
 
         join_bandday : bool, optional
-            If there are multiple observations per band and day (int of mjd)
-            for a given target, whether these should be joined (see
-            `join_how`). The default is False.
+            Join the observations of each target taken in the same band and the
+            same night (see `join_how` and `boundary`). The data then have one
+            row per (target, band, night), with the ``night`` and the number of
+            joined observations ``nvisits``. The default is False.
 
         join_how : str, optional
-            If `join_bandday` is True, how multiple observations should be
-            combined (name of a pandas groupby method, e.g. "first", "mean",
-            "sum"). The default is "first".
+            How the observations of a band and night are joined, if
+            `join_bandday`:
+
+            - "first", "last": the first (last) observation.
+            - "coadd" (or "add", "sum"): co-addition, i.e. the inverse-variance
+              weighted mean flux (and mjd) with error ``1/sqrt(sum(1/fluxerr**2))``
+              (see ``DataSet._coadd_observations_``). The fluxes are first converted
+              to a common zero point (`zp`, or that of the first observation).
+
+            The default is "first".
+
+        boundary : float, optional
+            Time of day separating two nights, as a fraction of the UT day,
+            used with `join_bandday`. If None, from the survey logs
+            (``self.survey.get_night_boundary()``), or 0 (0h UT) if there is no
+            survey. The default is None.
 
         Returns
         -------
@@ -444,8 +465,15 @@ class DataSet(object):
 
         Raises
         ------
-        NotImplementedError
-            If `join_how` is not a valid groupby method.
+        ValueError
+            If `join_how` is not one of the above.
+
+        Warns
+        -----
+        UserWarning
+            If `join_bandday` without `boundary` nor survey (nights change at
+            0h UT), or if observations of different zero points are co-added
+            without `zp` (converted to the zero point of the first one).
         """
         if phase_range is not None:
             add_phase = True
@@ -456,28 +484,14 @@ class DataSet(object):
             data = self.data.copy()
             index = data.index.levels[0]
 
+        if zp is not None:
+            coef = 10 ** (-(data["zp"].values - zp) / 2.5)
+            data["flux"] *= coef
+            data["fluxerr"] *= coef
+            data["zp"] = zp
+
         if join_bandday:
-            index_colnames = data.index.names
-            data["mjd_date"] = data["mjd"].astype("int")
-            # make sure variance column exists as the variance add/mean/sum etc.
-            if "fluxvar" not in data.columns:
-                data["fluxvar"] = data["fluxerr"]**2
-                fluxvar_to_be_removed = True
-            else:
-                fluxvar_to_be_removed = False
-
-            gb_data = data.reset_index().groupby(by=["index", "band", "mjd_date"])
-            if hasattr(gb_data, join_how):
-                data = getattr(gb_data, join_how)().reset_index().set_index(index_colnames)
-            else:
-                raise NotImplementedError(f"gb_data.{join_how=} not implemented.")
-
-            if join_how in ["mean", "sum"]:
-                # overwrite fluxerr to respect the statistics
-                data["fluxerr"] = np.sqrt(data["fluxvar"])
-
-            if fluxvar_to_be_removed:
-                _ = data.pop("fluxvar")
+            data = self._join_bandday_(data, join_how=join_how, boundary=boundary)
 
         if add_phase:
             target_info = self.targets.data.loc[index][["t0", redshift_key]]
@@ -495,19 +509,101 @@ class DataSet(object):
             else:
                 data = data[~flag_detection]
 
-        if zp is not None:
-            coef = 10 ** (-(data["zp"].values - zp) / 2.5)
-            data["flux"] *= coef
-            data["fluxerr"] *= coef
-            data["zp"] = zp
-
         return data
 
-    def get_ndetection(self, phase_range=None, per_band=False, join_bandday=False, join_how="first"):
+    @staticmethod
+    def _coadd_observations_(data, by, first_columns=None):
+        """Co-add the observations sharing the same `by` values.
+
+        The co-added flux is the inverse-variance weighted mean of the fluxes,
+        ``sum(w_i flux_i) / sum(w_i)`` with ``w_i = 1/fluxerr_i**2``, and its error
+        ``1/sqrt(sum(w_i))``: N observations of equal errors at S/N each give
+        S/N x sqrt(N). The fluxes must share the same zero point.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Observations with (at least) the `by` columns, ``mjd``, ``flux`` and
+            ``fluxerr``.
+
+        by : list of str
+            Columns defining the observations to co-add together, e.g.
+            ``["index", "band", "night"]``.
+
+        first_columns : list of str, optional
+            Other columns to keep, with the value of the first observation of each
+            group (e.g. ``["zp"]``). The default is None.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row per group (columns `by`): weighted mean ``mjd`` and ``flux``,
+            ``fluxerr``, the number of co-added observations ``nvisits``, and the
+            `first_columns`.
+        """
+        data = data.assign(weight=data["fluxerr"]**-2) # inverse variance
+        data = data.assign(wflux=data["flux"] * data["weight"], wmjd=data["mjd"] * data["weight"])
+
+        grouped = data.groupby(by)
+        sums = grouped[["weight", "wflux", "wmjd"]].sum()
+        coadded = pandas.DataFrame({"mjd": sums["wmjd"] / sums["weight"],
+                                    "flux": sums["wflux"] / sums["weight"],
+                                    "fluxerr": sums["weight"]**-0.5,
+                                    "nvisits": grouped.size()})
+        if first_columns is not None:
+            coadded = coadded.join(grouped[list(first_columns)].first())
+
+        return coadded.reset_index()
+
+
+    def _join_bandday_(self, data, join_how="first", zp=None, boundary=None):
+        """Join the observations per target, band and night (see :meth:`get_data`)."""
+        if boundary is None:
+            if self.survey is not None and hasattr(self.survey, "get_night_boundary"):
+                boundary = self.survey.get_night_boundary()
+            else:
+                warnings.warn("join_bandday without survey nor boundary: nights change at 0h UT.")
+                boundary = 0
+
+
+        index_names = list(data.index.names) # (target, observation)
+        data = data.reset_index()
+        data["night"] = np.floor(data["mjd"] - boundary).astype(int)
+        by = [index_names[0], "band", "night"]
+
+        if join_how in ["first", "last"]:
+            grouped = data.groupby(by)
+            joined = getattr(grouped, join_how)()
+            joined["nvisits"] = grouped.size()
+            joined = joined.reset_index()
+
+        elif join_how in ["add", "coadd", "sum"]:
+            # co-addition requires a common zero point (none: fluxes assumed homogeneous).
+            if "zp" in data:
+                if zp is None:
+                    zp = data["zp"].iloc[0]
+                    if data["zp"].nunique() > 1:
+                        warnings.warn(f"observations of different zero points are co-added at zp={zp}: set zp to choose it.")
+
+                coef = 10 ** (-(data["zp"] - zp) / 2.5)
+                data["flux"], data["fluxerr"], data["zp"] = data["flux"] * coef, data["fluxerr"] * coef, zp
+            first_columns = [index_names[1]] + [k for k in ["zp", "zpsys"] if k in data]
+            joined = self._coadd_observations_(data=data, by=by, first_columns=first_columns)
+
+        else:
+            raise ValueError(f"join_how must be 'first', 'last' or 'coadd' (or 'add', 'sum'), not {join_how=}")
+
+        return joined.set_index(index_names)
+
+    def get_ndetection(self, phase_range=None, per_band=False,
+                        join_bandday=False, join_how="coadd",
+                        boundary=None):
         """Get the number of detections for each lightcurve.
 
         Computes the number of datapoints with (flux/fluxerr) >= 5
-        (see :meth:`get_data`).
+        (see :meth:`get_data`). With ``join_bandday=True, join_how="coadd"``,
+        the observations of each band and night are co-added first: e.g. 10
+        observations at 4 sigma in one night make a 12.6 sigma detection.
 
         Parameters
         ----------
@@ -519,13 +615,18 @@ class DataSet(object):
             made per target *and* per band. The default is False.
 
         join_bandday : bool, optional
-            If there are multiple observations per band and day (int of mjd)
-            for a given target, whether these should be joined (see
-            `join_how`). The default is False.
+            Join the observations of each target taken in the same band and the
+            same night before counting (see :meth:`get_data`). The default is
+            False.
 
         join_how : str, optional
-            How the band-day observations should be joined; ignored if
-            `join_bandday` is False. The default is "firt" (sic).
+            How the observations of a band and night are joined: "first",
+            "last" or "coadd" (see :meth:`get_data`); ignored if `join_bandday`
+            is False. The default is "coadd".
+
+        boundary : float, optional
+            Time of day separating two nights (see :meth:`get_data`).
+            The default is None.
 
         Returns
         -------
@@ -533,10 +634,9 @@ class DataSet(object):
             The number of detected points per target (and per band if
             `per_band` is True).
         """
-
         data = self.get_data(phase_range=phase_range, detection=True,
-                                 join_bandday=join_bandday,
-                                 join_how=join_how)
+                             join_bandday=join_bandday, join_how=join_how,
+                             boundary=boundary)
         if per_band:
             groupby = [self._data_index, "band"]
         else:

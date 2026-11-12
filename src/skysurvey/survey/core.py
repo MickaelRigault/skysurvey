@@ -30,7 +30,7 @@ class BaseSurvey( object ):
 
     REQUIRED_COLUMNS = ['mjd', 'band', 'skynoise', "gain", "zp"]
 
-    # NOTE 
+    # NOTE
     # -----
     # ``skynoise`` is the image background contribution to the flux measurement
     # error (in units corresponding to the specified zeropoint and zeropoint
@@ -45,19 +45,19 @@ class BaseSurvey( object ):
     # ``sigma_pixel`` is the background noise in a single pixel in counts.
     # -- note from sncosmo
 
-    
-    
+
+
     def __init__(self, data):
         """Initialize the BaseSurvey class."""
         self.set_data(data)
-    
+
     def __array__(self):
         """Numpy array representation of the data."""
         return self.data.__array__()
-    
+
     # ============== #
     #   Methods      #
-    # ============== #    
+    # ============== #
     def set_data(self, data, lower_precision=True, sort_mjd=True):
         """Set the observing data.
 
@@ -80,20 +80,20 @@ class BaseSurvey( object ):
         if data is None:
             self._data = None
             return
-        
+
         if not np.isin(self.REQUIRED_COLUMNS, data.columns).all():
             warnings.warn(f"at least one of the following column name if missing {self.REQUIRED_COLUMNS}")
 
         if self.fields is not None and self.fieldids.name is not None:
             if not np.all([f_name in data for f_name in self.fieldids.names]):
                 warnings.warn(f"fieldid {self.fieldids.names} are not in the input data")
-            
+
         if lower_precision:
             data = data.astype( {k: str(v).replace("64","32") for k, v in data.dtypes.to_dict().items()})
 
         if sort_mjd and not (data["mjd"].is_monotonic_increasing or data["mjd"].is_monotonic_decreasing):
             data = data.sort_values("mjd")
-            
+
         self._data = data
     # ------------ #
     #   GETTER     #
@@ -112,7 +112,8 @@ class BaseSurvey( object ):
             Min and max values of the `timekey` column.
         """
         return self.data[timekey].agg(["min", "max"]).values
-        
+
+
     def get_fieldcoverage(self, incl_zeros=False, fillna=np.nan,
                           **kwargs):
         """Get the number of observations per field.
@@ -141,9 +142,10 @@ class BaseSurvey( object ):
         get_fieldstat : Get observing statistics for the fields.
         """
         return self.get_fieldstat(stat="size", columns=None,
-                                    incl_zeros=incl_zeros, 
+                                    incl_zeros=incl_zeros,
                                   fillna=fillna, **kwargs)
-    
+
+
     def get_fieldstat(self, stat, columns=None,
                         incl_zeros=False, fillna=np.nan,
                         data=None):
@@ -186,18 +188,18 @@ class BaseSurvey( object ):
         fieldgrouped = self.data.groupby(fieldids)
         if stat in ["size","value_counts"]:
             data = fieldgrouped.size()
-            
+
         elif columns is None:
             data = fieldgrouped.agg(stat)
         else:
             data = fieldgrouped[columns].agg(stat)
-            
+
         if not incl_zeros:
             return data
 
         return data.reindex(self.fieldids, level=0)
-        
-        
+
+
     def radec_to_fieldid(self, radec):
         """Get the fieldid of the given (list of) coordinates.
 
@@ -218,6 +220,7 @@ class BaseSurvey( object ):
         """
         raise NotImplementedError("you have not implemented radec_to_fieldid for your survey")
 
+
     def get_observations_from_coords(self, radec):
         """Get the data associated to the input radec coordinates.
 
@@ -236,10 +239,60 @@ class BaseSurvey( object ):
         """
         fields = self.radec_to_fieldid(radec, observed_fields=True)
         return self.data[ self.data[self.fieldids.name].isin(fields[self.fieldids.name]) ].copy()
-    
+
+    def get_night_boundary(self, longitude=None, nbins=1440):
+        """Get the time of day separating two nights.
+
+        Without `longitude`, this is found from the observing logs
+        (``self.data["mjd"]``): folding all the observation times on one day, a
+        (ground-based) observatory never observes during its daytime, and the
+        middle of this empty interval is close to local noon.
+
+        Parameters
+        ----------
+        longitude : float, optional
+            Longitude of the observatory in deg (East positive). If given, the
+            boundary is the local mean noon, and the logs are not used. The
+            default is None.
+
+        nbins : int, optional
+            Number of time-of-day bins (1440: 1 minute). The default is 1440.
+
+        Returns
+        -------
+        float
+            Boundary between two nights, as a fraction of the UT day: the middle
+            of the longest time-of-day interval without any observation (the
+            daytime), or the local mean noon if `longitude` is given.
+
+        Raises
+        ------
+        ValueError
+            If there are observations at all times of day (no daytime in the
+            logs): give `longitude` instead.
+        """
+        if longitude is not None:
+            return (0.5 - longitude / 360) % 1
+
+        mjd = self.data["mjd"]
+        counts = np.histogram(np.asarray(mjd) % 1, bins=nbins, range=(0, 1))[0]
+        empty = (counts == 0)
+        if not empty.any():
+            raise ValueError("observations at all times of day: give the longitude of the observatory.")
+
+        # longest run of empty bins, circularly (the daytime may cross 0h UT)
+        doubled = np.concatenate([empty, empty])
+        best_length, best_start, length = 0, 0, 0
+        for i, empty_ in enumerate(doubled):
+            length = length + 1 if empty_ else 0
+            if length > best_length:
+                best_length, best_start = min(length, nbins), i - length + 1
+
+        return ((best_start + best_length / 2) / nbins) % 1
+
     # ----------- #
     #  PLOTTER    #
-    # ----------- #        
+    # ----------- #
     def show(self):
         """Show the sky coverage.
 
@@ -297,14 +350,14 @@ class BaseSurvey( object ):
             The figure containing the plot.
         """
         from astropy.time import Time
-        
+
         day = self.data["mjd"].astype(int)
         day.name = "day"
         data = self.data.join(day) # this is a copy
 
         if fieldid is not None:
             data = data[data["fieldid"].isin( np.atleast_1d(fieldid) )]
-        
+
         if ax is None:
             import matplotlib.pyplot as plt
             fig = plt.figure(figsize=(9,2))
@@ -334,7 +387,7 @@ class BaseSurvey( object ):
             bottom = 0
             if band_colors is None:
                 band_colors = [None for i_ in range(len(bands))]
-                
+
             for band_, color_ in zip( bands, band_colors ):
                 d_ = nobs.xs(band_, level=1).reindex(all_days).fillna(0).astype(int).values
                 ax.bar(times, d_, color=color_,
@@ -353,7 +406,7 @@ class BaseSurvey( object ):
 
         clearwhich = ["left","right","top"] # "bottom"
         [ax.spines[which].set_visible(False) for which in clearwhich]
-        ax.tick_params(axis="y", labelsize="small", 
+        ax.tick_params(axis="y", labelsize="small",
                                    labelcolor="0.7", color="0.7")
 
         ax.grid(axis="y", lw=0.5, color='0.7', zorder=1, alpha=0.5)
@@ -362,9 +415,9 @@ class BaseSurvey( object ):
         ax.set_ylim(ymin=0, ymax=np.round(max_obs*1.05,decimals=-1) )
         if legend:
             ax.legend(loc=[0,1], ncol=nbands, frameon=False, fontsize="small")
-            
+
         return fig
-    
+
     # ============== #
     #   Properties   #
     # ============== #
@@ -372,20 +425,20 @@ class BaseSurvey( object ):
     def data(self):
         """Observing data, i.e., dataframe containing what has been observed when."""
         return self._data
-    
+
     @property
     def metadata(self):
         """Metadata associated to the survey."""
         meta = {"type":self.of_type}
         return meta
-    
-    @property    
+
+    @property
     def nfields(self):
         """Number of fields."""
         if not hasattr(self,"_nfields") or self._nfields is None:
             warnings.warn("no nfields set, so this is assuming max of data['fieldid'].")
             self._nfields =self.data["fieldid"].max()
-            
+
         return self._nfields
 
     @property
@@ -395,7 +448,7 @@ class BaseSurvey( object ):
             return None
         return self._fields
 
-    
+
     @property
     def of_type(self):
         """Kind of survey (name of the class)."""
@@ -405,4 +458,3 @@ class BaseSurvey( object ):
     def date_range(self):
         """First and last date (mjd) of the survey."""
         return np.min(self.data["mjd"]), np.max(self.data["mjd"])
-        
