@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 import pandas
 import pytest
@@ -206,51 +207,159 @@ def test_from_targets_and_survey_single_target(flat_target):
                                np.sqrt(dataset.data["skynoise"]**2 + flux / dataset.data["gain"]))
 
 
+# tests for the func DataSet._coadd_observations_
+def test_coadd_observations_weighted_mean():
+    data = pandas.DataFrame({"key": [0, 0, 1], "mjd": [1., 2., 3.],
+                             "flux": [10., 20., 5.], "fluxerr": [3., 4., 1.], "zp": 30.})
+    coadded = DataSet._coadd_observations_(data, by=["key"], first_columns=["zp"]).set_index("key")
+    w = np.array([1 / 9, 1 / 16]) # inverse variances
+    assert np.isclose(coadded.loc[0, "flux"], (10 * w[0] + 20 * w[1]) / w.sum())
+    assert np.isclose(coadded.loc[0, "fluxerr"], 1 / np.sqrt(w.sum()))
+    assert np.isclose(coadded.loc[0, "mjd"], (1 * w[0] + 2 * w[1]) / w.sum())
+    assert coadded.loc[0, "nvisits"] == 2 and coadded.loc[0, "zp"] == 30.
+    # a single observation is unchanged
+    assert (coadded.loc[1, "flux"], coadded.loc[1, "fluxerr"], coadded.loc[1, "nvisits"]) == (5., 1., 1)
+
+def test_coadd_observations_signal_to_noise():
+    # 10 observations at 4 sigma (equal errors) -> 4 x sqrt(10) sigma
+    data = pandas.DataFrame({"key": 0, "mjd": np.arange(10.), "flux": 4., "fluxerr": 1.})
+    coadded = DataSet._coadd_observations_(data, by=["key"])
+    assert np.isclose(coadded["flux"].iloc[0] / coadded["fluxerr"].iloc[0], 4 * np.sqrt(10))
+
+def test_coadd_observations_statistics():
+    # co-added fluxes of noisy observations follow N(truth, fluxerr)
+    rng = np.random.default_rng(1)
+    ngroups, nobs = 20_000, 5
+    fluxerr = rng.uniform(1, 3, size=ngroups * nobs)
+    data = pandas.DataFrame({"key": np.repeat(np.arange(ngroups), nobs), "mjd": 0.,
+                             "flux": 10. + rng.normal(0, fluxerr), "fluxerr": fluxerr})
+    coadded = DataSet._coadd_observations_(data, by=["key"])
+    pull = (coadded["flux"] - 10.) / coadded["fluxerr"]
+    assert np.abs(pull.mean()) < 5 / np.sqrt(ngroups)
+    assert np.abs(pull.std() - 1) < 5 / np.sqrt(2 * ngroups)
+
+
 # tests for the func get_data (join_bandday)
 @pytest.fixture
 def dataset_bandday():
-    # target 0: two g-band obs on day 0, one r-band obs on day 0, one g-band obs on day 1
+    # target 0: g-band obs at mjd 0.1, 0.6 and 1.3, r-band obs at mjd 0.2.
+    # with nights changing at 0.9 (boundary): g at 0.1 and 0.6 in the same night, r in it too, g at 1.3 the next one.
     index = pandas.MultiIndex.from_tuples([(0, 0), (0, 1), (0, 2), (0, 3)], names=["index", "index_obs"])
     data = pandas.DataFrame({"mjd": [0.1, 0.6, 0.2, 1.3],
                              "band": ["g", "g", "r", "g"],
                              "flux": [10., 20., 5., 7.],
-                             "fluxerr": [3., 4., 1., 2.]}, index=index)
+                             "fluxerr": [3., 4., 1., 2.],
+                             "zp": 30.}, index=index)
     return DataSet(data)
 
+def get_g_night0(data, boundary=0.9):
+    """ the joined g-band observation of the night of mjd=0.1 """
+    return data[(data["band"] == "g") & (data["night"] == np.floor(0.1 - boundary))].iloc[0]
+
 def test_get_data_join_bandday_first(dataset_bandday):
-    data = dataset_bandday.get_data(join_bandday=True, join_how="first")
+    data = dataset_bandday.get_data(join_bandday=True, join_how="first", boundary=0.9)
+    assert len(data) == 3 # (g, first night), (r, first night), (g, second night)
+    assert data.index.names == ["index", "index_obs"]
+    g_night0 = get_g_night0(data)
+    assert (g_night0["flux"], g_night0["fluxerr"], g_night0["nvisits"]) == (10., 3., 2)
 
-    assert len(data) == 3 # (g, day0), (r, day0), (g, day1)
-    g_day0 = data[(data["band"] == "g") & (data["mjd_date"] == 0)]
-    assert g_day0["flux"].iloc[0] == 10.
-    assert g_day0["fluxerr"].iloc[0] == 3.
-    assert "fluxvar" not in data, "temporary fluxvar column should be removed"
+def test_get_data_join_bandday_last(dataset_bandday):
+    g_night0 = get_g_night0(dataset_bandday.get_data(join_bandday=True, join_how="last", boundary=0.9))
+    assert (g_night0["flux"], g_night0["fluxerr"]) == (20., 4.)
 
-def test_get_data_join_bandday_sum_flux(dataset_bandday):
-    data = dataset_bandday.get_data(join_bandday=True, join_how="sum")
-    g_day0 = data[(data["band"] == "g") & (data["mjd_date"] == 0)]
-    assert g_day0["flux"].iloc[0] == 30.
-    # variance adds up: sqrt(3**2 + 4**2) = 5
-    assert g_day0["fluxerr"].iloc[0] == pytest.approx(5.)
+@pytest.mark.parametrize("join_how", ["coadd", "add", "sum"])
+def test_get_data_join_bandday_coadd(dataset_bandday, join_how):
+    data = dataset_bandday.get_data(join_bandday=True, join_how=join_how, boundary=0.9)
+    w = np.array([1 / 9, 1 / 16]) # inverse variances of the two g-band obs of night 0
+    g_night0 = get_g_night0(data)
+    assert np.isclose(g_night0["flux"], (10 * w[0] + 20 * w[1]) / w.sum())
+    assert np.isclose(g_night0["fluxerr"], 1 / np.sqrt(w.sum()))
+    assert g_night0["nvisits"] == 2 and g_night0["zp"] == 30.
+    r_night0 = data[data["band"] == "r"].iloc[0]
+    assert (r_night0["flux"], r_night0["fluxerr"], r_night0["nvisits"]) == (5., 1., 1), "single obs unchanged"
 
-def test_get_data_join_bandday_single_obs_unchanged(dataset_bandday):
-    data = dataset_bandday.get_data(join_bandday=True, join_how="sum")
-    r_day0 = data[data["band"] == "r"]
-    assert r_day0["flux"].iloc[0] == 5.
-    assert r_day0["fluxerr"].iloc[0] == pytest.approx(1.)
+def test_get_data_join_bandday_boundary(dataset_bandday):
+    # with nights changing at 0.5 (12h UT): g at 0.1 alone, g at 0.6 and 1.3 in the same night
+    data = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.5)
+    g_data = data[data["band"] == "g"].set_index("night")
+    assert sorted(g_data["nvisits"]) == [1, 2]
+    w = np.array([1 / 16, 1 / 4]) # g at 0.6 (20 +/- 4) and 1.3 (7 +/- 2)
+    assert np.isclose(g_data.loc[np.floor(0.6 - 0.5), "flux"], (20 * w[0] + 7 * w[1]) / w.sum())
 
-def test_get_data_join_bandday_mean_flux(dataset_bandday):
-    data = dataset_bandday.get_data(join_bandday=True, join_how="mean")
-    g_day0 = data[(data["band"] == "g") & (data["mjd_date"] == 0)]
-    assert g_day0["flux"].iloc[0] == 15.
+def test_get_data_join_bandday_boundary_from_survey(dataset_bandday):
+    class FakeSurveyNight:
+        def get_night_boundary(self):
+            return 0.5
 
-def test_get_data_join_bandday_keeps_existing_fluxvar(dataset_bandday):
-    dataset_bandday.data["fluxvar"] = dataset_bandday.data["fluxerr"]**2
-    data = dataset_bandday.get_data(join_bandday=True, join_how="sum")
-    assert "fluxvar" in data
-    g_day0 = data[(data["band"] == "g") & (data["mjd_date"] == 0)]
-    assert g_day0["fluxvar"].iloc[0] == pytest.approx(25.)
+    dataset_bandday.set_survey(FakeSurveyNight())
+    data = dataset_bandday.get_data(join_bandday=True, join_how="coadd")
+    expected = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.5)
+    pandas.testing.assert_frame_equal(data, expected, obj="the survey boundary (0.5) should be used")
+
+def test_get_data_join_bandday_no_survey_warns(dataset_bandday):
+    with pytest.warns(UserWarning):
+        data = dataset_bandday.get_data(join_bandday=True, join_how="first")
+    assert len(data) == 3 # nights change at 0h UT
+
+def test_get_data_join_bandday_coadd_zp(dataset_bandday):
+    # one of the two g-band obs of night 0 at zp=27.5: 10 times fainter in flux units
+    dataset_bandday.data.loc[(0, 1), ["flux", "fluxerr", "zp"]] = [2., 0.4, 27.5]
+    with pytest.warns(UserWarning, match="zp=30"): # the zero point used is given
+        data = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.9)
+    w = np.array([1 / 9, 1 / 16]) # converted to the zp of the first obs (30): back to 20 +/- 4
+    assert np.isclose(get_g_night0(data)["flux"], (10 * w[0] + 20 * w[1]) / w.sum())
+    assert (data["zp"] == 30).all()
+    # or explicitly at zp=30, without warning
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        data = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.9, zp=30)
+    assert np.isclose(get_g_night0(data)["flux"], (10 * w[0] + 20 * w[1]) / w.sum())
 
 def test_get_data_join_bandday_unknown_how(dataset_bandday):
-    with pytest.raises(NotImplementedError):
-        dataset_bandday.get_data(join_bandday=True, join_how="not_a_groupby_method")
+    with pytest.raises(ValueError):
+        dataset_bandday.get_data(join_bandday=True, join_how="mean", boundary=0.9)
+
+def test_get_data_join_bandday_coadd_no_zp_column(dataset_bandday):
+    # without zp column, the fluxes are assumed in the same unit and co-added as they are
+    dataset_bandday.data.pop("zp")
+    data = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.9)
+    w = np.array([1 / 9, 1 / 16])
+    assert np.isclose(get_g_night0(data)["flux"], (10 * w[0] + 20 * w[1]) / w.sum())
+    assert "zp" not in data
+
+def test_get_data_join_bandday_coadd_columns(dataset_bandday):
+    # one row per (target, band, night), indexed by the first observation of the night;
+    # zpsys (and zp) of the first observation are kept, per-observation columns are dropped.
+    dataset_bandday.data["zpsys"] = "ab"
+    dataset_bandday.data["skynoise"] = 1.
+    data = dataset_bandday.get_data(join_bandday=True, join_how="coadd", boundary=0.9)
+    assert data.index.names == ["index", "index_obs"]
+    g_data = data[data["band"] == "g"]
+    assert sorted(g_data.index.get_level_values("index_obs")) == [0, 3], "first obs of each g-band night"
+    assert (data["zpsys"] == "ab").all()
+    assert "skynoise" not in data
+    assert set(data.columns) >= {"mjd", "band", "flux", "fluxerr", "zp", "night", "nvisits"}
+
+def test_get_data_join_bandday_first_keeps_columns(dataset_bandday):
+    dataset_bandday.data["skynoise"] = [1., 2., 3., 4.]
+    g_night0 = get_g_night0(dataset_bandday.get_data(join_bandday=True, join_how="first", boundary=0.9))
+    assert g_night0["skynoise"] == 1., "first: all the columns of the first observation"
+
+def test_get_ndetection_join_how_default():
+    # get_ndetection co-adds by default (join_how="coadd") when joining band and night
+    index = pandas.MultiIndex.from_product([[0], range(10)], names=["index", "index_obs"])
+    data = pandas.DataFrame({"mjd": 100.1 + np.arange(10) * 0.01, "band": "g",
+                             "flux": 4., "fluxerr": 1., "zp": 30.}, index=index)
+    dataset = DataSet(data)
+    assert dataset.get_ndetection(join_bandday=True, boundary=0.9).loc[0] == 1
+    # "first" keeps a single 4 sigma observation: no detection
+    assert len(dataset.get_ndetection(join_bandday=True, join_how="first", boundary=0.9)) == 0
+
+def test_get_ndetection_coadd():
+    # 10 observations at 4 sigma in one night: no detection per visit, one once co-added
+    index = pandas.MultiIndex.from_product([[0], range(10)], names=["index", "index_obs"])
+    data = pandas.DataFrame({"mjd": 100.1 + np.arange(10) * 0.01, "band": "g",
+                             "flux": 4., "fluxerr": 1., "zp": 30.}, index=index)
+    dataset = DataSet(data)
+    assert len(dataset.get_ndetection()) == 0
+    assert dataset.get_ndetection(join_bandday=True, join_how="coadd", boundary=0.9).loc[0] == 1

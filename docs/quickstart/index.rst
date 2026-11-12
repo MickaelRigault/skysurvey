@@ -35,7 +35,7 @@ Complete examples
 
 The full chain, from real survey logs to lightcurve fits:
 
-.. grid:: 1 1 2 2
+.. grid:: 1 1 3 3
    :gutter: 3
 
    .. grid-item-card:: Survey logs to lightcurve fit
@@ -52,6 +52,13 @@ The full chain, from real survey logs to lightcurve fits:
       One year of SNe Ia in an LSST deep drilling field (OpSim v5.1, camera
       rotation and CCD gaps), fitted and checked against the truth.
 
+   .. grid-item-card:: Co-added detections
+      :link: coadd_detections
+      :link-type: doc
+
+      Several visits per night: co-add them per band and night before
+      counting detections (``join_how="coadd"``).
+
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -60,3 +67,4 @@ The full chain, from real survey logs to lightcurve fits:
    quickstart_survey
    quickstart_survey_target_dataset
    lsst_deepfield
+   coadd_detections

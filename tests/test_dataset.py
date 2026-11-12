@@ -381,7 +381,7 @@ def test_get_ndetection(dataset):
         dataset.get_ndetection(join_bandday=True)
 
         mock_get.assert_called_once_with(phase_range=None, detection=True, join_bandday=True,
-                                         join_how="first")
+                                         join_how="coadd", boundary=None)
 
 @pytest.fixture
 def dataset_ndetection(targets, survey):
