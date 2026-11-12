@@ -50,6 +50,8 @@ Sky coordinates and geometry
    tools.utils.parse_skyarea
    tools.utils.surface_of_skyarea
    tools.projection.project_to_radec
+   tools.projection.camera_to_sky
+   tools.projection.sky_to_camera
    tools.projection.skyarea_to_skysurface
    tools.projection.spatialjoin_radec_to_fields
 

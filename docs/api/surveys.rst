@@ -47,6 +47,8 @@ Footprints and fields
 
    get_footprint
    get_lsst_footprint
+   get_lsst_ccd_footprints
+   get_lsst_fields
    get_des_footprint
    get_des_fields
    get_des_field_coordinates
@@ -62,6 +64,7 @@ Observing logs
    :nosignatures:
 
    read_opsim
+   parse_opsim
    get_weblogs
    register_snls_bandpasses
    survey.roman.parse_simlib

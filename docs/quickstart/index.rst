@@ -30,6 +30,28 @@ lightcurve fits, in :doc:`simulate_and_fit`.
       Observe the targets with the survey and explore the simulated
       lightcurves.
 
+Complete examples
+-----------------
+
+The full chain, from real survey logs to lightcurve fits:
+
+.. grid:: 1 1 2 2
+   :gutter: 3
+
+   .. grid-item-card:: Survey logs to lightcurve fit
+      :link: simulate_and_fit
+      :link-type: doc
+
+      ZTF logs, SNe Ia, lightcurves and SALT2 fits (sncosmo or saltjax),
+      step by step and timed.
+
+   .. grid-item-card:: LSST deep field
+      :link: lsst_deepfield
+      :link-type: doc
+
+      One year of SNe Ia in an LSST deep drilling field (OpSim v5.1, camera
+      rotation and CCD gaps), fitted and checked against the truth.
+
 .. toctree::
    :hidden:
    :maxdepth: 1
@@ -37,3 +59,4 @@ lightcurve fits, in :doc:`simulate_and_fit`.
    quickstart_target
    quickstart_survey
    quickstart_survey_target_dataset
+   lsst_deepfield

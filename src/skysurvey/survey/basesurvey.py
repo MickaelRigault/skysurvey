@@ -465,6 +465,11 @@ class GridSurvey(PolygonSurvey, _FootPrintHandler_ ):
         return rabins, decbins, nvisits
 
 
+
+    # --------- #
+    #   PLOT    #
+    # --------- #
+
     def show_nvisits(self, ax=None, cmap="viridis",
                         incl_colorbar=False, incl_title=True, **kwargs):
         """ """
