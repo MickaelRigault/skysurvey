@@ -263,9 +263,9 @@ def radec_to_camera(ra, dec, ra_boresight, dec_boresight, rotskypos=0):
 
     ra, dec, ra_boresight, dec_boresight = np.broadcast_arrays(
         *[np.atleast_1d(v_).astype(float) for v_ in [ra, dec, ra_boresight, dec_boresight]])
-    l, b = np.asarray(rot_xz_sph(ra - ra_boresight, dec, -dec_boresight)).reshape(2, -1)
-    l = (l + 180) % 360 - 180 # ra offset in [-180, 180[
-    return sky_to_camera(l * np.cos(np.radians(b)), b, rotskypos)
+    lsky, bsky = np.asarray(rot_xz_sph(ra - ra_boresight, dec, -dec_boresight)).reshape(2, -1)
+    lsky = (lsky + 180) % 360 - 180 # ra offset in [-180, 180[
+    return sky_to_camera(lsky * np.cos(np.radians(bsky)), bsky, rotskypos)
 
 
 # ================== #
